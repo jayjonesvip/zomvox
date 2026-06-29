@@ -1,0 +1,1446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>JayVoxel Outlands - Single File Voxel Shooter</title>
+<style>
+  :root{
+    --panel: rgba(5, 10, 14, .72);
+    --line: rgba(255,255,255,.17);
+    --text: #eaf7ff;
+    --muted: #aac1d0;
+    --accent: #91f36e;
+    --warn: #ffd45d;
+    --bad: #ff6262;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; height:100%; overflow:hidden; background:#06111c; color:var(--text); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; touch-action:none; }
+  #game{ position:fixed; inset:0; width:100vw; height:100vh; display:block; background:linear-gradient(#6fb1ff,#d7f0ff 45%,#8fc171); cursor:crosshair; touch-action:none; }
+  #vignette{ pointer-events:none; position:fixed; inset:0; box-shadow: inset 0 0 160px rgba(0,0,0,.55), inset 0 -95px 135px rgba(0,0,0,.25); mix-blend-mode:multiply; z-index:1; }
+  #damageFlash{ pointer-events:none; position:fixed; inset:0; background:radial-gradient(circle at 50% 50%, rgba(255,0,0,0), rgba(255,0,0,.32)); opacity:0; transition:opacity .22s; z-index:12; }
+  #damageFlash.hit{ opacity:1; transition:opacity .04s; }
+
+  #reticle{ pointer-events:none; position:fixed; left:50%; top:50%; width:48px; height:48px; transform:translate(-50%,-50%); filter:drop-shadow(0 2px 4px rgba(0,0,0,.85)); z-index:8; }
+  #reticle::before{ content:""; position:absolute; inset:12px; border:2px solid rgba(255,255,255,.92); border-radius:999px; box-shadow:0 0 0 1px rgba(0,0,0,.55), inset 0 0 0 1px rgba(0,0,0,.35); }
+  #reticle::after{ content:""; position:absolute; left:50%; top:50%; width:5px; height:5px; transform:translate(-50%,-50%); background:rgba(255,255,255,.95); border-radius:50%; box-shadow:0 0 0 1px rgba(0,0,0,.72); }
+  .tick{ position:absolute; background:rgba(255,255,255,.9); box-shadow:0 0 0 1px rgba(0,0,0,.48); }
+  .tick.t{ left:23px; top:0; width:2px; height:12px; }
+  .tick.b{ left:23px; bottom:0; width:2px; height:12px; }
+  .tick.l{ left:0; top:23px; width:12px; height:2px; }
+  .tick.r{ right:0; top:23px; width:12px; height:2px; }
+
+  #hud{ pointer-events:none; position:fixed; left:14px; top:12px; width:min(410px, calc(100vw - 28px)); padding:10px 12px; background:var(--panel); border:1px solid var(--line); border-radius:8px; backdrop-filter:blur(8px); box-shadow:0 12px 34px rgba(0,0,0,.28); font-size:12px; line-height:1.25; z-index:9; }
+  #hud strong{ color:#fff; }
+  .hudrow{ display:flex; gap:6px; flex-wrap:wrap; color:var(--muted); margin-top:7px; }
+  .pill{ border:1px solid rgba(255,255,255,.15); padding:3px 7px; border-radius:999px; background:rgba(255,255,255,.06); white-space:nowrap; }
+  .pill.good{ color:#bfffb1; border-color:rgba(145,243,110,.36); }
+  .pill.warn{ color:#ffe198; border-color:rgba(255,212,93,.36); }
+  .pill.bad{ color:#ffb0b0; border-color:rgba(255,98,98,.42); }
+  #target{ margin-top:7px; color:#d9ecff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #bars{ margin-top:9px; display:grid; gap:6px; }
+  .bar{ height:9px; border-radius:999px; border:1px solid rgba(255,255,255,.14); background:rgba(0,0,0,.25); overflow:hidden; }
+  .fill{ height:100%; width:100%; background:linear-gradient(90deg, #5ded70, #c4ff72); box-shadow:0 0 18px rgba(145,243,110,.28); }
+  .fill.ammo{ background:linear-gradient(90deg, #ffe47b, #ffb347); }
+
+  #weaponPanel{ position:fixed; right:14px; top:12px; width:230px; padding:10px 12px; border-radius:8px; background:rgba(5,10,15,.78); border:1px solid var(--line); backdrop-filter:blur(10px); box-shadow:0 14px 40px rgba(0,0,0,.32); pointer-events:none; z-index:9; }
+  #weaponPanel .label{ color:#b9cad7; font-size:10px; letter-spacing:.09em; text-transform:uppercase; font-weight:900; white-space:nowrap; }
+  #bulletRack{ display:grid; grid-template-columns:repeat(6, 1fr); gap:6px; margin:8px 0 7px; }
+  .bullet{ position:relative; height:24px; border-radius:6px 6px 4px 4px; background:linear-gradient(180deg,#fff4a8 0%,#ffd35b 48%,#b56b24 49%,#7b411c 100%); border:2px solid rgba(0,0,0,.58); box-shadow:inset 0 4px 0 rgba(255,255,255,.28), 0 0 18px rgba(255,210,75,.18); transform-origin:50% 100%; transition:opacity .14s, transform .14s, filter .14s; }
+  .bullet::before{ content:""; position:absolute; left:50%; top:-7px; width:13px; height:10px; transform:translateX(-50%); clip-path:polygon(50% 0,100% 100%,0 100%); background:#fff2a2; border:2px solid rgba(0,0,0,.5); border-bottom:0; }
+  .bullet.spent{ opacity:.22; filter:grayscale(1); transform:translateY(5px) scale(.86); box-shadow:none; }
+  #weaponPanel.reloading .bullet.spent{ animation:bulletPulse .35s ease-in-out infinite alternate; }
+  @keyframes bulletPulse{ from{ opacity:.18; } to{ opacity:.45; } }
+  #reserveText{ color:#d6e9f5; font-size:13px; font-weight:900; letter-spacing:.02em; }
+  #reloadText{ color:#ffdc7a; font-size:12px; font-weight:900; margin-top:2px; min-height:15px; letter-spacing:.04em; text-transform:uppercase; }
+
+  #gun{ pointer-events:none; position:fixed; right:7.5vw; bottom:-10px; width:260px; height:150px; transform:rotate(-2deg); transform-origin:80% 80%; opacity:.98; filter:drop-shadow(0 22px 24px rgba(0,0,0,.58)); image-rendering:pixelated; }
+  #gun .stock{ position:absolute; right:156px; bottom:22px; width:88px; height:48px; border-radius:4px; background:linear-gradient(180deg,#6d4527,#3b2414); border:3px solid rgba(0,0,0,.55); box-shadow:inset 0 6px 0 rgba(255,255,255,.08), inset -10px -10px 0 rgba(0,0,0,.18); }
+  #gun .stock::after{ content:""; position:absolute; right:-18px; top:12px; width:24px; height:20px; background:#28343a; border:3px solid rgba(0,0,0,.55); }
+  #gun .body{ position:absolute; right:64px; bottom:46px; width:142px; height:56px; border-radius:5px; background:linear-gradient(180deg,#2f8b45,#185127); border:3px solid rgba(0,0,0,.58); box-shadow:inset 0 7px 0 rgba(255,255,255,.12), inset 0 -12px 0 rgba(0,0,0,.18); }
+  #gun .body::before{ content:""; position:absolute; left:16px; top:-18px; width:56px; height:18px; background:#1d2e35; border:3px solid rgba(0,0,0,.55); border-bottom:0; border-radius:4px 4px 0 0; }
+  #gun .body::after{ content:""; position:absolute; right:18px; top:16px; width:34px; height:18px; background:#9fd36d; border:3px solid rgba(0,0,0,.42); box-shadow:-50px 0 0 #206633; opacity:.95; }
+  #gun .grip{ position:absolute; right:116px; bottom:0; width:42px; height:66px; transform:skewX(-10deg); border-radius:4px 4px 9px 9px; background:linear-gradient(90deg,#3f2918,#7c4c28); border:3px solid rgba(0,0,0,.58); box-shadow:inset -8px -8px 0 rgba(0,0,0,.2); }
+  #gun .barrel{ position:absolute; right:10px; bottom:62px; width:70px; height:28px; border-radius:4px; background:linear-gradient(180deg,#2a3c42,#17252b); border:3px solid rgba(0,0,0,.6); box-shadow:inset 0 6px 0 rgba(255,255,255,.08); }
+  #gun .barrel::after{ content:""; position:absolute; right:-18px; top:4px; width:22px; height:18px; background:#10181d; border:3px solid rgba(0,0,0,.65); border-left:0; }
+  #muzzle{ position:absolute; right:-18px; bottom:52px; width:58px; height:58px; border-radius:8px; opacity:0; transform:scale(.35); background:radial-gradient(circle, #fff 0 12%, #ffe17d 13% 34%, #ff8a2c 35% 58%, rgba(255,128,0,0) 63%); filter:blur(.2px) drop-shadow(0 0 18px #ffb347); }
+  #gun.fire{ animation:kick .08s ease-out; }
+  #gun.fire #muzzle{ opacity:1; transform:scale(1); transition:opacity .06s, transform .06s; }
+  @keyframes kick{ 0%{ transform:translate(0,0) rotate(-2deg); } 45%{ transform:translate(14px,7px) rotate(-5deg); } 100%{ transform:translate(0,0) rotate(-2deg); } }
+
+
+
+  #scoreFeed{ pointer-events:none; position:fixed; left:50%; top:34%; transform:translateX(-50%); display:flex; flex-direction:column; align-items:center; gap:6px; z-index:6; }
+  .scorePop{ font-size:clamp(24px,4vw,46px); font-weight:1000; letter-spacing:.02em; color:#fff; text-shadow:0 3px 0 rgba(0,0,0,.75), 0 0 18px rgba(255,255,255,.35); animation:scoreRise 1.05s ease-out forwards; white-space:nowrap; }
+  .scorePop.head{ color:#ffe77e; text-shadow:0 3px 0 rgba(0,0,0,.75), 0 0 22px rgba(255,218,92,.55); }
+  .scorePop.kill{ color:#aaff86; text-shadow:0 3px 0 rgba(0,0,0,.75), 0 0 22px rgba(130,255,103,.45); }
+  .scorePop.block{ color:#bfe7ff; text-shadow:0 3px 0 rgba(0,0,0,.75), 0 0 22px rgba(117,202,255,.42); }
+  .scorePop.combo{ color:#ffad66; text-shadow:0 3px 0 rgba(0,0,0,.75), 0 0 24px rgba(255,140,42,.55); transform:scale(1.1); }
+  .scorePop.pickup{ color:#8fffc8; text-shadow:0 3px 0 rgba(0,0,0,.75), 0 0 24px rgba(97,255,190,.48); }
+  @keyframes scoreRise{ 0%{ opacity:0; transform:translateY(18px) scale(.88); } 14%{ opacity:1; transform:translateY(0) scale(1.05); } 72%{ opacity:1; } 100%{ opacity:0; transform:translateY(-58px) scale(.98); } }
+
+  #healthStatus{ pointer-events:none; position:fixed; left:50%; top:12px; width:230px; transform:translateX(-50%); padding:10px 12px; border-radius:8px; background:rgba(4,10,14,.82); border:1px solid rgba(255,255,255,.18); box-shadow:0 15px 42px rgba(0,0,0,.36); backdrop-filter:blur(10px); z-index:9; }
+  #healthStatus .healthTop{ display:flex; justify-content:space-between; align-items:baseline; gap:10px; margin-bottom:7px; }
+  #healthStatus .healthLabel{ font-size:10px; letter-spacing:.09em; text-transform:uppercase; color:#bad0db; font-weight:900; }
+  #healthBigText{ font-size:24px; font-weight:1000; line-height:.9; color:#f8fff5; text-shadow:0 2px 0 rgba(0,0,0,.6); }
+  .bigHealthBar{ height:12px; border-radius:999px; border:1px solid rgba(255,255,255,.18); background:rgba(0,0,0,.38); overflow:hidden; box-shadow:inset 0 2px 7px rgba(0,0,0,.45); }
+  #healthBigFill{ height:100%; width:100%; background:linear-gradient(90deg,#35e75d,#d8ff70); box-shadow:0 0 18px rgba(103,255,105,.32); transition:width .12s; }
+  #healthStatus.warn #healthBigFill{ background:linear-gradient(90deg,#ffd45d,#ff8f46); }
+  #healthStatus.danger{ border-color:rgba(255,80,80,.48); animation:healthPulse .72s ease-in-out infinite alternate; }
+  #healthStatus.danger #healthBigFill{ background:linear-gradient(90deg,#ff3b3b,#ff9b6b); box-shadow:0 0 24px rgba(255,63,63,.55); }
+  @keyframes healthPulse{ from{ box-shadow:0 15px 42px rgba(0,0,0,.36),0 0 0 rgba(255,40,40,0); } to{ box-shadow:0 15px 42px rgba(0,0,0,.36),0 0 32px rgba(255,40,40,.35); } }
+
+  #reloadOverlay{ pointer-events:none; position:fixed; left:50%; bottom:23%; transform:translateX(-50%) translateY(8px); min-width:min(360px, calc(100vw - 38px)); padding:10px 12px; border-radius:16px; background:rgba(4,9,13,.82); border:1px solid rgba(255,220,122,.42); box-shadow:0 12px 40px rgba(0,0,0,.36); opacity:0; transition:.14s; z-index:4; }
+  #reloadOverlay.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+  #reloadOverlay .reloadTitle{ font-weight:1000; letter-spacing:.14em; text-transform:uppercase; color:#ffdc7a; text-align:center; margin-bottom:8px; }
+  .reloadBar{ height:12px; border-radius:999px; background:rgba(0,0,0,.42); border:1px solid rgba(255,255,255,.16); overflow:hidden; }
+  #reloadOverlayFill{ height:100%; width:0%; background:linear-gradient(90deg,#ffe27a,#ffae3f); transition:width .08s linear; }
+
+  #menu{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center; padding:22px; background:radial-gradient(circle at 50% 35%, rgba(35,85,110,.45), rgba(2,7,12,.82) 62%, rgba(0,0,0,.93)); z-index:20; }
+  .card{ width:min(760px, 96vw); border:1px solid rgba(255,255,255,.18); background:linear-gradient(180deg, rgba(13,24,35,.88), rgba(5,9,14,.8)); border-radius:26px; padding:28px; box-shadow:0 30px 90px rgba(0,0,0,.55); backdrop-filter:blur(12px); }
+  h1{ margin:0 0 8px; font-size:clamp(36px, 6vw, 64px); letter-spacing:-.06em; line-height:.95; }
+  h1 b{ color:var(--accent); text-shadow:0 0 22px rgba(145,243,110,.35); }
+  .subtitle{ color:#c1d7e6; margin:0 0 20px; font-size:16px; }
+  .grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin:18px 0 22px; }
+  .tip{ border:1px solid rgba(255,255,255,.13); background:rgba(255,255,255,.055); border-radius:14px; padding:10px 12px; color:#d4e5f2; font-size:14px; }
+  .tip kbd{ display:inline-block; min-width:28px; text-align:center; padding:2px 7px; border-radius:7px; background:rgba(255,255,255,.13); border:1px solid rgba(255,255,255,.18); color:#fff; font-weight:800; box-shadow:inset 0 -1px 0 rgba(0,0,0,.45); }
+  button#play{ appearance:none; border:0; border-radius:16px; padding:14px 20px; color:#06230e; font-size:18px; font-weight:900; background:linear-gradient(180deg,#c5ffa8,#72df60); box-shadow:0 14px 40px rgba(105,216,90,.26), inset 0 2px 0 rgba(255,255,255,.45); cursor:pointer; }
+  button#play:hover{ filter:brightness(1.05); }
+  #toast{ pointer-events:none; position:fixed; right:14px; top:116px; max-width:350px; padding:10px 12px; border-radius:8px; background:rgba(4,11,16,.76); border:1px solid rgba(255,255,255,.16); color:#dff4ff; font-size:13px; opacity:0; transform:translateY(-8px); transition:.2s; backdrop-filter:blur(8px); z-index:13; }
+  #toast.show{ opacity:1; transform:translateY(0); }
+  #mobileControls{ position:fixed; inset:0; pointer-events:none; display:none; z-index:11; touch-action:none; }
+  #stickBase{ pointer-events:auto; position:absolute; left:calc(22px + env(safe-area-inset-left)); bottom:calc(22px + env(safe-area-inset-bottom)); width:118px; height:118px; border-radius:50%; border:1px solid rgba(255,255,255,.24); background:rgba(5,10,14,.35); box-shadow:inset 0 0 28px rgba(0,0,0,.25), 0 8px 28px rgba(0,0,0,.26); touch-action:none; }
+  #stickKnob{ position:absolute; left:50%; top:50%; width:54px; height:54px; margin:-27px 0 0 -27px; border-radius:50%; border:1px solid rgba(255,255,255,.35); background:rgba(220,245,255,.28); box-shadow:0 8px 22px rgba(0,0,0,.32); }
+  .touchBtn{ pointer-events:auto; position:absolute; width:68px; height:68px; border-radius:50%; border:1px solid rgba(255,255,255,.28); background:rgba(5,10,14,.48); color:#f2fbff; font-weight:1000; font-size:12px; letter-spacing:.05em; text-transform:uppercase; box-shadow:0 8px 26px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.16); touch-action:none; }
+  .touchBtn:active,.touchBtn.active{ transform:translateY(2px); filter:brightness(1.2); }
+  #touchShoot{ right:calc(26px + env(safe-area-inset-right)); bottom:calc(32px + env(safe-area-inset-bottom)); width:82px; height:82px; background:rgba(140,38,24,.58); }
+  #touchJump{ right:calc(118px + env(safe-area-inset-right)); bottom:calc(76px + env(safe-area-inset-bottom)); }
+  #touchReload{ right:calc(114px + env(safe-area-inset-right)); bottom:calc(8px + env(safe-area-inset-bottom)); }
+  #touchSprint{ left:calc(154px + env(safe-area-inset-left)); bottom:calc(32px + env(safe-area-inset-bottom)); width:58px; height:58px; }
+  #portraitBlock{ position:fixed; inset:0; display:none; align-items:center; justify-content:center; text-align:center; padding:24px; background:#06111c; color:#eaf7ff; z-index:40; font-weight:1000; letter-spacing:.02em; }
+  @media (max-width: 720px){
+    #menu{ padding:8px; align-items:flex-start; }
+    .card{ width:min(96vw, 620px); max-height:calc(100vh - 16px); overflow:auto; border-radius:16px; padding:14px 16px; }
+    h1{ font-size:32px; letter-spacing:-.04em; }
+    .subtitle{ font-size:13px; line-height:1.25; margin-bottom:10px; }
+    .grid{ grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin:10px 0 12px; }
+    .tip{ border-radius:8px; padding:7px 8px; font-size:12px; }
+    .tip kbd{ min-width:23px; padding:1px 5px; border-radius:5px; }
+    button#play{ border-radius:10px; padding:10px 16px; font-size:16px; }
+    #hud{ left:8px; top:8px; width:34vw; max-width:none; padding:8px; font-size:10px; }
+    #hud > div:first-child span{ display:none; }
+    #hudrow,.hudrow{ gap:4px; margin-top:5px; }
+    #coords,#seed{ display:none; }
+    #target{ max-width:100%; }
+    #weaponPanel{ right:8px; top:8px; width:31vw; min-width:0; padding:8px; }
+    #healthStatus{ top:8px; width:25vw; padding:8px; }
+    #healthBigText{ font-size:20px; }
+    .bigHealthBar{ height:10px; }
+    .bullet{ height:19px; border-width:1px; }
+    .bullet::before{ width:10px; height:8px; top:-6px; border-width:1px; }
+    #gun{ right:0; transform:scale(.8) rotate(-2deg); }
+    .grid{ grid-template-columns:1fr; }
+    #mobileControls{ display:block; }
+  }
+  @media (pointer: coarse){
+    #mobileControls{ display:block; }
+  }
+  @media (orientation: portrait){
+    #portraitBlock{ display:flex; }
+  }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="vignette"></div>
+<div id="damageFlash"></div>
+<div id="reticle"><div class="tick t"></div><div class="tick b"></div><div class="tick l"></div><div class="tick r"></div></div>
+<div id="hud">
+  <div><strong>JayVoxel Outlands</strong> <span style="color:#a8becd">/ single-file voxel survival shooter</span></div>
+  <div class="hudrow">
+    <span class="pill" id="coords">x 0 y 0 z 0</span>
+    <span class="pill" id="fps">60 fps</span>
+    <span class="pill" id="clock">day</span>
+    <span class="pill good" id="hpPill">HP 100</span>
+    <span class="pill" id="chunks">chunks 0</span>
+    <span class="pill" id="kills">kills 0</span>
+    <span class="pill good" id="scorePill">score 0</span>
+    <span class="pill" id="seed">seed 0</span>
+  </div>
+  <div id="target">Click to lock mouse. Left-click shoots. Right-click or R reloads.</div>
+</div>
+<div id="weaponPanel">
+  <div class="label">Block Blaster / 6-Round Mag</div>
+  <div id="bulletRack"></div>
+  <div id="reserveText">Reserve 36</div>
+  <div id="reloadText"></div>
+</div>
+<div id="healthStatus">
+  <div class="healthTop"><span class="healthLabel">Health Status</span><span id="healthBigText">100%</span></div>
+  <div class="bigHealthBar"><div id="healthBigFill"></div></div>
+</div>
+<div id="scoreFeed"></div>
+<div id="reloadOverlay"><div class="reloadTitle">Reloading</div><div class="reloadBar"><div id="reloadOverlayFill"></div></div></div>
+<div id="gun"><div class="stock"></div><div class="body"></div><div class="grip"></div><div class="barrel"></div><div id="muzzle"></div></div>
+<div id="toast"></div>
+<div id="mobileControls" aria-hidden="true">
+  <div id="stickBase"><div id="stickKnob"></div></div>
+  <button class="touchBtn" id="touchSprint" type="button">Run</button>
+  <button class="touchBtn" id="touchJump" type="button">Jump</button>
+  <button class="touchBtn" id="touchReload" type="button">Reload</button>
+  <button class="touchBtn" id="touchShoot" type="button">Shoot</button>
+</div>
+<div id="portraitBlock">Rotate to landscape</div>
+<div id="menu">
+  <div class="card">
+    <h1>JayVoxel <b>Outlands</b></h1>
+    <p class="subtitle">A fixed-size voxel survival shooter with day/night lighting, sand beaches, water, rocks, block-breaking bullets, six-round reloads, ammo crates, and monsters wandering in from the hills.</p>
+    <div class="grid">
+      <div class="tip"><kbd>WASD</kbd> move &nbsp; <kbd>Mouse</kbd> aim</div>
+      <div class="tip"><kbd>Left</kbd> shoot &nbsp; <kbd>Right</kbd>/<kbd>R</kbd> reload</div>
+      <div class="tip"><kbd>Space</kbd> jump &nbsp; <kbd>Shift</kbd> sprint</div>
+      <div class="tip"><kbd>N</kbd> new world &nbsp; <kbd>F</kbd> debug fly</div>
+    </div>
+    <button id="play">Play</button>
+  </div>
+</div>
+<script>
+(() => {
+  'use strict';
+
+  const canvas = document.getElementById('game');
+  const gl = canvas.getContext('webgl', { antialias: true, alpha: false, powerPreference: 'high-performance' });
+  if (!gl) {
+    document.body.innerHTML = '<div style="padding:30px;font-family:sans-serif">WebGL is not available in this browser.</div>';
+    return;
+  }
+
+  const $ = (id) => document.getElementById(id);
+  const hudCoords = $('coords');
+  const hudFps = $('fps');
+  const hudClock = $('clock');
+  const hudHp = $('hpPill');
+  const hudChunks = $('chunks');
+  const hudKills = $('kills');
+  const hudScore = $('scorePill');
+  const hudSeed = $('seed');
+  const hudTarget = $('target');
+  const reloadText = $('reloadText');
+  const weaponPanel = $('weaponPanel');
+  const bulletRack = $('bulletRack');
+  const reserveText = $('reserveText');
+  const menu = $('menu');
+  const play = $('play');
+  const toast = $('toast');
+  const gun = $('gun');
+  const damageFlash = $('damageFlash');
+  const healthStatus = $('healthStatus');
+  const healthBigText = $('healthBigText');
+  const healthBigFill = $('healthBigFill');
+  const scoreFeed = $('scoreFeed');
+  const reloadOverlay = $('reloadOverlay');
+  const reloadOverlayFill = $('reloadOverlayFill');
+  const mobileControls = $('mobileControls');
+  const stickBase = $('stickBase');
+  const stickKnob = $('stickKnob');
+  const touchShoot = $('touchShoot');
+  const touchJump = $('touchJump');
+  const touchReload = $('touchReload');
+  const touchSprint = $('touchSprint');
+
+  const BLOCK = {
+    GRASS: 1,
+    DIRT: 2,
+    STONE: 3,
+    WOOD: 4,
+    LEAF: 5,
+    SAND: 6,
+    WATER: 7,
+    BRICK: 8,
+    LAMP: 9
+  };
+
+  const CHUNK_SIZE = 16;
+  const RENDER_RADIUS = 3;
+  const WORLD_CHUNK_RADIUS = 4;
+  const WORLD_MIN = -WORLD_CHUNK_RADIUS * CHUNK_SIZE;
+  const WORLD_MAX = (WORLD_CHUNK_RADIUS + 1) * CHUNK_SIZE - 1;
+  const MAX_Y = 46;
+  const WATER_LEVEL = 8;
+  const PLAYER_HEIGHT = 1.76;
+  const PLAYER_RADIUS = 0.31;
+  const MAG_SIZE = 6;
+  const RELOAD_TIME = 1.15;
+  const ENEMY_CAP = 18;
+
+  for (let i = 0; i < MAG_SIZE; i++) {
+    const b = document.createElement('div');
+    b.className = 'bullet';
+    bulletRack.appendChild(b);
+  }
+
+  let currentSeed = 729641;
+  let world = new Map();
+  let edits = new Map();
+  let loadedChunks = new Set();
+  let currentChunkX = 999999;
+  let currentChunkZ = 999999;
+  let meshes = { opaque: null, water: null, dynamic: null };
+  let rebuildQueued = false;
+  let worldBlockCount = 0;
+
+  const player = {
+    pos: [0, 16, 0],
+    vel: [0, 0, 0],
+    yaw: Math.PI,
+    pitch: 0,
+    grounded: false,
+    fly: false,
+    health: 100,
+    mag: MAG_SIZE,
+    reserve: 36,
+    reloading: false,
+    reloadTimer: 0,
+    invuln: 0,
+    kills: 0,
+    score: 0,
+    deaths: 0
+  };
+
+  let enemies = [];
+  let pickups = [];
+  let particles = [];
+  let nextSpawnTimer = 3.5;
+  let locked = false;
+  let touchMode = matchMedia('(pointer: coarse)').matches;
+  let keys = Object.create(null);
+  const touchInput = { moveX: 0, moveY: 0, jump: false, sprint: false, lookId: null, lookX: 0, lookY: 0, stickId: null };
+  let lastTarget = null;
+  let lastFrame = performance.now();
+  let fpsAvg = 60;
+  let frameCounter = 0;
+  let lastKillTime = -999;
+  let dayAmount = 1;
+
+  function showToast(message) {
+    toast.textContent = message;
+    toast.classList.add('show');
+    clearTimeout(showToast.timer);
+    showToast.timer = setTimeout(() => toast.classList.remove('show'), 1500);
+  }
+
+  function scorePop(message, cls = '') {
+    const el = document.createElement('div');
+    el.className = 'scorePop ' + cls;
+    el.textContent = message;
+    scoreFeed.appendChild(el);
+    setTimeout(() => el.remove(), 1150);
+  }
+
+  let audioCtx = null;
+  function getAudio() {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    if (!audioCtx) audioCtx = new AC();
+    if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
+    return audioCtx;
+  }
+  function tone(freq, dur = .08, type = 'square', gain = .05, endFreq = null) {
+    const ctx = getAudio();
+    if (!ctx) return;
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    const now = ctx.currentTime;
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, now);
+    if (endFreq) osc.frequency.exponentialRampToValueAtTime(Math.max(20, endFreq), now + dur);
+    g.gain.setValueAtTime(gain, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now + dur);
+    osc.connect(g); g.connect(ctx.destination);
+    osc.start(now); osc.stop(now + dur + .02);
+  }
+  function noise(dur = .05, gain = .08, cutoff = 1200) {
+    const ctx = getAudio();
+    if (!ctx) return;
+    const len = Math.max(1, Math.floor(ctx.sampleRate * dur));
+    const buffer = ctx.createBuffer(1, len, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / len);
+    const src = ctx.createBufferSource();
+    const filt = ctx.createBiquadFilter();
+    const g = ctx.createGain();
+    const now = ctx.currentTime;
+    filt.type = 'lowpass'; filt.frequency.setValueAtTime(cutoff, now);
+    g.gain.setValueAtTime(gain, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now + dur);
+    src.buffer = buffer;
+    src.connect(filt); filt.connect(g); g.connect(ctx.destination);
+    src.start(now); src.stop(now + dur + .02);
+  }
+  function sound(name) {
+    if (name === 'shoot') { noise(.045, .12, 950); tone(105, .05, 'sawtooth', .045, 55); }
+    else if (name === 'empty') { tone(120, .07, 'square', .04, 85); }
+    else if (name === 'reloadStart') { tone(180, .05, 'square', .04, 105); setTimeout(() => tone(260, .04, 'square', .035, 180), 110); }
+    else if (name === 'reloadDone') { tone(360, .06, 'triangle', .045, 520); }
+    else if (name === 'block') { noise(.055, .075, 520); tone(165, .045, 'square', .035, 110); }
+    else if (name === 'hit') { tone(470, .055, 'triangle', .055, 260); }
+    else if (name === 'head') { tone(780, .07, 'square', .052, 1180); }
+    else if (name === 'kill') { tone(260, .075, 'square', .055, 390); setTimeout(() => tone(520, .08, 'triangle', .05, 780), 80); }
+    else if (name === 'pickup') { tone(520, .06, 'triangle', .045, 780); }
+    else if (name === 'hurt') { tone(85, .12, 'sawtooth', .07, 45); }
+  }
+
+
+  function pulseDamage() {
+    damageFlash.classList.remove('hit');
+    void damageFlash.offsetWidth;
+    damageFlash.classList.add('hit');
+    setTimeout(() => damageFlash.classList.remove('hit'), 90);
+  }
+
+  function resize() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const w = Math.floor(innerWidth * dpr);
+    const h = Math.floor(innerHeight * dpr);
+    if (canvas.width !== w || canvas.height !== h) {
+      canvas.width = w;
+      canvas.height = h;
+      gl.viewport(0, 0, w, h);
+    }
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  function createShader(type, source) {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, source);
+    gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
+    return s;
+  }
+  function createProgram(vs, fs) {
+    const p = gl.createProgram();
+    gl.attachShader(p, createShader(gl.VERTEX_SHADER, vs));
+    gl.attachShader(p, createShader(gl.FRAGMENT_SHADER, fs));
+    gl.linkProgram(p);
+    if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+    return p;
+  }
+
+  const voxelVS = `
+    attribute vec3 aPosition;
+    attribute vec3 aNormal;
+    attribute vec2 aUv;
+    attribute float aType;
+    uniform mat4 uMVP;
+    varying vec3 vNormal;
+    varying vec3 vWorld;
+    varying vec2 vUv;
+    varying float vType;
+    void main(){
+      vNormal = aNormal;
+      vWorld = aPosition;
+      vUv = aUv;
+      vType = aType;
+      gl_Position = uMVP * vec4(aPosition, 1.0);
+    }
+  `;
+  const voxelFS = `
+    precision mediump float;
+    varying vec3 vNormal;
+    varying vec3 vWorld;
+    varying vec2 vUv;
+    varying float vType;
+    uniform vec3 uCam;
+    uniform float uTime;
+    uniform vec3 uLightDir;
+    uniform vec3 uSky;
+    uniform float uDay;
+    float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123); }
+    float gridLine(vec2 uv){
+      float b = min(min(uv.x, 1.0 - uv.x), min(uv.y, 1.0 - uv.y));
+      return smoothstep(0.0, 0.035, b);
+    }
+    vec3 baseColor(float t, vec3 n){
+      if(t < 1.5){ if(n.y > 0.55) return vec3(0.23, 0.60, 0.24); return vec3(0.40, 0.28, 0.16); }
+      if(t < 2.5) return vec3(0.46, 0.29, 0.16);
+      if(t < 3.5) return vec3(0.50, 0.53, 0.56);
+      if(t < 4.5) return vec3(0.52, 0.30, 0.12);
+      if(t < 5.5) return vec3(0.12, 0.46, 0.19);
+      if(t < 6.5) return vec3(0.78, 0.67, 0.36);
+      if(t < 7.5) return vec3(0.10, 0.37, 0.70);
+      if(t < 8.5) return vec3(0.62, 0.20, 0.16);
+      if(t < 9.5) return vec3(1.00, 0.74, 0.25);
+      if(t < 10.5) return vec3(0.14, 0.65, 0.19); /* enemy green */
+      if(t < 11.5) return vec3(0.08, 0.36, 0.11); /* enemy dark */
+      if(t < 12.5) return vec3(1.00, 0.10, 0.07); /* eyes */
+      if(t < 13.5) return vec3(0.88, 0.70, 0.18); /* ammo */
+      if(t < 14.5) return vec3(0.86, 0.88, 0.82); /* metal */
+      return vec3(1.0, 0.45, 0.18); /* particles */
+    }
+    void main(){
+      vec3 n = normalize(vNormal);
+      vec3 color = baseColor(vType, n);
+      float grain = hash(floor(vec2(vWorld.x * 6.0 + vWorld.y * 1.7, vWorld.z * 6.0 - vWorld.y * 2.3)));
+      color *= 0.88 + grain * 0.18;
+      if(vType > 6.5 && vType < 7.5){
+        float ripple = sin((vWorld.x * 2.4 + vWorld.z * 2.1 + uTime * 2.6)) * 0.04;
+        color += vec3(0.03, 0.12, 0.18) + ripple;
+      }
+      if(vType > 8.5 && vType < 9.5) color += vec3(0.55, 0.38, 0.05);
+      if(vType > 11.5 && vType < 12.5) color += vec3(0.70, 0.02, 0.0);
+      if(vType > 14.5) color += vec3(0.50, 0.15, 0.04);
+      float edge = gridLine(vUv);
+      color *= mix(0.58, 1.0, edge);
+      float sun = max(dot(n, normalize(uLightDir)), 0.0);
+      float skyBounce = max(n.y, 0.0) * mix(0.05, 0.18, uDay);
+      float light = mix(0.13, 0.39, uDay) + sun * mix(0.28, 0.70, uDay) + skyBounce;
+      if(vType > 8.5 && vType < 9.5) light += 0.65;
+      if(vType > 11.5 && vType < 12.5) light += 0.75;
+      if(vType > 12.5) light += 0.22;
+      color *= light;
+      float dist = length(vWorld - uCam);
+      float fog = smoothstep(54.0, 128.0, dist);
+      color = mix(color, uSky, fog);
+      color += vec3(0.03, 0.05, 0.10) * (1.0 - uDay);
+      float alpha = (vType > 6.5 && vType < 7.5) ? 0.63 : 1.0;
+      gl_FragColor = vec4(color, alpha);
+    }
+  `;
+  const lineVS = `
+    attribute vec3 aPosition;
+    uniform mat4 uMVP;
+    void main(){ gl_Position = uMVP * vec4(aPosition, 1.0); }
+  `;
+  const lineFS = `
+    precision mediump float;
+    uniform vec4 uColor;
+    void main(){ gl_FragColor = uColor; }
+  `;
+
+  const voxelProgram = createProgram(voxelVS, voxelFS);
+  const lineProgram = createProgram(lineVS, lineFS);
+  const loc = {
+    pos: gl.getAttribLocation(voxelProgram, 'aPosition'),
+    normal: gl.getAttribLocation(voxelProgram, 'aNormal'),
+    uv: gl.getAttribLocation(voxelProgram, 'aUv'),
+    type: gl.getAttribLocation(voxelProgram, 'aType'),
+    mvp: gl.getUniformLocation(voxelProgram, 'uMVP'),
+    cam: gl.getUniformLocation(voxelProgram, 'uCam'),
+    time: gl.getUniformLocation(voxelProgram, 'uTime'),
+    light: gl.getUniformLocation(voxelProgram, 'uLightDir'),
+    sky: gl.getUniformLocation(voxelProgram, 'uSky'),
+    day: gl.getUniformLocation(voxelProgram, 'uDay')
+  };
+  const lineLoc = {
+    pos: gl.getAttribLocation(lineProgram, 'aPosition'),
+    mvp: gl.getUniformLocation(lineProgram, 'uMVP'),
+    color: gl.getUniformLocation(lineProgram, 'uColor')
+  };
+  const lineBuffer = gl.createBuffer();
+  const dynamicBuffer = gl.createBuffer();
+
+  function mat4Perspective(fovy, aspect, near, far) {
+    const f = 1 / Math.tan(fovy / 2);
+    const nf = 1 / (near - far);
+    const out = new Float32Array(16);
+    out[0] = f / aspect; out[5] = f; out[10] = (far + near) * nf; out[11] = -1; out[14] = 2 * far * near * nf;
+    return out;
+  }
+  function mat4LookAt(eye, center, up) {
+    let x0, x1, x2, y0, y1, y2, z0, z1, z2, len;
+    z0 = eye[0] - center[0]; z1 = eye[1] - center[1]; z2 = eye[2] - center[2];
+    len = Math.hypot(z0, z1, z2) || 1; z0 /= len; z1 /= len; z2 /= len;
+    x0 = up[1] * z2 - up[2] * z1; x1 = up[2] * z0 - up[0] * z2; x2 = up[0] * z1 - up[1] * z0;
+    len = Math.hypot(x0, x1, x2) || 1; x0 /= len; x1 /= len; x2 /= len;
+    y0 = z1 * x2 - z2 * x1; y1 = z2 * x0 - z0 * x2; y2 = z0 * x1 - z1 * x0;
+    const out = new Float32Array(16);
+    out[0] = x0; out[1] = y0; out[2] = z0; out[3] = 0;
+    out[4] = x1; out[5] = y1; out[6] = z1; out[7] = 0;
+    out[8] = x2; out[9] = y2; out[10] = z2; out[11] = 0;
+    out[12] = -(x0 * eye[0] + x1 * eye[1] + x2 * eye[2]);
+    out[13] = -(y0 * eye[0] + y1 * eye[1] + y2 * eye[2]);
+    out[14] = -(z0 * eye[0] + z1 * eye[1] + z2 * eye[2]);
+    out[15] = 1;
+    return out;
+  }
+  function mat4Mul(a, b) {
+    const out = new Float32Array(16);
+    const a00 = a[0], a01 = a[1], a02 = a[2], a03 = a[3];
+    const a10 = a[4], a11 = a[5], a12 = a[6], a13 = a[7];
+    const a20 = a[8], a21 = a[9], a22 = a[10], a23 = a[11];
+    const a30 = a[12], a31 = a[13], a32 = a[14], a33 = a[15];
+    let b0 = b[0], b1 = b[1], b2 = b[2], b3 = b[3];
+    out[0] = b0*a00 + b1*a10 + b2*a20 + b3*a30; out[1] = b0*a01 + b1*a11 + b2*a21 + b3*a31; out[2] = b0*a02 + b1*a12 + b2*a22 + b3*a32; out[3] = b0*a03 + b1*a13 + b2*a23 + b3*a33;
+    b0 = b[4]; b1 = b[5]; b2 = b[6]; b3 = b[7];
+    out[4] = b0*a00 + b1*a10 + b2*a20 + b3*a30; out[5] = b0*a01 + b1*a11 + b2*a21 + b3*a31; out[6] = b0*a02 + b1*a12 + b2*a22 + b3*a32; out[7] = b0*a03 + b1*a13 + b2*a23 + b3*a33;
+    b0 = b[8]; b1 = b[9]; b2 = b[10]; b3 = b[11];
+    out[8] = b0*a00 + b1*a10 + b2*a20 + b3*a30; out[9] = b0*a01 + b1*a11 + b2*a21 + b3*a31; out[10] = b0*a02 + b1*a12 + b2*a22 + b3*a32; out[11] = b0*a03 + b1*a13 + b2*a23 + b3*a33;
+    b0 = b[12]; b1 = b[13]; b2 = b[14]; b3 = b[15];
+    out[12] = b0*a00 + b1*a10 + b2*a20 + b3*a30; out[13] = b0*a01 + b1*a11 + b2*a21 + b3*a31; out[14] = b0*a02 + b1*a12 + b2*a22 + b3*a32; out[15] = b0*a03 + b1*a13 + b2*a23 + b3*a33;
+    return out;
+  }
+
+  function lookDir() {
+    const cp = Math.cos(player.pitch);
+    return [Math.sin(player.yaw) * cp, Math.sin(player.pitch), Math.cos(player.yaw) * cp];
+  }
+  function eyePos() { return [player.pos[0], player.pos[1] + 1.58, player.pos[2]]; }
+  function keyOf(x, y, z) { return x + ',' + y + ',' + z; }
+  function chunkKey(cx, cz) { return cx + ',' + cz; }
+  function chunkCoord(v) { return Math.floor(v / CHUNK_SIZE); }
+  function chunkInWorld(cx, cz) { return Math.abs(cx) <= WORLD_CHUNK_RADIUS && Math.abs(cz) <= WORLD_CHUNK_RADIUS; }
+  function inWorldXZ(x, z) { return x >= WORLD_MIN && x <= WORLD_MAX && z >= WORLD_MIN && z <= WORLD_MAX; }
+  function clampToWorld(pos) {
+    pos[0] = Math.max(WORLD_MIN + PLAYER_RADIUS + .4, Math.min(WORLD_MAX - PLAYER_RADIUS - .4, pos[0]));
+    pos[2] = Math.max(WORLD_MIN + PLAYER_RADIUS + .4, Math.min(WORLD_MAX - PLAYER_RADIUS - .4, pos[2]));
+  }
+  function getBlock(x, y, z) { return world.get(keyOf(x, y, z)) || 0; }
+  function genSetBlock(x, y, z, type) {
+    if (!inWorldXZ(x, z)) return;
+    const k = keyOf(x, y, z);
+    if (edits.has(k)) return;
+    if (type) world.set(k, type); else world.delete(k);
+  }
+  function setBlock(x, y, z, type, persist = true) {
+    if (!inWorldXZ(x, z)) return;
+    const k = keyOf(x, y, z);
+    if (type) world.set(k, type); else world.delete(k);
+    if (persist) edits.set(k, type || 0);
+  }
+  function isSolidType(type) { return !!type && type !== BLOCK.WATER && type !== BLOCK.LEAF; }
+  function blocksMovement(type) { return !!type && type !== BLOCK.WATER && type !== BLOCK.LEAF; }
+
+  function seededHash(x, z) {
+    const n = Math.sin((x * 127.1 + z * 311.7 + currentSeed * 0.0137)) * 43758.5453123;
+    return n - Math.floor(n);
+  }
+  function smoothstep(t) { return t * t * (3 - 2 * t); }
+  function noise2(x, z) {
+    const xi = Math.floor(x), zi = Math.floor(z);
+    const xf = x - xi, zf = z - zi;
+    const a = seededHash(xi, zi), b = seededHash(xi + 1, zi), c = seededHash(xi, zi + 1), d = seededHash(xi + 1, zi + 1);
+    const u = smoothstep(xf), v = smoothstep(zf);
+    return (a * (1 - u) + b * u) * (1 - v) + (c * (1 - u) + d * u) * v;
+  }
+  function fbm(x, z) {
+    let value = 0, amp = 0.5, freq = 0.032;
+    for (let i = 0; i < 5; i++) { value += noise2(x * freq, z * freq) * amp; freq *= 2.02; amp *= 0.52; }
+    return value;
+  }
+  function terrainHeight(x, z) {
+    const broad = fbm(x * 0.45 + 500, z * 0.45 - 200);
+    const detail = fbm(x, z);
+    let h = Math.floor(4 + detail * 18 + broad * 12);
+    const ridge = Math.abs(noise2(x * 0.012 - 300, z * 0.012 + 800) - 0.5) * 2;
+    h += Math.floor(ridge * 5);
+    return Math.max(3, Math.min(MAX_Y - 8, h));
+  }
+
+  function applyEditsForChunk(cx, cz) {
+    const x0 = cx * CHUNK_SIZE, z0 = cz * CHUNK_SIZE;
+    edits.forEach((type, k) => {
+      const p = k.split(',');
+      const x = +p[0], y = +p[1], z = +p[2];
+      if (x >= x0 && x < x0 + CHUNK_SIZE && z >= z0 && z < z0 + CHUNK_SIZE) {
+        if (type) world.set(k, type); else world.delete(k);
+      }
+    });
+  }
+
+  function spawnPickupAt(x, y, z, amount) {
+    pickups.push({ x: x + .5, y: y + .35, z: z + .5, amount, bob: seededHash(x * 5.1, z * 9.3) * 10 });
+  }
+
+  function generateChunk(cx, cz) {
+    if (!chunkInWorld(cx, cz)) return;
+    const ck = chunkKey(cx, cz);
+    if (loadedChunks.has(ck)) return;
+    loadedChunks.add(ck);
+    const x0 = cx * CHUNK_SIZE, z0 = cz * CHUNK_SIZE;
+    for (let lx = 0; lx < CHUNK_SIZE; lx++) {
+      for (let lz = 0; lz < CHUNK_SIZE; lz++) {
+        const x = x0 + lx, z = z0 + lz;
+        const h = terrainHeight(x, z);
+        const beach = h <= WATER_LEVEL + 2;
+        const desert = noise2(x * 0.035 + 90, z * 0.035 - 30) > 0.66 && h < WATER_LEVEL + 9;
+        const topType = (beach || desert) ? BLOCK.SAND : BLOCK.GRASS;
+        for (let y = 0; y <= h; y++) {
+          let type = BLOCK.STONE;
+          if (y === h) type = topType;
+          else if (y > h - 4) type = (beach || desert) ? BLOCK.SAND : BLOCK.DIRT;
+          genSetBlock(x, y, z, type);
+        }
+        if (h < WATER_LEVEL) {
+          for (let y = h + 1; y <= WATER_LEVEL; y++) genSetBlock(x, y, z, BLOCK.WATER);
+        }
+      }
+    }
+    // Trees are limited away from chunk borders so chunks can be generated/unloaded cleanly.
+    for (let lx = 2; lx < CHUNK_SIZE - 2; lx++) {
+      for (let lz = 2; lz < CHUNK_SIZE - 2; lz++) {
+        const x = x0 + lx, z = z0 + lz;
+        const h = terrainHeight(x, z);
+        if (h > WATER_LEVEL + 1 && seededHash(x * 8.31, z * 3.77) > 0.985) {
+          const trunk = 4 + Math.floor(seededHash(x + 11.2, z - 4.1) * 3);
+          for (let y = 1; y <= trunk; y++) genSetBlock(x, h + y, z, BLOCK.WOOD);
+          const crownY = h + trunk;
+          for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++) for (let dy = -1; dy <= 2; dy++) {
+            const dist = Math.abs(dx) + Math.abs(dz) + Math.max(0, dy - 1);
+            if (dist <= 4 && seededHash(x + dx * 19 + dy, z + dz * 23) > 0.08) {
+              const bx = x + dx, by = crownY + dy, bz = z + dz;
+              if (!getBlock(bx, by, bz)) genSetBlock(bx, by, bz, BLOCK.LEAF);
+            }
+          }
+        }
+      }
+    }
+    for (let lx = 3; lx < CHUNK_SIZE - 3; lx += 2) {
+      for (let lz = 3; lz < CHUNK_SIZE - 3; lz += 2) {
+        const x = x0 + lx, z = z0 + lz;
+        const h = terrainHeight(x, z);
+        const rockNoise = seededHash(x * 4.13 + 15, z * 6.71 - 8);
+        if (h > WATER_LEVEL + 1 && rockNoise > 0.965) {
+          const radius = 1 + Math.floor(seededHash(x - 21, z + 32) * 2.2);
+          const height = 1 + Math.floor(seededHash(x + 5, z - 17) * 3.3);
+          for (let dx = -radius; dx <= radius; dx++) for (let dz = -radius; dz <= radius; dz++) {
+            const falloff = Math.abs(dx) + Math.abs(dz);
+            const stack = Math.max(1, height - Math.floor(falloff * .7));
+            if (falloff <= radius + 1 && seededHash(x + dx * 9.1, z + dz * 7.7) > 0.12) {
+              const bx = x + dx, bz = z + dz, by = terrainHeight(bx, bz) + 1;
+              for (let y = 0; y < stack; y++) genSetBlock(bx, by + y, bz, BLOCK.STONE);
+            }
+          }
+        }
+      }
+    }
+    if (seededHash(cx * 20.2 + 19, cz * 17.7 - 3) > 0.72) {
+      const lx = 3 + Math.floor(seededHash(cx + 77, cz - 42) * 10);
+      const lz = 3 + Math.floor(seededHash(cx - 14, cz + 91) * 10);
+      const x = x0 + lx, z = z0 + lz, y = terrainHeight(x, z) + 1;
+      if (y > WATER_LEVEL + 1) spawnPickupAt(x, y, z, 12 + Math.floor(seededHash(x, z) * 28));
+    }
+    applyEditsForChunk(cx, cz);
+  }
+
+  function unloadChunk(cx, cz) {
+    const ck = chunkKey(cx, cz);
+    if (!loadedChunks.has(ck)) return;
+    loadedChunks.delete(ck);
+    const x0 = cx * CHUNK_SIZE, z0 = cz * CHUNK_SIZE;
+    for (let x = x0; x < x0 + CHUNK_SIZE; x++) {
+      for (let z = z0; z < z0 + CHUNK_SIZE; z++) {
+        for (let y = -4; y <= MAX_Y + 26; y++) world.delete(keyOf(x, y, z));
+      }
+    }
+    // Keep living things mostly near the player and currently loaded area.
+    pickups = pickups.filter(p => chunkCoord(p.x) !== cx || chunkCoord(p.z) !== cz || Math.hypot(p.x - player.pos[0], p.z - player.pos[2]) < 28);
+    enemies = enemies.filter(e => chunkCoord(e.x) !== cx || chunkCoord(e.z) !== cz || Math.hypot(e.x - player.pos[0], e.z - player.pos[2]) < 36);
+  }
+
+  function ensureChunks(force = false) {
+    if (!force && loadedChunks.size >= (WORLD_CHUNK_RADIUS * 2 + 1) ** 2) return;
+    currentChunkX = 0; currentChunkZ = 0;
+    for (let cx = -WORLD_CHUNK_RADIUS; cx <= WORLD_CHUNK_RADIUS; cx++) {
+      for (let cz = -WORLD_CHUNK_RADIUS; cz <= WORLD_CHUNK_RADIUS; cz++) generateChunk(cx, cz);
+    }
+    queueRebuild();
+  }
+
+  function topSolidY(x, z) {
+    x = Math.max(WORLD_MIN, Math.min(WORLD_MAX, Math.floor(x)));
+    z = Math.max(WORLD_MIN, Math.min(WORLD_MAX, Math.floor(z)));
+    generateChunk(chunkCoord(x), chunkCoord(z));
+    for (let y = MAX_Y + 25; y >= 0; y--) {
+      const t = getBlock(x, y, z);
+      if (t && t !== BLOCK.WATER && t !== BLOCK.LEAF) return y;
+    }
+    return terrainHeight(x, z);
+  }
+
+  const faces = [
+    { n: [ 1, 0, 0], v: [[1,0,0],[1,1,0],[1,1,1],[1,0,1]] },
+    { n: [-1, 0, 0], v: [[0,0,1],[0,1,1],[0,1,0],[0,0,0]] },
+    { n: [ 0, 1, 0], v: [[0,1,1],[1,1,1],[1,1,0],[0,1,0]] },
+    { n: [ 0,-1, 0], v: [[0,0,0],[1,0,0],[1,0,1],[0,0,1]] },
+    { n: [ 0, 0, 1], v: [[1,0,1],[1,1,1],[0,1,1],[0,0,1]] },
+    { n: [ 0, 0,-1], v: [[0,0,0],[0,1,0],[1,1,0],[1,0,0]] }
+  ];
+  const tri = [0, 1, 2, 0, 2, 3];
+  const uvs = [[0,0], [0,1], [1,1], [1,0]];
+
+  function neighborHidesFace(type, neighborType) {
+    if (!neighborType) return false;
+    if (type === BLOCK.WATER) return true;
+    return neighborType !== BLOCK.WATER;
+  }
+  function pushFace(arr, x, y, z, face, type) {
+    for (const idx of tri) {
+      const p = face.v[idx], uv = uvs[idx];
+      arr.push(x + p[0], y + p[1], z + p[2], face.n[0], face.n[1], face.n[2], uv[0], uv[1], type);
+    }
+  }
+  function pushBox(arr, x, y, z, w, h, d, type) {
+    const boxFaces = [
+      { n: [ 1,0,0], v: [[w,0,0],[w,h,0],[w,h,d],[w,0,d]] },
+      { n: [-1,0,0], v: [[0,0,d],[0,h,d],[0,h,0],[0,0,0]] },
+      { n: [0, 1,0], v: [[0,h,d],[w,h,d],[w,h,0],[0,h,0]] },
+      { n: [0,-1,0], v: [[0,0,0],[w,0,0],[w,0,d],[0,0,d]] },
+      { n: [0,0, 1], v: [[w,0,d],[w,h,d],[0,h,d],[0,0,d]] },
+      { n: [0,0,-1], v: [[0,0,0],[0,h,0],[w,h,0],[w,0,0]] }
+    ];
+    for (const f of boxFaces) pushFace(arr, x, y, z, f, type);
+  }
+
+  function pushBoxY(arr, cx, y, cz, x0, y0, z0, w, h, d, yaw, type) {
+    const c = Math.cos(yaw), s = Math.sin(yaw);
+    const x1 = x0 + w, y1 = y0 + h, z1 = z0 + d;
+    const boxFaces = [
+      { n: [ 1,0,0], v: [[x1,y0,z0],[x1,y1,z0],[x1,y1,z1],[x1,y0,z1]] },
+      { n: [-1,0,0], v: [[x0,y0,z1],[x0,y1,z1],[x0,y1,z0],[x0,y0,z0]] },
+      { n: [0, 1,0], v: [[x0,y1,z1],[x1,y1,z1],[x1,y1,z0],[x0,y1,z0]] },
+      { n: [0,-1,0], v: [[x0,y0,z0],[x1,y0,z0],[x1,y0,z1],[x0,y0,z1]] },
+      { n: [0,0, 1], v: [[x1,y0,z1],[x1,y1,z1],[x0,y1,z1],[x0,y0,z1]] },
+      { n: [0,0,-1], v: [[x0,y0,z0],[x0,y1,z0],[x1,y1,z0],[x1,y0,z0]] }
+    ];
+    for (const f of boxFaces) {
+      const nx = f.n[0] * c - f.n[2] * s;
+      const nz = f.n[0] * s + f.n[2] * c;
+      for (const idx of tri) {
+        const p = f.v[idx], uv = uvs[idx];
+        const wx = cx + p[0] * c - p[2] * s;
+        const wz = cz + p[0] * s + p[2] * c;
+        arr.push(wx, y + p[1], wz, nx, f.n[1], nz, uv[0], uv[1], type);
+      }
+    }
+  }
+
+  function makeMesh(data) {
+    const buffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), gl.STATIC_DRAW);
+    return { buffer, count: data.length / 9 };
+  }
+  function rebuildMeshes() {
+    const opaque = [], water = [];
+    world.forEach((type, k) => {
+      const parts = k.split(',');
+      const x = +parts[0], y = +parts[1], z = +parts[2];
+      const arr = type === BLOCK.WATER ? water : opaque;
+      for (const f of faces) {
+        const nt = getBlock(x + f.n[0], y + f.n[1], z + f.n[2]);
+        if (!neighborHidesFace(type, nt)) pushFace(arr, x, y, z, f, type);
+      }
+    });
+    if (meshes.opaque) gl.deleteBuffer(meshes.opaque.buffer);
+    if (meshes.water) gl.deleteBuffer(meshes.water.buffer);
+    meshes.opaque = makeMesh(opaque);
+    meshes.water = makeMesh(water);
+    worldBlockCount = world.size;
+    rebuildQueued = false;
+  }
+  function queueRebuild() {
+    if (!rebuildQueued) { rebuildQueued = true; requestAnimationFrame(rebuildMeshes); }
+  }
+
+  function collidesAt(pos) {
+    const minX = Math.floor(pos[0] - PLAYER_RADIUS), maxX = Math.floor(pos[0] + PLAYER_RADIUS);
+    const minY = Math.floor(pos[1]), maxY = Math.floor(pos[1] + PLAYER_HEIGHT);
+    const minZ = Math.floor(pos[2] - PLAYER_RADIUS), maxZ = Math.floor(pos[2] + PLAYER_RADIUS);
+    for (let x = minX; x <= maxX; x++) for (let y = minY; y <= maxY; y++) for (let z = minZ; z <= maxZ; z++) {
+      if (blocksMovement(getBlock(x, y, z))) return true;
+    }
+    return false;
+  }
+  function moveAxis(axis, amount) {
+    if (amount === 0) return;
+    player.pos[axis] += amount;
+    if (collidesAt(player.pos)) {
+      const dir = Math.sign(amount);
+      if (axis === 0) player.pos[axis] = dir > 0 ? Math.floor(player.pos[axis] + PLAYER_RADIUS) - PLAYER_RADIUS - 0.001 : Math.floor(player.pos[axis] - PLAYER_RADIUS + 1) + PLAYER_RADIUS + 0.001;
+      if (axis === 1) {
+        if (dir < 0) { player.pos[axis] = Math.floor(player.pos[axis]) + 1.001; player.grounded = true; }
+        else player.pos[axis] = Math.floor(player.pos[axis] + PLAYER_HEIGHT) - PLAYER_HEIGHT - 0.001;
+        player.vel[1] = 0;
+      }
+      if (axis === 2) player.pos[axis] = dir > 0 ? Math.floor(player.pos[axis] + PLAYER_RADIUS) - PLAYER_RADIUS - 0.001 : Math.floor(player.pos[axis] - PLAYER_RADIUS + 1) + PLAYER_RADIUS + 0.001;
+    }
+  }
+
+  function updateMovement(dt) {
+    const forward = [Math.sin(player.yaw), 0, Math.cos(player.yaw)];
+    const right = [Math.cos(player.yaw), 0, -Math.sin(player.yaw)];
+    let mx = 0, mz = 0;
+    if (keys.KeyW || keys.ArrowUp) { mx += forward[0]; mz += forward[2]; }
+    if (keys.KeyS || keys.ArrowDown) { mx -= forward[0]; mz -= forward[2]; }
+    if (keys.KeyD || keys.ArrowRight) { mx += right[0]; mz += right[2]; }
+    if (keys.KeyA || keys.ArrowLeft) { mx -= right[0]; mz -= right[2]; }
+    if (touchInput.moveY || touchInput.moveX) {
+      mx += forward[0] * -touchInput.moveY + right[0] * touchInput.moveX;
+      mz += forward[2] * -touchInput.moveY + right[2] * touchInput.moveX;
+    }
+    const len = Math.hypot(mx, mz) || 1; mx /= len; mz /= len;
+    const sprint = keys.ShiftLeft || keys.ShiftRight || touchInput.sprint;
+    const speed = (player.fly ? 9.5 : 5.35) * (sprint ? 1.55 : 1.0);
+    player.vel[0] = mx * speed; player.vel[2] = mz * speed;
+    if (player.fly) {
+      player.vel[1] = 0;
+      if (keys.Space || touchInput.jump) player.vel[1] += speed;
+      if (keys.ControlLeft || keys.ControlRight || keys.KeyC) player.vel[1] -= speed;
+      player.grounded = false;
+    } else {
+      player.vel[1] -= 22 * dt;
+      if ((keys.Space || touchInput.jump) && player.grounded) { player.vel[1] = 8.2; player.grounded = false; }
+    }
+    moveAxis(0, player.vel[0] * dt);
+    moveAxis(2, player.vel[2] * dt);
+    clampToWorld(player.pos);
+    player.grounded = false;
+    moveAxis(1, player.vel[1] * dt);
+    clampToWorld(player.pos);
+    ensureChunks();
+    if (player.pos[1] < -20) damagePlayer(999);
+  }
+
+  function enemySpawnPoint() {
+    for (let i = 0; i < 28; i++) {
+      const a = seededHash(performance.now() * .001 + i, player.pos[0] + i) * Math.PI * 2;
+      const r = 24 + seededHash(player.pos[2] - i * 17, performance.now() * .002) * 38;
+      const x = Math.floor(player.pos[0] + Math.cos(a) * r);
+      const z = Math.floor(player.pos[2] + Math.sin(a) * r);
+      if (!inWorldXZ(x, z)) continue;
+      generateChunk(chunkCoord(x), chunkCoord(z));
+      const y = topSolidY(x, z) + 1;
+      if (y > WATER_LEVEL + 1 && !blocksMovement(getBlock(x, y, z))) return { x: x + .5, y, z: z + .5 };
+    }
+    return null;
+  }
+  function spawnEnemy() {
+    const p = enemySpawnPoint();
+    if (!p) return;
+    const big = seededHash(p.x * 9.1, p.z * 3.2) > 0.82;
+    const dx = player.pos[0] - p.x, dz = player.pos[2] - p.z;
+    enemies.push({ x: p.x, y: p.y, z: p.z, hp: big ? 80 : 48, maxHp: big ? 80 : 48, speed: big ? 2.0 : 2.55, attack: 0, phase: seededHash(p.x, p.z) * 10, big, face: Math.atan2(dx, -dz) });
+  }
+
+  function lerpAngle(a, b, t) {
+    let d = ((b - a + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+    return a + d * t;
+  }
+
+  function updateEnemies(dt) {
+    nextSpawnTimer -= dt;
+    if (nextSpawnTimer <= 0 && enemies.length < ENEMY_CAP) {
+      spawnEnemy();
+      nextSpawnTimer = 3.0 + Math.random() * 4.2 + Math.min(7, enemies.length * .25);
+    }
+    for (const e of enemies) {
+      e.phase += dt;
+      const dx = player.pos[0] - e.x, dz = player.pos[2] - e.z;
+      const dist = Math.hypot(dx, dz) || 1;
+      const targetFace = Math.atan2(dx, -dz);
+      e.face = lerpAngle(e.face ?? targetFace, targetFace, Math.min(1, dt * 9));
+      if (dist < 70) {
+        const step = e.speed * dt;
+        const nx = e.x + (dx / dist) * step;
+        const nz = e.z + (dz / dist) * step;
+        const gx = Math.floor(nx), gz = Math.floor(nz);
+        const ground = topSolidY(gx, gz);
+        if (ground > WATER_LEVEL - 1 && ground < e.y + 2.5) {
+          e.x = nx; e.z = nz; e.y += ((ground + 1) - e.y) * Math.min(1, dt * 8);
+        }
+      }
+      e.attack -= dt;
+      if (dist < 1.35 && Math.abs(player.pos[1] - e.y) < 2.1 && e.attack <= 0) {
+        damagePlayer(e.big ? 22 : 14);
+        e.attack = e.big ? 1.25 : .9;
+      }
+    }
+    enemies = enemies.filter(e => e.hp > 0 && Math.hypot(e.x - player.pos[0], e.z - player.pos[2]) < 130);
+  }
+
+  function damagePlayer(amount) {
+    if (player.invuln > 0) return;
+    player.health -= amount;
+    player.invuln = .45;
+    pulseDamage();
+    sound('hurt');
+    if (player.health <= 0) respawn();
+  }
+  function respawn() {
+    player.deaths++;
+    player.health = 100;
+    player.mag = MAG_SIZE;
+    player.reserve = Math.max(player.reserve, 24);
+    player.reloading = false;
+    player.reloadTimer = 0;
+    reloadOverlay.classList.remove('show');
+    reloadOverlayFill.style.width = '0%';
+    const sx = 0, sz = 0;
+    player.pos = [sx + .5, topSolidY(sx, sz) + 2.2, sz + .5];
+    player.vel = [0, 0, 0];
+    currentChunkX = 999999;
+    currentChunkZ = 999999;
+    ensureChunks(true);
+    enemies = enemies.filter(e => Math.hypot(e.x - player.pos[0], e.z - player.pos[2]) > 34);
+    showToast('You died — respawned at the old marker. Deaths: ' + player.deaths);
+  }
+
+  function startReload() {
+    if (player.reloading || player.mag >= MAG_SIZE || player.reserve <= 0) return;
+    player.reloading = true;
+    player.reloadTimer = RELOAD_TIME;
+    reloadText.textContent = 'Reloading...';
+    reloadOverlay.classList.add('show');
+    reloadOverlayFill.style.width = '0%';
+    sound('reloadStart');
+  }
+  function finishReload() {
+    const need = MAG_SIZE - player.mag;
+    const take = Math.min(need, player.reserve);
+    player.mag += take;
+    player.reserve -= take;
+    player.reloading = false;
+    player.reloadTimer = 0;
+    reloadText.textContent = '';
+    reloadOverlay.classList.remove('show');
+    reloadOverlayFill.style.width = '0%';
+    sound('reloadDone');
+  }
+
+  function entityHitAt(px, py, pz) {
+    for (const e of enemies) {
+      const sx = e.big ? .62 : .48;
+      const top = e.y + (e.big ? 2.25 : 1.9);
+      const headLine = e.y + (e.big ? 1.42 : 1.26);
+      if (Math.abs(px - e.x) < sx && Math.abs(pz - e.z) < sx && py >= e.y && py <= top) return { enemy: e, head: py >= headLine };
+    }
+    return null;
+  }
+  function raycastProjectile(maxDist) {
+    const e = eyePos();
+    const d = lookDir();
+    let prevBlock = null;
+    for (let t = 0; t <= maxDist; t += 0.065) {
+      const px = e[0] + d[0] * t;
+      const py = e[1] + d[1] * t;
+      const pz = e[2] + d[2] * t;
+      const hitEnemy = entityHitAt(px, py, pz);
+      if (hitEnemy) return { kind: 'enemy', enemy: hitEnemy.enemy, head: hitEnemy.head, point: [px, py, pz], dist: t };
+      const bx = Math.floor(px), by = Math.floor(py), bz = Math.floor(pz);
+      const type = getBlock(bx, by, bz);
+      if (type && type !== BLOCK.WATER) return { kind: 'block', x: bx, y: by, z: bz, type, point: [px, py, pz], prev: prevBlock, dist: t };
+      prevBlock = { x: bx, y: by, z: bz };
+    }
+    return { kind: 'miss', point: [e[0] + d[0] * maxDist, e[1] + d[1] * maxDist, e[2] + d[2] * maxDist] };
+  }
+  function shoot() {
+    if (player.reloading) return;
+    if (player.mag <= 0) { showToast('Empty. Reload.'); sound('empty'); startReload(); return; }
+    player.mag--;
+    gun.classList.remove('fire');
+    void gun.offsetWidth;
+    gun.classList.add('fire');
+    setTimeout(() => gun.classList.remove('fire'), 80);
+    sound('shoot');
+    const hit = raycastProjectile(58);
+    if (hit.kind === 'enemy') {
+      const damage = hit.head ? 52 : 28;
+      hit.enemy.hp -= damage;
+      spawnParticles(hit.point[0], hit.point[1], hit.point[2], hit.head ? 12 : 8, hit.head ? 12 : 15);
+      sound(hit.head ? 'head' : 'hit');
+      if (hit.head) { player.score += 50; scorePop('+50 HEADSHOT', 'head'); }
+      if (hit.enemy.hp <= 0) {
+        player.kills++;
+        player.score += 100;
+        scorePop('+100 ENEMY DOWN', 'kill');
+        const now = performance.now() / 1000;
+        if (now - lastKillTime < 2.0) { player.score += 150; scorePop('+150 DOUBLE KILL', 'combo'); }
+        lastKillTime = now;
+        sound('kill');
+        if (Math.random() < .55) spawnPickupAt(Math.floor(hit.enemy.x), Math.floor(hit.enemy.y), Math.floor(hit.enemy.z), 10 + Math.floor(Math.random() * 22));
+        showToast('Enemy down. Kills: ' + player.kills);
+      }
+    } else if (hit.kind === 'block') {
+      player.score += 25;
+      scorePop('+25 BLOCK DAMAGE', 'block');
+      sound('block');
+      if (hit.y > 0 && hit.type !== BLOCK.LAMP) {
+        setBlock(hit.x, hit.y, hit.z, 0);
+        spawnParticles(hit.point[0], hit.point[1], hit.point[2], 6, 15);
+        queueRebuild();
+      } else {
+        spawnParticles(hit.point[0], hit.point[1], hit.point[2], 3, 15);
+      }
+    }
+    if (player.mag <= 0 && player.reserve > 0) startReload();
+  }
+
+  function spawnParticles(x, y, z, count, type) {
+    for (let i = 0; i < count; i++) {
+      particles.push({ x, y, z, vx: (Math.random() - .5) * 5, vy: Math.random() * 3.8, vz: (Math.random() - .5) * 5, life: .35 + Math.random() * .35, type });
+    }
+  }
+  function updateParticles(dt) {
+    for (const p of particles) {
+      p.life -= dt; p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt; p.vy -= 7 * dt;
+    }
+    particles = particles.filter(p => p.life > 0);
+  }
+
+  function updatePickups(dt) {
+    for (const p of pickups) {
+      p.bob += dt * 3.2;
+      const dist = Math.hypot(p.x - player.pos[0], p.z - player.pos[2]);
+      if (dist < 1.45 && Math.abs(p.y - player.pos[1]) < 2.2) {
+        player.reserve += p.amount;
+        p.collected = true;
+        showToast('Ammo +' + p.amount);
+        scorePop('+' + p.amount + ' AMMO PICKUP', 'pickup');
+        sound('pickup');
+      }
+    }
+    pickups = pickups.filter(p => !p.collected && Math.hypot(p.x - player.pos[0], p.z - player.pos[2]) < 120);
+  }
+
+  function aimTarget(maxDist) {
+    const e = eyePos();
+    const d = lookDir();
+    for (let t = 0; t <= maxDist; t += 0.09) {
+      const px = e[0] + d[0] * t, py = e[1] + d[1] * t, pz = e[2] + d[2] * t;
+      const enemy = entityHitAt(px, py, pz);
+      if (enemy) return { kind: 'enemy', hp: enemy.enemy.hp, maxHp: enemy.enemy.maxHp, head: enemy.head };
+      const bx = Math.floor(px), by = Math.floor(py), bz = Math.floor(pz);
+      const type = getBlock(bx, by, bz);
+      if (type && type !== BLOCK.WATER) return { kind: 'block', x: bx, y: by, z: bz, type };
+    }
+    return null;
+  }
+
+  function update(dt) {
+    if (!locked && menu.style.display !== 'none') {
+      updateHud();
+      return;
+    }
+    if (player.invuln > 0) player.invuln -= dt;
+    if (player.reloading) {
+      player.reloadTimer -= dt;
+      reloadText.textContent = 'Reloading ' + Math.max(0, player.reloadTimer).toFixed(1) + 's';
+      reloadOverlayFill.style.width = Math.max(0, Math.min(100, (1 - player.reloadTimer / RELOAD_TIME) * 100)) + '%';
+      if (player.reloadTimer <= 0) finishReload();
+    }
+    updateMovement(dt);
+    updateEnemies(dt);
+    updatePickups(dt);
+    updateParticles(dt);
+    lastTarget = aimTarget(42);
+    updateHud();
+  }
+
+  function blockName(type) {
+    if (type === BLOCK.WATER) return 'Water';
+    if (type === BLOCK.GRASS) return 'Grass';
+    if (type === BLOCK.DIRT) return 'Dirt';
+    if (type === BLOCK.STONE) return 'Stone';
+    if (type === BLOCK.WOOD) return 'Wood';
+    if (type === BLOCK.LEAF) return 'Leaves';
+    if (type === BLOCK.SAND) return 'Sand';
+    if (type === BLOCK.BRICK) return 'Brick';
+    if (type === BLOCK.LAMP) return 'Glow marker';
+    return 'Block';
+  }
+  function updateAmmoDisplay() {
+    const bullets = bulletRack.children;
+    for (let i = 0; i < MAG_SIZE; i++) {
+      bullets[i].classList.toggle('spent', i >= player.mag);
+    }
+    reserveText.textContent = 'Reserve ' + player.reserve;
+    weaponPanel.classList.toggle('reloading', player.reloading);
+  }
+
+  function updateHud() {
+    hudCoords.textContent = `x ${player.pos[0].toFixed(1)}  y ${player.pos[1].toFixed(1)}  z ${player.pos[2].toFixed(1)}`;
+    hudClock.textContent = dayAmount > .62 ? 'day' : (dayAmount > .22 ? 'dusk' : 'night');
+    hudClock.className = 'pill ' + (dayAmount > .62 ? 'good' : (dayAmount > .22 ? 'warn' : 'bad'));
+    hudHp.textContent = 'HP ' + Math.max(0, Math.round(player.health));
+    hudHp.className = 'pill ' + (player.health < 35 ? 'bad' : 'good');
+    hudChunks.textContent = 'chunks ' + loadedChunks.size;
+    hudKills.textContent = 'kills ' + player.kills;
+    hudScore.textContent = 'score ' + player.score;
+    const hpNow = Math.max(0, Math.round(player.health));
+    healthBigText.textContent = hpNow + '%';
+    healthStatus.className = hpNow < 35 ? 'danger' : (hpNow < 65 ? 'warn' : '');
+    healthBigFill.style.width = Math.max(0, player.health) + '%';
+    updateAmmoDisplay();
+    if (lastTarget && lastTarget.kind === 'enemy') hudTarget.textContent = `Reticle on voxel monster — HP ${Math.max(0, Math.ceil(lastTarget.hp))}/${lastTarget.maxHp}`;
+    else if (lastTarget && lastTarget.kind === 'block') hudTarget.textContent = `Aiming at ${blockName(lastTarget.type)} (${lastTarget.x}, ${lastTarget.y}, ${lastTarget.z}) — bullets break blocks`;
+    else hudTarget.textContent = `Enemies ${enemies.length}/${ENEMY_CAP} - Fixed outlands ${WORLD_MIN}..${WORLD_MAX} - Blocks ${worldBlockCount.toLocaleString()}`;
+  }
+
+  function bindVoxelMesh(mesh) {
+    gl.bindBuffer(gl.ARRAY_BUFFER, mesh.buffer);
+    const stride = 9 * 4;
+    gl.enableVertexAttribArray(loc.pos); gl.vertexAttribPointer(loc.pos, 3, gl.FLOAT, false, stride, 0);
+    gl.enableVertexAttribArray(loc.normal); gl.vertexAttribPointer(loc.normal, 3, gl.FLOAT, false, stride, 3 * 4);
+    gl.enableVertexAttribArray(loc.uv); gl.vertexAttribPointer(loc.uv, 2, gl.FLOAT, false, stride, 6 * 4);
+    gl.enableVertexAttribArray(loc.type); gl.vertexAttribPointer(loc.type, 1, gl.FLOAT, false, stride, 8 * 4);
+  }
+  function drawMesh(mesh) { if (!mesh || mesh.count === 0) return; bindVoxelMesh(mesh); gl.drawArrays(gl.TRIANGLES, 0, mesh.count); }
+
+  function buildDynamicMesh(time) {
+    const arr = [];
+    for (const e of enemies) {
+      const scale = e.big ? 1.18 : 1;
+      const bob = Math.sin(e.phase * 5) * .05;
+      const x = e.x, y = e.y + bob, z = e.z;
+      // Rotated block-monster silhouette: it turns as it moves, so the eye face points at you.
+      const yaw = e.face ?? Math.atan2(player.pos[0] - e.x, -(player.pos[2] - e.z));
+      pushBoxY(arr, x, y, z, -.18*scale, 0, -.18*scale, .22*scale, .45*scale, .22*scale, yaw, 11);
+      pushBoxY(arr, x, y, z,  .02*scale, 0, -.18*scale, .22*scale, .45*scale, .22*scale, yaw, 11);
+      pushBoxY(arr, x, y, z, -.18*scale, 0,  .02*scale, .22*scale, .45*scale, .22*scale, yaw, 11);
+      pushBoxY(arr, x, y, z,  .02*scale, 0,  .02*scale, .22*scale, .45*scale, .22*scale, yaw, 11);
+      pushBoxY(arr, x, y, z, -.34*scale, .36*scale, -.24*scale, .68*scale, .95*scale, .48*scale, yaw, 10);
+      pushBoxY(arr, x, y, z, -.42*scale, 1.22*scale, -.35*scale, .84*scale, .64*scale, .70*scale, yaw, 10);
+      pushBoxY(arr, x, y, z, -.22*scale, 1.48*scale, -.39*scale, .12*scale, .12*scale, .06*scale, yaw, 12);
+      pushBoxY(arr, x, y, z,  .10*scale, 1.48*scale, -.39*scale, .12*scale, .12*scale, .06*scale, yaw, 12);
+    }
+    for (const p of pickups) {
+      const y = p.y + Math.sin(p.bob) * .16;
+      pushBox(arr, p.x - .32, y, p.z - .32, .64, .38, .64, 13);
+      pushBox(arr, p.x - .22, y + .38, p.z - .22, .44, .12, .44, 14);
+    }
+    for (const p of particles) {
+      const s = .07 + p.life * .05;
+      pushBox(arr, p.x - s/2, p.y - s/2, p.z - s/2, s, s, s, p.type || 15);
+    }
+    gl.bindBuffer(gl.ARRAY_BUFFER, dynamicBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(arr), gl.DYNAMIC_DRAW);
+    meshes.dynamic = { buffer: dynamicBuffer, count: arr.length / 9 };
+  }
+
+  function cubeOutlineVertices(x, y, z) {
+    const e = 0.004;
+    const x0 = x - e, y0 = y - e, z0 = z - e, x1 = x + 1 + e, y1 = y + 1 + e, z1 = z + 1 + e;
+    return new Float32Array([
+      x0,y0,z0, x1,y0,z0,  x1,y0,z0, x1,y0,z1,  x1,y0,z1, x0,y0,z1,  x0,y0,z1, x0,y0,z0,
+      x0,y1,z0, x1,y1,z0,  x1,y1,z0, x1,y1,z1,  x1,y1,z1, x0,y1,z1,  x0,y1,z1, x0,y1,z0,
+      x0,y0,z0, x0,y1,z0,  x1,y0,z0, x1,y1,z0,  x1,y0,z1, x1,y1,z1,  x0,y0,z1, x0,y1,z1
+    ]);
+  }
+  function drawOutline(mvp) {
+    if (!lastTarget || lastTarget.kind !== 'block') return;
+    gl.useProgram(lineProgram);
+    gl.uniformMatrix4fv(lineLoc.mvp, false, mvp);
+    gl.uniform4f(lineLoc.color, 1, 1, 1, 0.75);
+    const verts = cubeOutlineVertices(lastTarget.x, lastTarget.y, lastTarget.z);
+    gl.bindBuffer(gl.ARRAY_BUFFER, lineBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, verts, gl.DYNAMIC_DRAW);
+    gl.enableVertexAttribArray(lineLoc.pos);
+    gl.vertexAttribPointer(lineLoc.pos, 3, gl.FLOAT, false, 0, 0);
+    gl.drawArrays(gl.LINES, 0, verts.length / 3);
+  }
+
+  function render(time) {
+    resize();
+    const sunAngle = time * 0.035 + 1.15;
+    const sunY = Math.sin(sunAngle);
+    dayAmount = Math.max(0, Math.min(1, (sunY + 0.18) / 0.9));
+    const dusk = 1 - Math.abs(dayAmount - 0.45) / 0.45;
+    const sky = [
+      0.05 + dayAmount * 0.47 + Math.max(0, dusk) * 0.12,
+      0.08 + dayAmount * 0.62 + Math.max(0, dusk) * 0.08,
+      0.16 + dayAmount * 0.72
+    ];
+    gl.clearColor(sky[0], sky[1], sky[2], 1);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.enable(gl.DEPTH_TEST);
+    gl.disable(gl.CULL_FACE);
+
+    const aspect = canvas.width / canvas.height;
+    const proj = mat4Perspective(Math.PI / 3, aspect, 0.06, 170);
+    const e = eyePos();
+    const d = lookDir();
+    const view = mat4LookAt(e, [e[0] + d[0], e[1] + d[1], e[2] + d[2]], [0, 1, 0]);
+    const mvp = mat4Mul(proj, view);
+
+    gl.useProgram(voxelProgram);
+    gl.uniformMatrix4fv(loc.mvp, false, mvp);
+    gl.uniform3f(loc.cam, e[0], e[1], e[2]);
+    gl.uniform1f(loc.time, time);
+    gl.uniform3f(loc.light, Math.cos(sunAngle) * 0.68, Math.max(-0.18, sunY), Math.sin(sunAngle + 0.7) * 0.68);
+    gl.uniform3f(loc.sky, sky[0], sky[1], sky[2]);
+    gl.uniform1f(loc.day, dayAmount);
+    gl.disable(gl.BLEND);
+    gl.depthMask(true);
+    drawMesh(meshes.opaque);
+
+    buildDynamicMesh(time);
+    drawMesh(meshes.dynamic);
+
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    gl.depthMask(false);
+    drawMesh(meshes.water);
+    gl.depthMask(true);
+    gl.disable(gl.BLEND);
+
+    drawOutline(mvp);
+  }
+
+  function loop(now) {
+    const dt = Math.min(0.04, (now - lastFrame) / 1000 || 0.016);
+    lastFrame = now;
+    fpsAvg = fpsAvg * 0.92 + (1 / dt) * 0.08;
+    if ((frameCounter++ & 15) === 0) hudFps.textContent = Math.round(fpsAvg) + ' fps';
+    update(dt);
+    render(now / 1000);
+    requestAnimationFrame(loop);
+  }
+
+  function generateWorld(seed) {
+    currentSeed = seed;
+    hudSeed.textContent = 'seed ' + currentSeed;
+    world = new Map();
+    edits = new Map();
+    loadedChunks = new Set();
+    enemies = [];
+    pickups = [];
+    particles = [];
+    player.health = 100;
+    player.mag = MAG_SIZE;
+    player.reserve = 36;
+    player.kills = 0;
+    player.score = 0;
+    player.deaths = 0;
+    player.reloading = false;
+    player.reloadTimer = 0;
+    nextSpawnTimer = 3.5;
+    lastKillTime = -999;
+    reloadOverlay.classList.remove('show');
+    reloadOverlayFill.style.width = '0%';
+    currentChunkX = 999999;
+    currentChunkZ = 999999;
+    // Center landmark and starting chunks.
+    player.pos = [0.5, 18, 0.5];
+    ensureChunks(true);
+    for (let y = WATER_LEVEL + 1; y <= WATER_LEVEL + 5; y++) setBlock(2, y, 2, BLOCK.BRICK, true);
+    setBlock(2, WATER_LEVEL + 6, 2, BLOCK.LAMP, true);
+    player.pos = [0.5, topSolidY(0, 0) + 2.2, 0.5];
+    player.vel = [0, 0, 0];
+    ensureChunks(true);
+    rebuildMeshes();
+    showToast('New fixed-size outlands generated');
+  }
+
+  function startGame() {
+    getAudio();
+    if (touchMode) {
+      locked = true;
+      menu.style.display = 'none';
+      return;
+    }
+    canvas.requestPointerLock();
+  }
+  play.addEventListener('click', startGame);
+  canvas.addEventListener('click', () => { if (!locked && !touchMode) canvas.requestPointerLock(); });
+  document.addEventListener('pointerlockchange', () => {
+    if (touchMode) return;
+    locked = document.pointerLockElement === canvas;
+    menu.style.display = locked ? 'none' : 'flex';
+  });
+  document.addEventListener('mousemove', (e) => {
+    if (!locked) return;
+    player.yaw -= e.movementX * 0.0022;
+    player.pitch -= e.movementY * 0.0022;
+    const cap = Math.PI / 2 - 0.02;
+    player.pitch = Math.max(-cap, Math.min(cap, player.pitch));
+  });
+  document.addEventListener('keydown', (e) => {
+    keys[e.code] = true;
+    if (e.code === 'KeyR' && !e.repeat) startReload();
+    if (e.code === 'KeyF' && !e.repeat) { player.fly = !player.fly; player.vel[1] = 0; showToast(player.fly ? 'Debug fly on' : 'Debug fly off'); }
+    if (e.code === 'KeyN' && !e.repeat) generateWorld(Math.floor(Math.random() * 999999));
+  });
+  document.addEventListener('keyup', (e) => { keys[e.code] = false; });
+  canvas.addEventListener('mousedown', (e) => {
+    if (!locked) { canvas.requestPointerLock(); return; }
+    if (e.button === 0) shoot();
+    if (e.button === 2) startReload();
+  });
+  canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+  function updateStick(clientX, clientY) {
+    const r = stickBase.getBoundingClientRect();
+    const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    const max = r.width * .36;
+    let dx = clientX - cx, dy = clientY - cy;
+    const len = Math.hypot(dx, dy);
+    if (len > max) { dx = dx / len * max; dy = dy / len * max; }
+    touchInput.moveX = dx / max;
+    touchInput.moveY = dy / max;
+    stickKnob.style.transform = `translate(${dx}px, ${dy}px)`;
+  }
+  function resetStick() {
+    touchInput.moveX = 0;
+    touchInput.moveY = 0;
+    touchInput.stickId = null;
+    stickKnob.style.transform = 'translate(0, 0)';
+  }
+  stickBase.addEventListener('pointerdown', (e) => {
+    touchMode = true;
+    touchInput.stickId = e.pointerId;
+    stickBase.setPointerCapture(e.pointerId);
+    updateStick(e.clientX, e.clientY);
+    e.preventDefault();
+  });
+  stickBase.addEventListener('pointermove', (e) => {
+    if (touchInput.stickId === e.pointerId) updateStick(e.clientX, e.clientY);
+  });
+  stickBase.addEventListener('pointerup', resetStick);
+  stickBase.addEventListener('pointercancel', resetStick);
+
+  function bindTouchButton(btn, down, up) {
+    btn.addEventListener('pointerdown', (e) => { touchMode = true; btn.classList.add('active'); down(); btn.setPointerCapture(e.pointerId); e.preventDefault(); });
+    const clear = () => { btn.classList.remove('active'); if (up) up(); };
+    btn.addEventListener('pointerup', clear);
+    btn.addEventListener('pointercancel', clear);
+  }
+  bindTouchButton(touchShoot, () => shoot());
+  bindTouchButton(touchJump, () => { touchInput.jump = true; }, () => { touchInput.jump = false; });
+  bindTouchButton(touchReload, () => startReload());
+  bindTouchButton(touchSprint, () => { touchInput.sprint = true; }, () => { touchInput.sprint = false; });
+
+  canvas.addEventListener('pointerdown', (e) => {
+    if (!touchMode || e.pointerType === 'mouse' || e.target !== canvas) return;
+    locked = true;
+    menu.style.display = 'none';
+    touchInput.lookId = e.pointerId;
+    touchInput.lookX = e.clientX;
+    touchInput.lookY = e.clientY;
+    canvas.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  });
+  canvas.addEventListener('pointermove', (e) => {
+    if (touchInput.lookId !== e.pointerId) return;
+    const dx = e.clientX - touchInput.lookX, dy = e.clientY - touchInput.lookY;
+    player.yaw -= dx * 0.0052;
+    player.pitch -= dy * 0.0052;
+    const cap = Math.PI / 2 - 0.02;
+    player.pitch = Math.max(-cap, Math.min(cap, player.pitch));
+    touchInput.lookX = e.clientX;
+    touchInput.lookY = e.clientY;
+    e.preventDefault();
+  });
+  function clearLook(e) {
+    if (touchInput.lookId === e.pointerId) touchInput.lookId = null;
+  }
+  canvas.addEventListener('pointerup', clearLook);
+  canvas.addEventListener('pointercancel', clearLook);
+
+  gl.enable(gl.DEPTH_TEST);
+  generateWorld(currentSeed);
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
