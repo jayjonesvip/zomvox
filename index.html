@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
 <title>JayVoxel Outlands - Single File Voxel Shooter</title>
 <style>
   :root{
@@ -16,10 +16,17 @@
   }
   *{ box-sizing:border-box; }
   html,body{ margin:0; height:100%; overflow:hidden; background:#06111c; color:var(--text); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; touch-action:none; }
-  #game{ position:fixed; inset:0; width:100vw; height:100vh; display:block; background:linear-gradient(#6fb1ff,#d7f0ff 45%,#8fc171); cursor:crosshair; touch-action:none; }
+  #game{ position:fixed; inset:0; width:100vw; height:100vh; display:block; background:linear-gradient(#6fb1ff,#d7f0ff 45%,#8fc171); cursor:crosshair; touch-action:none; will-change:transform; }
   #vignette{ pointer-events:none; position:fixed; inset:0; box-shadow: inset 0 0 160px rgba(0,0,0,.55), inset 0 -95px 135px rgba(0,0,0,.25); mix-blend-mode:multiply; z-index:1; }
   #damageFlash{ pointer-events:none; position:fixed; inset:0; background:radial-gradient(circle at 50% 50%, rgba(255,0,0,0), rgba(255,0,0,.32)); opacity:0; transition:opacity .22s; z-index:12; }
   #damageFlash.hit{ opacity:1; transition:opacity .04s; }
+  body.shaking #game{ animation:screenShake .22s cubic-bezier(.36,.07,.19,.97) both; }
+  @keyframes screenShake{
+    10%,90%{ transform:translate3d(-2px,1px,0); }
+    20%,80%{ transform:translate3d(4px,-2px,0); }
+    30%,50%,70%{ transform:translate3d(-7px,2px,0); }
+    40%,60%{ transform:translate3d(7px,-1px,0); }
+  }
 
   #reticle{ pointer-events:none; position:fixed; left:50%; top:50%; width:48px; height:48px; transform:translate(-50%,-50%); filter:drop-shadow(0 2px 4px rgba(0,0,0,.85)); z-index:8; }
   #reticle::before{ content:""; position:absolute; inset:12px; border:2px solid rgba(255,255,255,.92); border-radius:999px; box-shadow:0 0 0 1px rgba(0,0,0,.55), inset 0 0 0 1px rgba(0,0,0,.35); }
@@ -104,6 +111,10 @@
   .grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin:18px 0 22px; }
   .tip{ border:1px solid rgba(255,255,255,.13); background:rgba(255,255,255,.055); border-radius:14px; padding:10px 12px; color:#d4e5f2; font-size:14px; }
   .tip kbd{ display:inline-block; min-width:28px; text-align:center; padding:2px 7px; border-radius:7px; background:rgba(255,255,255,.13); border:1px solid rgba(255,255,255,.18); color:#fff; font-weight:800; box-shadow:inset 0 -1px 0 rgba(0,0,0,.45); }
+  .mobileTip{ display:none; }
+  .settingsPanel{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin:0 0 18px; }
+  .setting{ display:flex; align-items:center; gap:8px; border:1px solid rgba(255,255,255,.13); background:rgba(255,255,255,.055); border-radius:8px; padding:9px 10px; color:#dcecf7; font-size:13px; font-weight:800; user-select:none; }
+  .setting input{ width:18px; height:18px; accent-color:#86ee66; }
   button#play{ appearance:none; border:0; border-radius:16px; padding:14px 20px; color:#06230e; font-size:18px; font-weight:900; background:linear-gradient(180deg,#c5ffa8,#72df60); box-shadow:0 14px 40px rgba(105,216,90,.26), inset 0 2px 0 rgba(255,255,255,.45); cursor:pointer; }
   button#play:hover{ filter:brightness(1.05); }
   #toast{ pointer-events:none; position:fixed; right:14px; top:116px; max-width:350px; padding:10px 12px; border-radius:8px; background:rgba(4,11,16,.76); border:1px solid rgba(255,255,255,.16); color:#dff4ff; font-size:13px; opacity:0; transform:translateY(-8px); transition:.2s; backdrop-filter:blur(8px); z-index:13; }
@@ -125,6 +136,10 @@
     .grid{ grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin:10px 0 12px; }
     .tip{ border-radius:8px; padding:7px 8px; font-size:12px; }
     .tip kbd{ min-width:23px; padding:1px 5px; border-radius:5px; }
+    .desktopTip{ display:none; }
+    .mobileTip{ display:block; }
+    .settingsPanel{ grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; margin-bottom:12px; }
+    .setting{ padding:7px 8px; font-size:12px; }
     button#play{ border-radius:10px; padding:10px 16px; font-size:16px; }
     #hud{ display:none; }
     #hud > div:first-child span{ display:none; }
@@ -149,6 +164,12 @@
   @media (pointer: coarse){
     #mobileControls{ display:block; }
   }
+  body.hide-status #hud,
+  body.hide-health #healthStatus,
+  body.hide-ammo #weaponPanel,
+  body.hide-controls #mobileControls,
+  body.hide-reticle #reticle{ display:none !important; }
+  body.show-status #hud{ display:block; }
   @media (orientation: portrait){
     #portraitBlock{ display:flex; }
   }
@@ -199,10 +220,20 @@
     <h1>JayVoxel <b>Outlands</b></h1>
     <p class="subtitle">A fixed-size voxel survival shooter with day/night lighting, sand beaches, water, rocks, block-breaking bullets, six-round reloads, ammo crates, and monsters wandering in from the hills.</p>
     <div class="grid">
-      <div class="tip"><kbd>WASD</kbd> move &nbsp; <kbd>Mouse</kbd> aim</div>
-      <div class="tip"><kbd>Left</kbd> shoot &nbsp; <kbd>Right</kbd>/<kbd>R</kbd> reload</div>
-      <div class="tip"><kbd>Space</kbd> jump &nbsp; <kbd>Shift</kbd> sprint</div>
-      <div class="tip"><kbd>N</kbd> new world &nbsp; <kbd>F</kbd> debug fly</div>
+      <div class="tip desktopTip"><kbd>WASD</kbd> move &nbsp; <kbd>Mouse</kbd> aim</div>
+      <div class="tip desktopTip"><kbd>Left</kbd> shoot &nbsp; <kbd>Right</kbd>/<kbd>R</kbd> reload</div>
+      <div class="tip desktopTip"><kbd>Space</kbd> jump &nbsp; <kbd>Shift</kbd> sprint</div>
+      <div class="tip desktopTip"><kbd>N</kbd> new world &nbsp; <kbd>F</kbd> debug fly</div>
+      <div class="tip mobileTip"><kbd>Stick</kbd> move &nbsp; <kbd>Swipe</kbd> aim</div>
+      <div class="tip mobileTip"><kbd>Shoot</kbd> fire &nbsp; <kbd>Jump</kbd> hop</div>
+    </div>
+    <div class="settingsPanel">
+      <label class="setting"><input id="settingStatus" type="checkbox" />Status</label>
+      <label class="setting"><input id="settingHealth" type="checkbox" checked />Health</label>
+      <label class="setting"><input id="settingAmmo" type="checkbox" checked />Ammo</label>
+      <label class="setting"><input id="settingControls" type="checkbox" checked />Controls</label>
+      <label class="setting"><input id="settingSound" type="checkbox" checked />Sound</label>
+      <label class="setting"><input id="settingFullscreen" type="checkbox" checked />Fullscreen</label>
     </div>
     <button id="play">Play</button>
   </div>
@@ -249,6 +280,12 @@
   const touchShoot = $('touchShoot');
   const touchJump = $('touchJump');
   const touchSprint = $('touchSprint');
+  const settingStatus = $('settingStatus');
+  const settingHealth = $('settingHealth');
+  const settingAmmo = $('settingAmmo');
+  const settingControls = $('settingControls');
+  const settingSound = $('settingSound');
+  const settingFullscreen = $('settingFullscreen');
 
   const BLOCK = {
     GRASS: 1,
@@ -326,6 +363,7 @@
   let frameCounter = 0;
   let lastKillTime = -999;
   let dayAmount = 1;
+  let soundEnabled = true;
 
   function showToast(message) {
     toast.textContent = message;
@@ -383,6 +421,7 @@
     src.start(now); src.stop(now + dur + .02);
   }
   function sound(name) {
+    if (!soundEnabled) return;
     if (name === 'shoot') { noise(.045, .12, 950); tone(105, .05, 'sawtooth', .045, 55); }
     else if (name === 'empty') { tone(120, .07, 'square', .04, 85); }
     else if (name === 'reloadStart') { tone(180, .05, 'square', .04, 105); setTimeout(() => tone(260, .04, 'square', .035, 180), 110); }
@@ -401,6 +440,44 @@
     void damageFlash.offsetWidth;
     damageFlash.classList.add('hit');
     setTimeout(() => damageFlash.classList.remove('hit'), 90);
+  }
+  function shakeScreen() {
+    document.body.classList.remove('shaking');
+    void document.body.offsetWidth;
+    document.body.classList.add('shaking');
+    clearTimeout(shakeScreen.timer);
+    shakeScreen.timer = setTimeout(() => document.body.classList.remove('shaking'), 260);
+  }
+
+  function isMenuOpen() {
+    return menu.style.display !== 'none';
+  }
+
+  function applySettings() {
+    const showStatus = !!settingStatus.checked;
+    soundEnabled = !!settingSound.checked;
+    document.body.classList.toggle('show-status', showStatus);
+    document.body.classList.toggle('hide-status', !showStatus);
+    document.body.classList.toggle('hide-health', !settingHealth.checked);
+    document.body.classList.toggle('hide-ammo', !settingAmmo.checked);
+    document.body.classList.toggle('hide-controls', !settingControls.checked);
+  }
+
+  async function requestMobileFullscreen() {
+    if (!touchMode || !settingFullscreen.checked || document.fullscreenElement) return;
+    const target = document.documentElement;
+    try {
+      if (target.requestFullscreen) await target.requestFullscreen({ navigationUI: 'hide' });
+      else if (canvas.webkitRequestFullscreen) canvas.webkitRequestFullscreen();
+    } catch (_) {}
+  }
+  function initSettings() {
+    settingStatus.checked = !touchMode;
+    settingFullscreen.checked = touchMode;
+    [settingStatus, settingHealth, settingAmmo, settingControls, settingSound].forEach(el => {
+      el.addEventListener('change', applySettings);
+    });
+    applySettings();
   }
 
   function resize() {
@@ -1024,10 +1101,11 @@
   }
 
   function damagePlayer(amount) {
-    if (player.invuln > 0) return;
+    if (player.invuln > 0 || isMenuOpen()) return;
     player.health -= amount;
     player.invuln = .45;
     pulseDamage();
+    shakeScreen();
     sound('hurt');
     if (player.health <= 0) respawn();
   }
@@ -1399,10 +1477,12 @@
   }
 
   function startGame() {
-    getAudio();
+    applySettings();
+    if (soundEnabled) getAudio();
     if (touchMode) {
       locked = true;
       menu.style.display = 'none';
+      requestMobileFullscreen();
       return;
     }
     canvas.requestPointerLock();
@@ -1443,7 +1523,7 @@
     const len = Math.hypot(dx, dy);
     if (len > max) { dx = dx / len * max; dy = dy / len * max; }
     touchInput.moveX = dx / max;
-    touchInput.moveY = dy / max;
+    touchInput.moveY = -dy / max;
     stickKnob.style.transform = `translate(${dx}px, ${dy}px)`;
   }
   function resetStick() {
@@ -1502,6 +1582,7 @@
   canvas.addEventListener('pointerup', clearLook);
   canvas.addEventListener('pointercancel', clearLook);
 
+  initSettings();
   gl.enable(gl.DEPTH_TEST);
   generateWorld(currentSeed);
   requestAnimationFrame(loop);
