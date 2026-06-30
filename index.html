@@ -127,15 +127,20 @@
     .tip{ border-radius:8px; padding:7px 8px; font-size:12px; }
     .tip kbd{ min-width:23px; padding:1px 5px; border-radius:5px; }
     button#play{ border-radius:10px; padding:10px 16px; font-size:16px; }
-    #hud{ left:8px; top:8px; width:34vw; max-width:none; padding:8px; font-size:10px; }
+    #hud{ display:none; }
     #hud > div:first-child span{ display:none; }
     #hudrow,.hudrow{ gap:4px; margin-top:5px; }
     #coords,#seed{ display:none; }
     #target{ max-width:100%; }
-    #weaponPanel{ right:8px; top:8px; width:31vw; min-width:0; padding:8px; }
-    #healthStatus{ top:8px; width:25vw; padding:8px; }
-    #healthBigText{ font-size:20px; }
-    .bigHealthBar{ height:10px; }
+    #weaponPanel{ right:8px; top:8px; width:90px; min-width:0; padding:7px 8px; text-align:center; }
+    #weaponPanel .label,#bulletRack{ display:none; }
+    #reserveText{ font-size:20px; line-height:1; }
+    #reloadText{ font-size:9px; min-height:11px; margin-top:3px; }
+    #healthStatus{ left:8px; top:8px; width:128px; padding:7px 8px; transform:none; }
+    #healthStatus .healthTop{ margin-bottom:5px; }
+    #healthStatus .healthLabel{ display:none; }
+    #healthBigText{ font-size:18px; }
+    .bigHealthBar{ height:8px; }
     .bullet{ height:19px; border-width:1px; }
     .bullet::before{ width:10px; height:8px; top:-6px; border-width:1px; }
     #gun{ right:0; transform:scale(.8) rotate(-2deg); }
@@ -286,7 +291,10 @@
   let currentChunkX = 999999;
   let currentChunkZ = 999999;
   let meshes = { opaque: null, water: null, dynamic: null };
+  let chunkMeshes = new Map();
+  let dirtyChunks = new Set();
   let rebuildQueued = false;
+  let fullRebuildQueued = false;
   let worldBlockCount = 0;
 
   const player = {
@@ -648,8 +656,8 @@
     });
   }
 
-  function spawnPickupAt(x, y, z, amount) {
-    pickups.push({ x: x + .5, y: y + .35, z: z + .5, amount, bob: seededHash(x * 5.1, z * 9.3) * 10 });
+  function spawnPickupAt(x, y, z) {
+    pickups.push({ x: x + .5, y: y + .35, z: z + .5, amount: 6, bob: seededHash(x * 5.1, z * 9.3) * 10 });
   }
 
   function generateChunk(cx, cz) {
@@ -718,7 +726,7 @@
       const lx = 3 + Math.floor(seededHash(cx + 77, cz - 42) * 10);
       const lz = 3 + Math.floor(seededHash(cx - 14, cz + 91) * 10);
       const x = x0 + lx, z = z0 + lz, y = terrainHeight(x, z) + 1;
-      if (y > WATER_LEVEL + 1) spawnPickupAt(x, y, z, 12 + Math.floor(seededHash(x, z) * 28));
+      if (y > WATER_LEVEL + 1) spawnPickupAt(x, y, z);
     }
     applyEditsForChunk(cx, cz);
   }
@@ -821,26 +829,81 @@
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), gl.STATIC_DRAW);
     return { buffer, count: data.length / 9 };
   }
-  function rebuildMeshes() {
+  function disposeMesh(mesh) {
+    if (mesh && mesh.buffer) gl.deleteBuffer(mesh.buffer);
+  }
+  function disposeChunkMesh(ck) {
+    const old = chunkMeshes.get(ck);
+    if (!old) return;
+    disposeMesh(old.opaque);
+    disposeMesh(old.water);
+    chunkMeshes.delete(ck);
+  }
+  function buildChunkMesh(cx, cz) {
     const opaque = [], water = [];
-    world.forEach((type, k) => {
-      const parts = k.split(',');
-      const x = +parts[0], y = +parts[1], z = +parts[2];
-      const arr = type === BLOCK.WATER ? water : opaque;
-      for (const f of faces) {
-        const nt = getBlock(x + f.n[0], y + f.n[1], z + f.n[2]);
-        if (!neighborHidesFace(type, nt)) pushFace(arr, x, y, z, f, type);
+    const x0 = cx * CHUNK_SIZE, z0 = cz * CHUNK_SIZE;
+    for (let x = x0; x < x0 + CHUNK_SIZE; x++) {
+      for (let z = z0; z < z0 + CHUNK_SIZE; z++) {
+        for (let y = 0; y <= MAX_Y + 26; y++) {
+          const type = getBlock(x, y, z);
+          if (!type) continue;
+          const arr = type === BLOCK.WATER ? water : opaque;
+          for (const f of faces) {
+            const nt = getBlock(x + f.n[0], y + f.n[1], z + f.n[2]);
+            if (!neighborHidesFace(type, nt)) pushFace(arr, x, y, z, f, type);
+          }
+        }
       }
-    });
-    if (meshes.opaque) gl.deleteBuffer(meshes.opaque.buffer);
-    if (meshes.water) gl.deleteBuffer(meshes.water.buffer);
+    }
+    const ck = chunkKey(cx, cz);
+    disposeChunkMesh(ck);
+    chunkMeshes.set(ck, { opaque: makeMesh(opaque), water: makeMesh(water) });
+  }
+  function rebuildMeshes() {
+    [...chunkMeshes.keys()].forEach(ck => disposeChunkMesh(ck));
+    const opaque = [], water = [];
+    // Keep empty global meshes for compatibility; terrain is drawn per chunk.
+    disposeMesh(meshes.opaque);
+    disposeMesh(meshes.water);
     meshes.opaque = makeMesh(opaque);
     meshes.water = makeMesh(water);
+    loadedChunks.forEach(k => {
+      const parts = k.split(',');
+      buildChunkMesh(+parts[0], +parts[1]);
+    });
     worldBlockCount = world.size;
+    dirtyChunks.clear();
+    fullRebuildQueued = false;
     rebuildQueued = false;
   }
-  function queueRebuild() {
-    if (!rebuildQueued) { rebuildQueued = true; requestAnimationFrame(rebuildMeshes); }
+  function markDirtyChunk(cx, cz) {
+    if (chunkInWorld(cx, cz) && loadedChunks.has(chunkKey(cx, cz))) dirtyChunks.add(chunkKey(cx, cz));
+  }
+  function rebuildDirtyChunks() {
+    dirtyChunks.forEach(k => {
+      const parts = k.split(',');
+      buildChunkMesh(+parts[0], +parts[1]);
+    });
+    worldBlockCount = world.size;
+    dirtyChunks.clear();
+    rebuildQueued = false;
+  }
+  function performQueuedRebuild() {
+    if (fullRebuildQueued) rebuildMeshes();
+    else rebuildDirtyChunks();
+  }
+  function queueRebuild(x = null, z = null) {
+    if (x === null || z === null) {
+      fullRebuildQueued = true;
+    } else if (!fullRebuildQueued) {
+      const cx = chunkCoord(x), cz = chunkCoord(z);
+      markDirtyChunk(cx, cz);
+      markDirtyChunk(cx - 1, cz);
+      markDirtyChunk(cx + 1, cz);
+      markDirtyChunk(cx, cz - 1);
+      markDirtyChunk(cx, cz + 1);
+    }
+    if (!rebuildQueued) { rebuildQueued = true; requestAnimationFrame(performQueuedRebuild); }
   }
 
   function collidesAt(pos) {
@@ -1058,7 +1121,7 @@
         if (now - lastKillTime < 2.0) { player.score += 150; scorePop('+150 DOUBLE KILL', 'combo'); }
         lastKillTime = now;
         sound('kill');
-        if (Math.random() < .55) spawnPickupAt(Math.floor(hit.enemy.x), Math.floor(hit.enemy.y), Math.floor(hit.enemy.z), 10 + Math.floor(Math.random() * 22));
+        if (Math.random() < .55) spawnPickupAt(Math.floor(hit.enemy.x), Math.floor(hit.enemy.y), Math.floor(hit.enemy.z));
         showToast('Enemy down. Kills: ' + player.kills);
       }
     } else if (hit.kind === 'block') {
@@ -1068,7 +1131,7 @@
       if (hit.y > 0 && hit.type !== BLOCK.LAMP) {
         setBlock(hit.x, hit.y, hit.z, 0);
         spawnParticles(hit.point[0], hit.point[1], hit.point[2], 6, 15);
-        queueRebuild();
+        queueRebuild(hit.x, hit.z);
       } else {
         spawnParticles(hit.point[0], hit.point[1], hit.point[2], 3, 15);
       }
@@ -1154,7 +1217,7 @@
     for (let i = 0; i < MAG_SIZE; i++) {
       bullets[i].classList.toggle('spent', i >= player.mag);
     }
-    reserveText.textContent = 'Reserve ' + player.reserve;
+    reserveText.textContent = player.mag + '/' + player.reserve;
     weaponPanel.classList.toggle('reloading', player.reloading);
   }
 
@@ -1186,6 +1249,9 @@
     gl.enableVertexAttribArray(loc.type); gl.vertexAttribPointer(loc.type, 1, gl.FLOAT, false, stride, 8 * 4);
   }
   function drawMesh(mesh) { if (!mesh || mesh.count === 0) return; bindVoxelMesh(mesh); gl.drawArrays(gl.TRIANGLES, 0, mesh.count); }
+  function drawWorldMeshes(kind) {
+    chunkMeshes.forEach(entry => drawMesh(entry[kind]));
+  }
 
   function buildDynamicMesh(time) {
     const arr = [];
@@ -1272,7 +1338,7 @@
     gl.uniform1f(loc.day, dayAmount);
     gl.disable(gl.BLEND);
     gl.depthMask(true);
-    drawMesh(meshes.opaque);
+    drawWorldMeshes('opaque');
 
     buildDynamicMesh(time);
     drawMesh(meshes.dynamic);
@@ -1280,7 +1346,7 @@
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.depthMask(false);
-    drawMesh(meshes.water);
+    drawWorldMeshes('water');
     gl.depthMask(true);
     gl.disable(gl.BLEND);
 
