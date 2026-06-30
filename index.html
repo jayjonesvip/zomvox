@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<title>JayVoxel Outlands - Single File Voxel Shooter</title>
+<title>Ominous Frontier - Single File Voxel Shooter</title>
 <style>
   :root{
     --panel: rgba(5, 10, 14, .72);
@@ -105,7 +105,7 @@
 
   #menu{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center; padding:22px; background:radial-gradient(circle at 50% 35%, rgba(35,85,110,.45), rgba(2,7,12,.82) 62%, rgba(0,0,0,.93)); z-index:20; }
   .card{ width:min(760px, 96vw); border:1px solid rgba(255,255,255,.18); background:linear-gradient(180deg, rgba(13,24,35,.88), rgba(5,9,14,.8)); border-radius:26px; padding:28px; box-shadow:0 30px 90px rgba(0,0,0,.55); backdrop-filter:blur(12px); }
-  h1{ margin:0 0 8px; font-size:clamp(36px, 6vw, 64px); letter-spacing:-.06em; line-height:.95; }
+  h1{ margin:0 0 8px; font-size:clamp(36px, 6vw, 64px); letter-spacing:0; line-height:.95; }
   h1 b{ color:var(--accent); text-shadow:0 0 22px rgba(145,243,110,.35); }
   .subtitle{ color:#c1d7e6; margin:0 0 20px; font-size:16px; }
   .grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin:18px 0 22px; }
@@ -129,18 +129,19 @@
   #touchSprint{ left:calc(154px + env(safe-area-inset-left)); bottom:calc(32px + env(safe-area-inset-bottom)); width:58px; height:58px; }
   #portraitBlock{ position:fixed; inset:0; display:none; align-items:center; justify-content:center; text-align:center; padding:24px; background:#06111c; color:#eaf7ff; z-index:40; font-weight:1000; letter-spacing:.02em; }
   @media (max-width: 720px), (pointer: coarse){
-    #menu{ padding:8px; align-items:flex-start; }
-    .card{ width:min(96vw, 620px); max-height:calc(100vh - 16px); overflow:auto; border-radius:16px; padding:14px 16px; }
-    h1{ font-size:32px; letter-spacing:-.04em; }
-    .subtitle{ font-size:13px; line-height:1.25; margin-bottom:10px; }
-    .grid{ grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin:10px 0 12px; }
-    .tip{ border-radius:8px; padding:7px 8px; font-size:12px; }
+    #menu{ padding:max(4px, env(safe-area-inset-top)) 6px max(4px, env(safe-area-inset-bottom)); align-items:flex-start; }
+    .card{ width:min(98vw, 640px); max-height:calc(100dvh - 12px); overflow:auto; overscroll-behavior:contain; border-radius:14px; padding:10px 12px; }
+    h1{ font-size:28px; letter-spacing:0; margin-bottom:4px; }
+    .subtitle{ font-size:12px; line-height:1.18; margin-bottom:7px; }
+    .grid{ grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; margin:6px 0 8px; }
+    .tip{ border-radius:8px; padding:5px 7px; font-size:11px; }
     .tip kbd{ min-width:23px; padding:1px 5px; border-radius:5px; }
     .desktopTip{ display:none; }
     .mobileTip{ display:block; }
-    .settingsPanel{ grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; margin-bottom:12px; }
-    .setting{ padding:7px 8px; font-size:12px; }
-    button#play{ border-radius:10px; padding:10px 16px; font-size:16px; }
+    .settingsPanel{ grid-template-columns:repeat(2,minmax(0,1fr)); gap:5px; margin-bottom:8px; }
+    .setting{ padding:5px 7px; font-size:11px; }
+    .setting input{ width:16px; height:16px; }
+    button#play{ border-radius:10px; padding:8px 14px; font-size:15px; }
     #hud{ display:none; }
     #hud > div:first-child span{ display:none; }
     #hudrow,.hudrow{ gap:4px; margin-top:5px; }
@@ -181,7 +182,7 @@
 <div id="damageFlash"></div>
 <div id="reticle"><div class="tick t"></div><div class="tick b"></div><div class="tick l"></div><div class="tick r"></div></div>
 <div id="hud">
-  <div><strong>JayVoxel Outlands</strong> <span style="color:#a8becd">/ single-file voxel survival shooter</span></div>
+  <div><strong>Ominous Frontier</strong> <span style="color:#a8becd">/ single-file voxel survival shooter</span></div>
   <div class="hudrow">
     <span class="pill" id="coords">x 0 y 0 z 0</span>
     <span class="pill" id="fps">60 fps</span>
@@ -217,7 +218,7 @@
 <div id="portraitBlock">Rotate to landscape</div>
 <div id="menu">
   <div class="card">
-    <h1>JayVoxel <b>Outlands</b></h1>
+    <h1>Ominous <b>Frontier</b></h1>
     <p class="subtitle">A fixed-size voxel survival shooter with day/night lighting, sand beaches, water, rocks, block-breaking bullets, six-round reloads, ammo crates, and monsters wandering in from the hills.</p>
     <div class="grid">
       <div class="tip desktopTip"><kbd>WASD</kbd> move &nbsp; <kbd>Mouse</kbd> aim</div>
@@ -1315,7 +1316,7 @@
     updateAmmoDisplay();
     if (lastTarget && lastTarget.kind === 'enemy') hudTarget.textContent = `Reticle on voxel monster — HP ${Math.max(0, Math.ceil(lastTarget.hp))}/${lastTarget.maxHp}`;
     else if (lastTarget && lastTarget.kind === 'block') hudTarget.textContent = `Aiming at ${blockName(lastTarget.type)} (${lastTarget.x}, ${lastTarget.y}, ${lastTarget.z}) — bullets break blocks`;
-    else hudTarget.textContent = `Enemies ${enemies.length}/${ENEMY_CAP} - Fixed outlands ${WORLD_MIN}..${WORLD_MAX} - Blocks ${worldBlockCount.toLocaleString()}`;
+    else hudTarget.textContent = `Enemies ${enemies.length}/${ENEMY_CAP} - Ominous Frontier ${WORLD_MIN}..${WORLD_MAX} - Blocks ${worldBlockCount.toLocaleString()}`;
   }
 
   function bindVoxelMesh(mesh) {
@@ -1473,7 +1474,7 @@
     player.vel = [0, 0, 0];
     ensureChunks(true);
     rebuildMeshes();
-    showToast('New fixed-size outlands generated');
+    showToast('New Ominous Frontier generated');
   }
 
   function startGame() {
