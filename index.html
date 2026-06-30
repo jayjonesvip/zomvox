@@ -117,7 +117,7 @@
   #touchJump{ right:calc(24px + env(safe-area-inset-right)); top:calc(48% - 82px); bottom:auto; width:64px; height:64px; }
   #touchSprint{ left:calc(154px + env(safe-area-inset-left)); bottom:calc(32px + env(safe-area-inset-bottom)); width:58px; height:58px; }
   #portraitBlock{ position:fixed; inset:0; display:none; align-items:center; justify-content:center; text-align:center; padding:24px; background:#06111c; color:#eaf7ff; z-index:40; font-weight:1000; letter-spacing:.02em; }
-  @media (max-width: 720px){
+  @media (max-width: 720px), (pointer: coarse){
     #menu{ padding:8px; align-items:flex-start; }
     .card{ width:min(96vw, 620px); max-height:calc(100vh - 16px); overflow:auto; border-radius:16px; padding:14px 16px; }
     h1{ font-size:32px; letter-spacing:-.04em; }
@@ -940,8 +940,8 @@
     if (keys.KeyD || keys.ArrowRight) { mx += right[0]; mz += right[2]; }
     if (keys.KeyA || keys.ArrowLeft) { mx -= right[0]; mz -= right[2]; }
     if (touchInput.moveY || touchInput.moveX) {
-      mx += forward[0] * -touchInput.moveY + right[0] * touchInput.moveX;
-      mz += forward[2] * -touchInput.moveY + right[2] * touchInput.moveX;
+      mx += forward[0] * touchInput.moveY + right[0] * touchInput.moveX;
+      mz += forward[2] * touchInput.moveY + right[2] * touchInput.moveX;
     }
     const len = Math.hypot(mx, mz) || 1; mx /= len; mz /= len;
     const sprint = keys.ShiftLeft || keys.ShiftRight || touchInput.sprint;
