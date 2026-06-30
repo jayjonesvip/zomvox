@@ -1,6 +1,6 @@
-# Ominous Frontier
+# Ominous Realms
 
-Ominous Frontier is a single-file, browser-based voxel survival shooter. It drops the player into a fixed-size block world with sand, stone, water, trees, ammo pickups, roaming voxel enemies, day/night lighting, mobile controls, and destructible terrain.
+Ominous Realms is a single-file, browser-based voxel survival shooter. It drops the player into a fixed-size block world with sand, stone, water, trees, ammo pickups, roaming voxel enemies, day/night lighting, mobile controls, and destructible terrain.
 
 The entire game currently lives in `index.html`, which makes it easy to host, share, and iterate on without a build pipeline.
 
