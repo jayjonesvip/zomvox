@@ -1,31 +1,33 @@
-# Ominous Realms
+# ZomVox
 
-Ominous Realms is a single-file, browser-based voxel survival shooter. It drops the player into a fixed-size block world with sand, stone, water, trees, ammo pickups, roaming voxel enemies, day/night lighting, mobile controls, and destructible terrain.
-
-The entire game currently lives in `index.html`, which makes it easy to host, share, and iterate on without a build pipeline.
+**ZomVox: Zombies and Voxels** is a browser-based voxel zombie survival shooter. It drops the player into a fixed-size block world with sand, stone, water, rocks, trees, ammo pickups, roaming voxel zombies, day/night lighting, mobile controls, destructible terrain, and a splash/loading flow built for `zomvox.com`.
 
 ## Play
 
-Open `index.html` in a modern browser.
+Open `index.html` in a modern browser with WebGL enabled.
 
-For the best experience, use a browser with WebGL enabled. Desktop play works with mouse and keyboard. Mobile play is designed for landscape orientation and touch controls.
+Desktop play uses mouse and keyboard. Mobile play is designed for landscape orientation with touch controls.
 
 ## Current Features
 
-- Single-file HTML game with embedded CSS, JavaScript, and WebGL rendering.
-- Procedural voxel terrain built from grass, dirt, stone, sand, water, wood, leaves, bricks, and glow markers.
+- WebGL voxel rendering with no build step.
+- Split frontend files: `index.html`, `styles.css`, and `script.js`.
+- Branded ZomVox splash screen and favicon assets.
+- Procedural voxel terrain with grass, dirt, stone, sand, water, wood, leaves, bricks, and glow markers.
 - Fixed-size world bounds so the map does not grow forever while the player moves.
-- Chunk-level mesh rebuilding for block destruction, reducing the hitch that came from rebuilding the whole world after every shot.
-- Day/night lighting cycle with changing sky color and directional light.
+- Seed-driven world generation from the settings menu.
+- Rebuilding-world status meter when changing seeds or generating a new world.
+- Chunk-level mesh rebuilding for block destruction.
+- Day/night lighting cycle.
 - Six-round blaster magazine with reserve ammo.
 - Ammo pickups that add six rounds at a time.
-- Enemy spawning, pursuit, attacks, damage, deaths, scoring, combo popups, and pickups.
-- Block destruction by shooting terrain.
+- Zombie spawning, pursuit, attack cooldowns, retreat steps after attacks, deaths, scoring, and pickups.
+- Dramatic death overlay with respawn meter.
 - Mobile-only landscape gate.
 - Mobile touch joystick, jump, shoot, and run controls.
-- Settings screen before play for HUD, audio, controls, and fullscreen preferences.
+- Settings screen for HUD visibility, audio, controls, fullscreen, and seed changes.
 - Damage flash and screen shake when the player is hit.
-- Menu-safe gameplay pause so the player does not take damage while adjusting settings or before pressing Play.
+- Menu-safe gameplay pause so the player does not take damage before pressing Play.
 
 ## Desktop Controls
 
@@ -35,7 +37,7 @@ For the best experience, use a browser with WebGL enabled. Desktop play works wi
 - Right click or `R`: reload
 - `Space`: jump
 - `Shift`: sprint
-- `N`: generate a new world
+- `N`: rebuild with a random seed
 - `F`: toggle debug fly mode
 
 ## Mobile Controls
@@ -43,12 +45,10 @@ For the best experience, use a browser with WebGL enabled. Desktop play works wi
 Mobile is intended for landscape play.
 
 - Left joystick: move
-- Swipe on the open play area: aim
+- Swipe open play area: aim
 - Shoot button: fire
 - Jump button: jump
 - Run button: sprint
-
-The mobile start screen uses mobile-specific instructions instead of desktop keyboard controls. The detailed status HUD is hidden by default on touch devices to preserve play space, while health, ammo, and controls remain visible unless changed in settings.
 
 ## Settings
 
@@ -60,50 +60,42 @@ The pre-game settings panel allows quick tuning before entering the world:
 - Controls: show or hide the mobile controls.
 - Sound: turn game sounds on or off.
 - Fullscreen: request fullscreen on mobile when play starts.
+- Seed: enter a numeric seed from `0` to `999999`.
+- Rebuild World: apply the seed, show a rebuilding meter, regenerate the world, and restart the run.
 
 On mobile, Status defaults off and Fullscreen defaults on. On desktop, Status defaults on.
-
-## Gameplay Notes
-
-Ominous Frontier is currently tuned as an arcade survival prototype. The player explores, shoots enemies, breaks blocks, collects ammo, and survives enemy attacks.
-
-Enemies attack when they get close enough to the player. Their hitboxes and attack ranges are intentionally a little generous so mobile shooting feels less fussy.
-
-Water is generated through terrain depressions and lake basins. Beaches and sand should appear around lower areas, while stone outcrops add landmarks and cover.
-
-## Technical Notes
-
-The game uses WebGL directly rather than a framework. Terrain is represented as block IDs in a map, then converted into visible mesh buffers. Dynamic objects such as enemies, pickups, and particles are built into a separate dynamic mesh each frame.
-
-Terrain rendering is chunked. Full rebuilds are used when creating a world, while block destruction only marks nearby chunks dirty and rebuilds those chunk meshes. This keeps shooting responsive even in the fixed-size world.
-
-There is no package install step and no compilation step.
 
 ## Repository Layout
 
 ```text
 .
 ├── README.md
-└── index.html
+├── index.html
+├── styles.css
+├── script.js
+└── assets/
+    ├── favicon.ico
+    ├── favicon.png
+    └── zomvox-splash.png
 ```
 
 ## Development
 
-Because the project is a single HTML file, most changes can be made directly in `index.html`.
+There is no package install step and no compilation step.
 
-Useful areas to look for:
+Useful areas:
 
-- CSS HUD and mobile layout: top `<style>` block.
-- Block IDs and world constants: JavaScript constants near the start of the script.
-- Terrain generation: `terrainHeight()` and `generateChunk()`.
-- Mobile controls: `updateStick()`, touch button bindings, and the touch aim handlers.
-- Combat: `shoot()`, `raycastProjectile()`, `entityHitAt()`, and `updateEnemies()`.
-- HUD updates: `updateHud()` and `updateAmmoDisplay()`.
+- `index.html`: document structure, HUD, menu, settings, overlays, and controls.
+- `styles.css`: visual styling, responsive mobile layout, splash screen, HUD, death overlay, and world rebuild overlay.
+- `script.js`: WebGL setup, terrain generation, movement, combat, enemy behavior, seed rebuilding, HUD updates, and game loop.
+- `assets/`: splash screen and favicon files.
 
 ## Hosting
 
-Any static file host can serve the game. Upload `index.html` and `README.md`, then open `index.html` in the browser.
+Any static file host can serve the game. Upload the repository contents and open `index.html`.
+
+For `zomvox.com`, point the domain at the static host or deployment target that serves these files.
 
 ## Project Status
 
-Ominous Frontier is in active prototype development. Current work is focused on mobile ergonomics, readability of the HUD, enemy feel, terrain variety, and keeping the single-file game smooth on phones.
+ZomVox is in active prototype development. Current work is focused on mobile feel, zombie combat rhythm, readable HUDs, seed-driven worlds, terrain variety, and keeping the browser game smooth on phones.
