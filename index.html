@@ -117,6 +117,14 @@
   .setting input{ width:18px; height:18px; accent-color:#86ee66; }
   button#play{ appearance:none; border:0; border-radius:16px; padding:14px 20px; color:#06230e; font-size:18px; font-weight:900; background:linear-gradient(180deg,#c5ffa8,#72df60); box-shadow:0 14px 40px rgba(105,216,90,.26), inset 0 2px 0 rgba(255,255,255,.45); cursor:pointer; }
   button#play:hover{ filter:brightness(1.05); }
+  #splash{ position:fixed; inset:0; z-index:35; overflow:hidden; background:#02070b; transition:opacity .38s ease, visibility .38s ease; }
+  #splash.hide{ opacity:0; visibility:hidden; pointer-events:none; }
+  #splash::before{ content:""; position:absolute; inset:0; background:url("assets/ominous-frontier-splash.png") center/cover no-repeat; filter:saturate(1.06) contrast(1.02); }
+  #splash::after{ content:""; position:absolute; inset:0; background:linear-gradient(90deg, rgba(0,0,0,.22), rgba(0,0,0,.02) 46%, rgba(0,0,0,.5)), linear-gradient(0deg, rgba(0,0,0,.28), rgba(0,0,0,0) 44%); }
+  .splashLoad{ position:absolute; right:calc(24px + env(safe-area-inset-right)); bottom:calc(24px + env(safe-area-inset-bottom)); width:min(360px, calc(100vw - 48px)); z-index:1; padding:12px; border:1px solid rgba(255,255,255,.2); border-radius:8px; background:rgba(3,8,12,.62); box-shadow:0 18px 48px rgba(0,0,0,.45); backdrop-filter:blur(8px); }
+  .splashStatus{ color:#eaf7ff; font-size:13px; font-weight:900; letter-spacing:.04em; text-transform:uppercase; text-shadow:0 2px 8px rgba(0,0,0,.75); margin-bottom:8px; }
+  .splashMeter{ height:12px; overflow:hidden; border-radius:999px; border:1px solid rgba(255,255,255,.22); background:rgba(0,0,0,.5); box-shadow:inset 0 2px 8px rgba(0,0,0,.42); }
+  #splashFill{ height:100%; width:0%; border-radius:999px; background:linear-gradient(90deg,#6bf45d,#ffe27a,#ff9b3d); box-shadow:0 0 22px rgba(145,243,110,.45); transition:width .12s linear; }
   #toast{ pointer-events:none; position:fixed; right:14px; top:116px; max-width:350px; padding:10px 12px; border-radius:8px; background:rgba(4,11,16,.76); border:1px solid rgba(255,255,255,.16); color:#dff4ff; font-size:13px; opacity:0; transform:translateY(-8px); transition:.2s; backdrop-filter:blur(8px); z-index:13; }
   #toast.show{ opacity:1; transform:translateY(0); }
   #mobileControls{ position:fixed; inset:0; pointer-events:none; display:none; z-index:11; touch-action:none; }
@@ -142,6 +150,9 @@
     .setting{ padding:5px 7px; font-size:11px; }
     .setting input{ width:16px; height:16px; }
     button#play{ border-radius:10px; padding:8px 14px; font-size:15px; }
+    .splashLoad{ right:calc(12px + env(safe-area-inset-right)); bottom:calc(12px + env(safe-area-inset-bottom)); width:min(300px, calc(100vw - 24px)); padding:9px; }
+    .splashStatus{ font-size:11px; margin-bottom:6px; }
+    .splashMeter{ height:10px; }
     #hud{ display:none; }
     #hud > div:first-child span{ display:none; }
     #hudrow,.hudrow{ gap:4px; margin-top:5px; }
@@ -216,6 +227,12 @@
   <button class="touchBtn" id="touchShoot" type="button">Shoot</button>
 </div>
 <div id="portraitBlock">Rotate to landscape</div>
+<div id="splash" aria-live="polite">
+  <div class="splashLoad">
+    <div class="splashStatus" id="splashStatus">Getting latest version...</div>
+    <div class="splashMeter"><div id="splashFill"></div></div>
+  </div>
+</div>
 <div id="menu">
   <div class="card">
     <h1>Ominous <b>Frontier</b></h1>
@@ -281,6 +298,9 @@
   const touchShoot = $('touchShoot');
   const touchJump = $('touchJump');
   const touchSprint = $('touchSprint');
+  const splash = $('splash');
+  const splashStatus = $('splashStatus');
+  const splashFill = $('splashFill');
   const settingStatus = $('settingStatus');
   const settingHealth = $('settingHealth');
   const settingAmmo = $('settingAmmo');
@@ -451,7 +471,35 @@
   }
 
   function isMenuOpen() {
-    return menu.style.display !== 'none';
+    return menu.style.display !== 'none' || splash.style.display !== 'none';
+  }
+
+  function runSplash() {
+    const messages = [
+      'Getting latest version...',
+      'Generating world...',
+      'Calibrating display...'
+    ];
+    const duration = 2600;
+    const start = performance.now();
+    function step(now) {
+      const t = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - t, 2.2);
+      const idx = Math.min(messages.length - 1, Math.floor(t * messages.length));
+      splashStatus.textContent = messages[idx];
+      splashFill.style.width = (Math.max(.04, eased) * 100).toFixed(1) + '%';
+      if (t < 1) {
+        requestAnimationFrame(step);
+      } else {
+        splashStatus.textContent = 'Ready.';
+        splashFill.style.width = '100%';
+        setTimeout(() => {
+          splash.classList.add('hide');
+          setTimeout(() => { splash.style.display = 'none'; }, 420);
+        }, 180);
+      }
+    }
+    requestAnimationFrame(step);
   }
 
   function applySettings() {
@@ -1523,7 +1571,7 @@
     let dx = clientX - cx, dy = clientY - cy;
     const len = Math.hypot(dx, dy);
     if (len > max) { dx = dx / len * max; dy = dy / len * max; }
-    touchInput.moveX = dx / max;
+    touchInput.moveX = -dx / max;
     touchInput.moveY = -dy / max;
     stickKnob.style.transform = `translate(${dx}px, ${dy}px)`;
   }
@@ -1586,6 +1634,7 @@
   initSettings();
   gl.enable(gl.DEPTH_TEST);
   generateWorld(currentSeed);
+  runSplash();
   requestAnimationFrame(loop);
 })();
 </script>
