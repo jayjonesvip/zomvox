@@ -36,6 +36,7 @@
   #reticle.hit::after{ background:#ffed7a; }
   #reticle.kill::before{ border-color:#8cff73; animation:killMarker .26s ease-out; }
   #reticle.kill::after{ background:#8cff73; box-shadow:0 0 16px rgba(140,255,115,.72); }
+  body.dead #reticle{ display:none; }
   @keyframes hitMarker{ 0%{ transform:scale(.75); opacity:.45; } 55%{ transform:scale(1.24); opacity:1; } 100%{ transform:scale(1); opacity:1; } }
   @keyframes killMarker{ 0%{ transform:scale(.65); opacity:.4; } 45%{ transform:scale(1.38); opacity:1; } 100%{ transform:scale(1); opacity:1; } }
   @keyframes heartbeatFlash{ 0%,100%{ opacity:0; } 10%{ opacity:.2; } 18%{ opacity:.06; } 28%{ opacity:.17; } 46%{ opacity:0; } }
