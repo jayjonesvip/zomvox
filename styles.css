@@ -13,8 +13,10 @@
   #vignette{ pointer-events:none; position:fixed; inset:0; box-shadow: inset 0 0 160px rgba(0,0,0,.55), inset 0 -95px 135px rgba(0,0,0,.25); mix-blend-mode:multiply; z-index:1; }
   #damageFlash{ pointer-events:none; position:fixed; inset:0; background:radial-gradient(circle at 50% 50%, rgba(255,0,0,0), rgba(255,0,0,.32)); opacity:0; transition:opacity .22s; z-index:12; }
   #damageFlash.hit{ opacity:1; transition:opacity .04s; }
+  body.low-health #damageFlash{ animation:heartbeatFlash .95s ease-in-out infinite; }
   body.dead #game{ filter:grayscale(1) contrast(.82) brightness(.48); transition:filter .18s; }
   body.shaking #game{ animation:screenShake .22s cubic-bezier(.36,.07,.19,.97) both; }
+  body.low-health #vignette{ box-shadow: inset 0 0 160px rgba(90,0,0,.72), inset 0 -95px 135px rgba(0,0,0,.3); }
   @keyframes screenShake{
     10%,90%{ transform:translate3d(-2px,1px,0); }
     20%,80%{ transform:translate3d(4px,-2px,0); }
@@ -30,6 +32,13 @@
   .tick.b{ left:23px; bottom:0; width:2px; height:12px; }
   .tick.l{ left:0; top:23px; width:12px; height:2px; }
   .tick.r{ right:0; top:23px; width:12px; height:2px; }
+  #reticle.hit::before{ border-color:#ffed7a; animation:hitMarker .18s ease-out; }
+  #reticle.hit::after{ background:#ffed7a; }
+  #reticle.kill::before{ border-color:#8cff73; animation:killMarker .26s ease-out; }
+  #reticle.kill::after{ background:#8cff73; box-shadow:0 0 16px rgba(140,255,115,.72); }
+  @keyframes hitMarker{ 0%{ transform:scale(.75); opacity:.45; } 55%{ transform:scale(1.24); opacity:1; } 100%{ transform:scale(1); opacity:1; } }
+  @keyframes killMarker{ 0%{ transform:scale(.65); opacity:.4; } 45%{ transform:scale(1.38); opacity:1; } 100%{ transform:scale(1); opacity:1; } }
+  @keyframes heartbeatFlash{ 0%,100%{ opacity:0; } 10%{ opacity:.2; } 18%{ opacity:.06; } 28%{ opacity:.17; } 46%{ opacity:0; } }
 
   .pill{ border:1px solid rgba(255,255,255,.15); padding:3px 7px; border-radius:999px; background:rgba(255,255,255,.06); white-space:nowrap; }
   .pill.good{ color:#bfffb1; border-color:rgba(145,243,110,.36); }
@@ -63,6 +72,7 @@
   .scorePop.combo{ color:#ffad66; text-shadow:0 3px 0 rgba(0,0,0,.75), 0 0 24px rgba(255,140,42,.55); transform:scale(1.1); }
   .scorePop.pickup{ color:#8fffc8; text-shadow:0 3px 0 rgba(0,0,0,.75), 0 0 24px rgba(97,255,190,.48); }
   .scorePop.range{ color:#9fd8ff; text-shadow:0 3px 0 rgba(0,0,0,.75), 0 0 22px rgba(80,185,255,.48); }
+  .scorePop.wave{ color:#ff5f5f; font-size:clamp(18px,2.6vw,28px); letter-spacing:.08em; text-shadow:0 3px 0 rgba(0,0,0,.8), 0 0 24px rgba(255,80,80,.54); }
   .scorePop.small{ font-size:clamp(16px,2.4vw,26px); }
   @keyframes scoreRise{ 0%{ opacity:0; transform:translateY(18px) scale(.88); } 14%{ opacity:1; transform:translateY(0) scale(1.05); } 72%{ opacity:1; } 100%{ opacity:0; transform:translateY(-58px) scale(.98); } }
 
@@ -84,11 +94,16 @@
   #reloadOverlayFill{ height:100%; width:0%; background:linear-gradient(90deg,#ffe27a,#ffae3f); transition:width .08s linear; }
   #deathOverlay{ pointer-events:none; position:fixed; inset:0; display:flex; align-items:center; justify-content:center; z-index:34; opacity:0; visibility:hidden; background:radial-gradient(circle at 50% 45%, rgba(140,0,0,.16), rgba(0,0,0,.84) 58%, rgba(0,0,0,.96)), linear-gradient(90deg, rgba(95,0,0,.42), rgba(0,0,0,0) 48%, rgba(95,0,0,.42)); transition:opacity .18s, visibility .18s; }
   #deathOverlay.show{ opacity:1; visibility:visible; }
+  #deathOverlay.ready{ pointer-events:auto; }
   .deathCard{ width:min(720px, calc(100vw - 34px)); text-align:center; transform:skewY(-3deg); }
   .deathTitle{ color:#ff2f2f; font-size:clamp(54px, 13vw, 138px); line-height:.8; font-weight:1000; letter-spacing:0; text-transform:uppercase; text-shadow:0 5px 0 rgba(0,0,0,.75), 0 0 32px rgba(255,0,0,.45); filter:drop-shadow(0 0 16px rgba(255,38,38,.36)); }
   .deathText{ margin:16px 0 10px; color:#f7f0e8; font-size:13px; font-weight:900; letter-spacing:.18em; text-transform:uppercase; text-shadow:0 2px 0 rgba(0,0,0,.9); }
+  .deathStats{ width:min(460px, 78vw); margin:0 auto 14px; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:7px; }
+  .deathStats span{ padding:8px 6px; border:1px solid rgba(255,255,255,.18); border-radius:8px; background:rgba(0,0,0,.32); color:#f4f4f4; font-size:11px; line-height:1.35; font-weight:900; text-transform:uppercase; text-shadow:0 2px 0 rgba(0,0,0,.72); }
   .deathMeter{ width:min(420px, 74vw); height:13px; margin:0 auto; border:1px solid rgba(255,255,255,.24); background:rgba(0,0,0,.56); border-radius:999px; overflow:hidden; box-shadow:inset 0 2px 8px rgba(0,0,0,.48); }
   #deathFill{ height:100%; width:0%; background:linear-gradient(90deg,#ff2d2d,#ffcf45); box-shadow:0 0 22px rgba(255,47,47,.56); transition:width .08s linear; }
+  #deathContinue{ display:none; margin:16px auto 0; appearance:none; border:0; border-radius:10px; padding:10px 20px; color:#210606; font-size:16px; font-weight:1000; text-transform:uppercase; background:linear-gradient(180deg,#ffe16d,#ff5d3d); box-shadow:0 14px 40px rgba(255,50,50,.3), inset 0 2px 0 rgba(255,255,255,.34); cursor:pointer; }
+  #deathOverlay.ready #deathContinue{ display:block; }
 
   #menu{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center; padding:22px; background:radial-gradient(circle at 50% 35%, rgba(35,85,110,.45), rgba(2,7,12,.82) 62%, rgba(0,0,0,.93)); z-index:20; }
   .card{ width:min(760px, 96vw); border:1px solid rgba(255,255,255,.18); background:linear-gradient(180deg, rgba(13,24,35,.88), rgba(5,9,14,.8)); border-radius:26px; padding:28px; box-shadow:0 30px 90px rgba(0,0,0,.55); backdrop-filter:blur(12px); }

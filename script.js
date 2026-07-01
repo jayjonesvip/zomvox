@@ -22,6 +22,7 @@
   const healthBigText = $('healthBigText');
   const healthBigFill = $('healthBigFill');
   const scoreFeed = $('scoreFeed');
+  const reticle = $('reticle');
   const reloadOverlay = $('reloadOverlay');
   const reloadOverlayFill = $('reloadOverlayFill');
   const worldOverlay = $('worldOverlay');
@@ -29,6 +30,9 @@
   const worldFill = $('worldFill');
   const deathOverlay = $('deathOverlay');
   const deathFill = $('deathFill');
+  const deathText = $('deathText');
+  const deathStats = $('deathStats');
+  const deathContinue = $('deathContinue');
   const mobileControls = $('mobileControls');
   const stickBase = $('stickBase');
   const stickKnob = $('stickKnob');
@@ -109,6 +113,11 @@
     reloadTimer: 0,
     invuln: 0,
     kills: 0,
+    headshots: 0,
+    lifeKills: 0,
+    lifeHeadshots: 0,
+    lifeLongestShot: 0,
+    lifeStartedAt: performance.now(),
     score: 0,
     deaths: 0
   };
@@ -130,7 +139,9 @@
   let dayAmount = 1;
   let soundEnabled = true;
   let waterDamageTimer = 0;
-  const deathState = { active: false, timer: 0, duration: 2.65 };
+  let hordeLevel = 0;
+  let heartbeatTimer = 0;
+  const deathState = { active: false, timer: 0, duration: 1.85, ready: false };
   const worldRebuildState = { active: false, timer: 0, startedAt: 0, duration: 2.35, seed: null };
 
   function showToast(message) {
@@ -143,6 +154,31 @@
     el.textContent = message;
     scoreFeed.appendChild(el);
     setTimeout(() => el.remove(), 1150);
+  }
+
+  function resetLifeStats() {
+    player.lifeKills = 0;
+    player.lifeHeadshots = 0;
+    player.lifeLongestShot = 0;
+    player.lifeStartedAt = performance.now();
+  }
+
+  function formatLifeStats() {
+    const seconds = Math.max(0, Math.floor((performance.now() - player.lifeStartedAt) / 1000));
+    const minutes = Math.floor(seconds / 60);
+    const remain = String(seconds % 60).padStart(2, '0');
+    return [
+      ['Kills', player.lifeKills],
+      ['Headshots', player.lifeHeadshots],
+      ['Longest shot', Math.round(player.lifeLongestShot) + 'm'],
+      ['Survived', minutes + ':' + remain]
+    ];
+  }
+
+  function renderDeathStats() {
+    deathStats.innerHTML = formatLifeStats()
+      .map(([label, value]) => '<span>' + label + '<br>' + value + '</span>')
+      .join('');
   }
 
   let audioCtx = null;
@@ -193,10 +229,12 @@
     else if (name === 'reloadDone') { tone(360, .06, 'triangle', .045, 520); }
     else if (name === 'block') { noise(.055, .075, 520); tone(165, .045, 'square', .035, 110); }
     else if (name === 'hit') { tone(470, .055, 'triangle', .055, 260); }
-    else if (name === 'head') { tone(780, .07, 'square', .052, 1180); }
+    else if (name === 'head') { noise(.025, .06, 1900); tone(980, .045, 'square', .065, 1450); setTimeout(() => tone(520, .055, 'triangle', .045, 780), 45); }
     else if (name === 'kill') { tone(260, .075, 'square', .055, 390); setTimeout(() => tone(520, .08, 'triangle', .05, 780), 80); }
     else if (name === 'pickup') { tone(520, .06, 'triangle', .045, 780); }
     else if (name === 'hurt') { tone(85, .12, 'sawtooth', .07, 45); }
+    else if (name === 'wave') { tone(180, .08, 'sawtooth', .05, 120); setTimeout(() => tone(330, .09, 'triangle', .045, 480), 85); }
+    else if (name === 'heartbeat') { tone(55, .11, 'sine', .045, 45); }
   }
 
 
@@ -212,6 +250,52 @@
     document.body.classList.add('shaking');
     clearTimeout(shakeScreen.timer);
     shakeScreen.timer = setTimeout(() => document.body.classList.remove('shaking'), 260);
+  }
+  function pulseHitMarker(kind = 'hit') {
+    reticle.classList.remove('hit', 'kill');
+    void reticle.offsetWidth;
+    reticle.classList.add(kind === 'kill' ? 'kill' : 'hit');
+    clearTimeout(pulseHitMarker.timer);
+    pulseHitMarker.timer = setTimeout(() => reticle.classList.remove('hit', 'kill'), kind === 'kill' ? 260 : 180);
+  }
+
+  function spawnKillBurst(x, y, z, big = false) {
+    const count = big ? 28 : 20;
+    for (let i = 0; i < count; i++) {
+      particles.push({
+        x,
+        y,
+        z,
+        vx: (Math.random() - .5) * 7,
+        vy: 1 + Math.random() * 5.4,
+        vz: (Math.random() - .5) * 7,
+        life: .55 + Math.random() * .45,
+        type: i % 3 === 0 ? 12 : 15
+      });
+    }
+  }
+
+  function updateLowHealthFeedback(dt) {
+    const low = player.health > 0 && player.health < 25 && !deathState.active && !isMenuOpen();
+    document.body.classList.toggle('low-health', low);
+    if (!low) {
+      heartbeatTimer = 0;
+      return;
+    }
+    heartbeatTimer -= dt;
+    if (heartbeatTimer <= 0) {
+      sound('heartbeat');
+      heartbeatTimer = .95;
+    }
+  }
+
+  function checkHordeLevel() {
+    const next = Math.floor(player.kills / 5);
+    if (next <= hordeLevel) return;
+    hordeLevel = next;
+    scorePop('HORDE PRESSURE +' + hordeLevel, 'wave');
+    sound('wave');
+    nextSpawnTimer = Math.min(nextSpawnTimer, .75);
   }
 
   function isMenuOpen() {
@@ -912,9 +996,11 @@
 
   function updateEnemies(dt) {
     nextSpawnTimer -= dt;
-    if (nextSpawnTimer <= 0 && enemies.length < ENEMY_CAP) {
+    const enemyCap = ENEMY_CAP + hordeLevel * 2;
+    if (nextSpawnTimer <= 0 && enemies.length < enemyCap) {
       spawnEnemy();
-      nextSpawnTimer = 3.0 + Math.random() * 4.2 + Math.min(7, enemies.length * .25);
+      const pressure = Math.min(1.8, hordeLevel * .18);
+      nextSpawnTimer = Math.max(.75, 3.0 + Math.random() * 4.2 + Math.min(7, enemies.length * .25) - pressure);
     }
     for (const e of enemies) {
       e.phase += dt;
@@ -958,34 +1044,48 @@
     if (deathState.active || worldRebuildState.active) return;
     deathState.active = true;
     deathState.timer = 0;
+    deathState.ready = false;
+    if (document.pointerLockElement === canvas && document.exitPointerLock) document.exitPointerLock();
     document.body.classList.add('dead');
+    document.body.classList.remove('low-health');
     player.health = 0;
     player.vel = [0, 0, 0];
     player.reloading = false;
     player.reloadTimer = 0;
     reloadOverlay.classList.remove('show');
     reloadOverlayFill.style.width = '0%';
+    deathText.textContent = 'Final stats';
+    renderDeathStats();
     deathFill.style.width = '0%';
+    deathOverlay.classList.remove('ready');
     deathOverlay.classList.add('show');
   }
   function updateDeath(dt) {
     deathState.timer += dt;
     const progress = Math.min(1, deathState.timer / deathState.duration);
     deathFill.style.width = (progress * 100).toFixed(1) + '%';
-    if (progress >= 1) {
-      deathState.active = false;
-      deathOverlay.classList.remove('show');
-      document.body.classList.remove('dead');
-      respawn();
+    if (progress >= 1 && !deathState.ready) {
+      deathState.ready = true;
+      deathText.textContent = 'Click continue to respawn';
+      deathOverlay.classList.add('ready');
     }
   }
   function respawn() {
+    deathState.active = false;
+    deathState.ready = false;
+    deathState.timer = 0;
     player.deaths++;
     player.health = 100;
     player.mag = MAG_SIZE;
     player.reserve = Math.max(player.reserve, 24);
     player.reloading = false;
     player.reloadTimer = 0;
+    resetLifeStats();
+    document.body.classList.remove('dead', 'low-health');
+    deathOverlay.classList.remove('show', 'ready');
+    deathStats.textContent = '';
+    deathText.textContent = 'Respawning...';
+    deathFill.style.width = '0%';
     reloadOverlay.classList.remove('show');
     reloadOverlayFill.style.width = '0%';
     const sx = 0, sz = 0;
@@ -1059,13 +1159,22 @@
     sound('shoot');
     const hit = raycastProjectile(58);
     if (hit.kind === 'enemy') {
-      const damage = hit.head ? hit.enemy.hp : 28;
+      const wasHeadshot = hit.head;
+      const damage = wasHeadshot ? hit.enemy.hp : 28;
       hit.enemy.hp -= damage;
-      spawnParticles(hit.point[0], hit.point[1], hit.point[2], hit.head ? 12 : 8, hit.head ? 12 : 15);
-      sound(hit.head ? 'head' : 'hit');
+      spawnParticles(hit.point[0], hit.point[1], hit.point[2], wasHeadshot ? 12 : 8, wasHeadshot ? 12 : 15);
+      sound(wasHeadshot ? 'head' : 'hit');
+      if (wasHeadshot) {
+        player.headshots++;
+        player.lifeHeadshots++;
+      }
       if (hit.enemy.hp <= 0) {
         player.kills++;
-        if (hit.head) {
+        player.lifeKills++;
+        player.lifeLongestShot = Math.max(player.lifeLongestShot, hit.dist);
+        pulseHitMarker('kill');
+        spawnKillBurst(hit.enemy.x, hit.enemy.y + 1.1, hit.enemy.z, hit.enemy.big);
+        if (wasHeadshot) {
           player.score += 150;
           scorePop('+150 HEADSHOT KILL', 'head');
         } else {
@@ -1080,8 +1189,11 @@
         if (now - lastKillTime < 2.0) { player.score += 150; scorePop('+150 DOUBLE KILL', 'combo small'); }
         lastKillTime = now;
         sound('kill');
+        checkHordeLevel();
         if (Math.random() < .55) spawnPickupAt(Math.floor(hit.enemy.x), Math.floor(hit.enemy.y), Math.floor(hit.enemy.z));
         showToast('Enemy down. Kills: ' + player.kills);
+      } else {
+        pulseHitMarker('hit');
       }
     } else if (hit.kind === 'block') {
       player.score += 25;
@@ -1186,6 +1298,7 @@
     }
     updateMovement(dt);
     updateWaterHazard(dt);
+    updateLowHealthFeedback(dt);
     updateEnemies(dt);
     updatePickups(dt);
     updateParticles(dt);
@@ -1364,12 +1477,24 @@
     player.mag = MAG_SIZE;
     player.reserve = 36;
     player.kills = 0;
+    player.headshots = 0;
     player.score = 0;
     player.deaths = 0;
     player.reloading = false;
     player.reloadTimer = 0;
+    resetLifeStats();
     nextSpawnTimer = 3.5;
+    hordeLevel = 0;
+    heartbeatTimer = 0;
     lastKillTime = -999;
+    deathState.active = false;
+    deathState.ready = false;
+    deathState.timer = 0;
+    document.body.classList.remove('dead', 'low-health');
+    deathOverlay.classList.remove('show', 'ready');
+    deathStats.textContent = '';
+    deathText.textContent = 'Respawning...';
+    deathFill.style.width = '0%';
     reloadOverlay.classList.remove('show');
     reloadOverlayFill.style.width = '0%';
     currentChunkX = 999999;
@@ -1404,12 +1529,23 @@
       if (result && typeof result.catch === 'function') result.catch(() => {});
     } catch (_) {}
   }
+  function continueFromDeath() {
+    if (!deathState.active || !deathState.ready) return;
+    respawn();
+  }
   play.addEventListener('click', startGame);
-  canvas.addEventListener('click', () => { if (!locked && !touchMode) requestPointerLockSafe(); });
+  deathContinue.addEventListener('click', continueFromDeath);
+  canvas.addEventListener('click', () => {
+    if (deathState.active) {
+      continueFromDeath();
+      return;
+    }
+    if (!locked && !touchMode) requestPointerLockSafe();
+  });
   document.addEventListener('pointerlockchange', () => {
     if (touchMode) return;
     locked = document.pointerLockElement === canvas;
-    menu.style.display = locked ? 'none' : 'flex';
+    menu.style.display = locked || deathState.active ? 'none' : 'flex';
   });
   document.addEventListener('mousemove', (e) => {
     if (!locked) return;
@@ -1425,6 +1561,10 @@
   });
   document.addEventListener('keyup', (e) => { keys[e.code] = false; });
   canvas.addEventListener('mousedown', (e) => {
+    if (deathState.active) {
+      continueFromDeath();
+      return;
+    }
     if (!locked) { requestPointerLockSafe(); return; }
     if (e.button === 0) shoot();
     if (e.button === 2) startReload();
