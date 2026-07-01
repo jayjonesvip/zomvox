@@ -13,20 +13,6 @@
 <div id="vignette"></div>
 <div id="damageFlash"></div>
 <div id="reticle"><div class="tick t"></div><div class="tick b"></div><div class="tick l"></div><div class="tick r"></div></div>
-<div id="hud">
-  <div><strong>ZomVox</strong> <span style="color:#a8becd">/ Zombies and Voxels</span></div>
-  <div class="hudrow">
-    <span class="pill" id="coords">x 0 y 0 z 0</span>
-    <span class="pill" id="fps">60 fps</span>
-    <span class="pill" id="clock">day</span>
-    <span class="pill good" id="hpPill">HP 100</span>
-    <span class="pill" id="chunks">chunks 0</span>
-    <span class="pill" id="kills">kills 0</span>
-    <span class="pill good" id="scorePill">score 0</span>
-    <span class="pill" id="seed">seed 0</span>
-  </div>
-  <div id="target">Click to lock mouse. Left-click shoots. Right-click or R reloads.</div>
-</div>
 <div id="weaponPanel">
   <div class="label">Block Blaster / 6-Round Mag</div>
   <div id="bulletRack"></div>
@@ -42,7 +28,7 @@
 <div id="worldOverlay">
   <div class="worldCard">
     <div class="worldTitle">Rebuilding World</div>
-    <div class="worldText" id="worldText">Applying seed...</div>
+    <div class="worldText" id="worldText">Building frontier...</div>
     <div class="worldMeter"><div id="worldFill"></div></div>
   </div>
 </div>
@@ -71,24 +57,21 @@
 <div id="menu">
   <div class="card">
     <h1>Zom<b>Vox</b></h1>
-    <p class="subtitle">Zombies and Voxels. Survive a fixed-size voxel wasteland with day/night lighting, sand beaches, water, rocks, block-breaking bullets, ammo crates, and the dead wandering in from the hills.</p>
+    <p class="subtitle">Zombies and Voxels. Survive a huge streaming voxel wasteland with day/night lighting, dangerous water, sand beaches, rocks, block-breaking bullets, ammo crates, and the dead wandering in from the hills.</p>
     <div class="grid">
       <div class="tip desktopTip"><kbd>WASD</kbd> move &nbsp; <kbd>Mouse</kbd> aim</div>
       <div class="tip desktopTip"><kbd>Left</kbd> shoot &nbsp; <kbd>Right</kbd>/<kbd>R</kbd> reload</div>
       <div class="tip desktopTip"><kbd>Space</kbd> jump &nbsp; <kbd>Shift</kbd> sprint</div>
-      <div class="tip desktopTip"><kbd>N</kbd> new world &nbsp; <kbd>F</kbd> debug fly</div>
+      <div class="tip desktopTip"><kbd>N</kbd> new world &nbsp; <kbd>Shift</kbd> sprint</div>
       <div class="tip mobileTip"><kbd>Stick</kbd> move &nbsp; <kbd>Swipe</kbd> aim</div>
       <div class="tip mobileTip"><kbd>Shoot</kbd> fire &nbsp; <kbd>Jump</kbd> hop</div>
     </div>
     <div class="settingsPanel">
-      <label class="setting"><input id="settingStatus" type="checkbox" />Status</label>
       <label class="setting"><input id="settingHealth" type="checkbox" checked />Health</label>
       <label class="setting"><input id="settingAmmo" type="checkbox" checked />Ammo</label>
       <label class="setting"><input id="settingControls" type="checkbox" checked />Controls</label>
       <label class="setting"><input id="settingSound" type="checkbox" checked />Sound</label>
       <label class="setting"><input id="settingFullscreen" type="checkbox" checked />Fullscreen</label>
-      <label class="setting seedSetting">Seed <input id="settingSeed" type="number" min="0" max="999999" step="1" value="729641" /></label>
-      <button id="seedApply" class="setting seedButton" type="button">Rebuild World</button>
     </div>
     <button id="play">Play</button>
   </div>

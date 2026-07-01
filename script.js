@@ -9,15 +9,6 @@
   }
 
   const $ = (id) => document.getElementById(id);
-  const hudCoords = $('coords');
-  const hudFps = $('fps');
-  const hudClock = $('clock');
-  const hudHp = $('hpPill');
-  const hudChunks = $('chunks');
-  const hudKills = $('kills');
-  const hudScore = $('scorePill');
-  const hudSeed = $('seed');
-  const hudTarget = $('target');
   const reloadText = $('reloadText');
   const weaponPanel = $('weaponPanel');
   const bulletRack = $('bulletRack');
@@ -47,14 +38,18 @@
   const splash = $('splash');
   const splashStatus = $('splashStatus');
   const splashFill = $('splashFill');
-  const settingStatus = $('settingStatus');
   const settingHealth = $('settingHealth');
   const settingAmmo = $('settingAmmo');
   const settingControls = $('settingControls');
   const settingSound = $('settingSound');
   const settingFullscreen = $('settingFullscreen');
-  const settingSeed = $('settingSeed');
-  const seedApply = $('seedApply');
+
+  const GAME_OPTIONS = {
+    timeMode: 'cycle', // 'cycle', 'day', or 'night'
+    skyColor: null,   // null for dynamic sky, or '#102030', or [0.06, 0.13, 0.20]
+    dangerousWater: true,
+    fog: true
+  };
 
   const BLOCK = {
     GRASS: 1,
@@ -70,9 +65,6 @@
 
   const CHUNK_SIZE = 16;
   const RENDER_RADIUS = 3;
-  const WORLD_CHUNK_RADIUS = 4;
-  const WORLD_MIN = -WORLD_CHUNK_RADIUS * CHUNK_SIZE;
-  const WORLD_MAX = (WORLD_CHUNK_RADIUS + 1) * CHUNK_SIZE - 1;
   const MAX_Y = 46;
   const WATER_LEVEL = 8;
   const PLAYER_HEIGHT = 1.76;
@@ -106,7 +98,6 @@
     yaw: Math.PI,
     pitch: 0,
     grounded: false,
-    fly: false,
     health: 100,
     mag: MAG_SIZE,
     reserve: 36,
@@ -133,6 +124,7 @@
   let lastKillTime = -999;
   let dayAmount = 1;
   let soundEnabled = true;
+  let waterDamageTimer = 0;
   const deathState = { active: false, timer: 0, duration: 2.65 };
   const worldRebuildState = { active: false, timer: 0, startedAt: 0, duration: 2.35, seed: null };
 
@@ -224,10 +216,23 @@
     return menu.style.display !== 'none' || splash.style.display !== 'none';
   }
 
-  function sanitizeSeed(value) {
-    const parsed = Number.parseInt(value, 10);
-    if (!Number.isFinite(parsed)) return currentSeed;
-    return Math.max(0, Math.min(999999, parsed));
+  function clamp01(value) {
+    return Math.max(0, Math.min(1, value));
+  }
+
+  function skyOptionColor(fallback) {
+    const value = GAME_OPTIONS.skyColor;
+    if (Array.isArray(value) && value.length >= 3) {
+      return [clamp01(value[0]), clamp01(value[1]), clamp01(value[2])];
+    }
+    if (typeof value === 'string') {
+      const match = value.trim().match(/^#?([0-9a-f]{6})$/i);
+      if (match) {
+        const n = parseInt(match[1], 16);
+        return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
+      }
+    }
+    return fallback;
   }
 
   function runSplash() {
@@ -259,25 +264,20 @@
   }
 
   function applySettings() {
-    const showStatus = !!settingStatus.checked;
     soundEnabled = !!settingSound.checked;
-    document.body.classList.toggle('show-status', showStatus);
-    document.body.classList.toggle('hide-status', !showStatus);
     document.body.classList.toggle('hide-health', !settingHealth.checked);
     document.body.classList.toggle('hide-ammo', !settingAmmo.checked);
     document.body.classList.toggle('hide-controls', !settingControls.checked);
-    settingSeed.value = String(sanitizeSeed(settingSeed.value));
   }
 
   function beginWorldRebuild(seed) {
     if (worldRebuildState.active) return;
-    const nextSeed = sanitizeSeed(seed);
-    settingSeed.value = String(nextSeed);
+    const nextSeed = Number.isFinite(seed) ? seed : Math.floor(Math.random() * 999999);
     worldRebuildState.active = true;
     worldRebuildState.timer = 0;
     worldRebuildState.startedAt = performance.now();
     worldRebuildState.seed = nextSeed;
-    worldText.textContent = `Applying seed ${nextSeed}...`;
+    worldText.textContent = 'Building frontier...';
     worldFill.style.width = '0%';
     worldOverlay.classList.add('show');
     player.vel = [0, 0, 0];
@@ -291,7 +291,7 @@
     worldRebuildState.timer = (performance.now() - worldRebuildState.startedAt) / 1000;
     const progress = Math.min(1, worldRebuildState.timer / worldRebuildState.duration);
     worldFill.style.width = (progress * 100).toFixed(1) + '%';
-    if (progress < .38) worldText.textContent = `Applying seed ${worldRebuildState.seed}...`;
+    if (progress < .38) worldText.textContent = 'Building frontier...';
     else if (progress < .76) worldText.textContent = 'Clearing old voxels...';
     else worldText.textContent = 'Generating new zombie frontier...';
     if (progress >= 1) {
@@ -311,20 +311,10 @@
     } catch (_) {}
   }
   function initSettings() {
-    settingStatus.checked = !touchMode;
     settingFullscreen.checked = touchMode;
-    [settingStatus, settingHealth, settingAmmo, settingControls, settingSound].forEach(el => {
+    [settingHealth, settingAmmo, settingControls, settingSound].forEach(el => {
       el.addEventListener('change', applySettings);
     });
-    settingSeed.value = String(currentSeed);
-    seedApply.addEventListener('click', () => beginWorldRebuild(settingSeed.value));
-    settingSeed.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        beginWorldRebuild(settingSeed.value);
-      }
-    });
-    settingSeed.addEventListener('change', applySettings);
     applySettings();
   }
 
@@ -386,6 +376,7 @@
     uniform vec3 uLightDir;
     uniform vec3 uSky;
     uniform float uDay;
+    uniform float uFog;
     float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123); }
     float gridLine(vec2 uv){
       float b = min(min(uv.x, 1.0 - uv.x), min(uv.y, 1.0 - uv.y));
@@ -429,9 +420,11 @@
       if(vType > 11.5 && vType < 12.5) light += 0.75;
       if(vType > 12.5) light += 0.22;
       color *= light;
-      float dist = length(vWorld - uCam);
-      float fog = smoothstep(54.0, 128.0, dist);
-      color = mix(color, uSky, fog);
+      if(uFog > 0.5){
+        float dist = length(vWorld - uCam);
+        float fog = smoothstep(54.0, 128.0, dist);
+        color = mix(color, uSky, fog);
+      }
       color += vec3(0.03, 0.05, 0.10) * (1.0 - uDay);
       float alpha = (vType > 6.5 && vType < 7.5) ? 0.63 : 1.0;
       gl_FragColor = vec4(color, alpha);
@@ -460,7 +453,8 @@
     time: gl.getUniformLocation(voxelProgram, 'uTime'),
     light: gl.getUniformLocation(voxelProgram, 'uLightDir'),
     sky: gl.getUniformLocation(voxelProgram, 'uSky'),
-    day: gl.getUniformLocation(voxelProgram, 'uDay')
+    day: gl.getUniformLocation(voxelProgram, 'uDay'),
+    fog: gl.getUniformLocation(voxelProgram, 'uFog')
   };
   const lineLoc = {
     pos: gl.getAttribLocation(lineProgram, 'aPosition'),
@@ -519,21 +513,14 @@
   function keyOf(x, y, z) { return x + ',' + y + ',' + z; }
   function chunkKey(cx, cz) { return cx + ',' + cz; }
   function chunkCoord(v) { return Math.floor(v / CHUNK_SIZE); }
-  function chunkInWorld(cx, cz) { return Math.abs(cx) <= WORLD_CHUNK_RADIUS && Math.abs(cz) <= WORLD_CHUNK_RADIUS; }
-  function inWorldXZ(x, z) { return x >= WORLD_MIN && x <= WORLD_MAX && z >= WORLD_MIN && z <= WORLD_MAX; }
-  function clampToWorld(pos) {
-    pos[0] = Math.max(WORLD_MIN + PLAYER_RADIUS + .4, Math.min(WORLD_MAX - PLAYER_RADIUS - .4, pos[0]));
-    pos[2] = Math.max(WORLD_MIN + PLAYER_RADIUS + .4, Math.min(WORLD_MAX - PLAYER_RADIUS - .4, pos[2]));
-  }
+  function clampToWorld(pos) {}
   function getBlock(x, y, z) { return world.get(keyOf(x, y, z)) || 0; }
   function genSetBlock(x, y, z, type) {
-    if (!inWorldXZ(x, z)) return;
     const k = keyOf(x, y, z);
     if (edits.has(k)) return;
     if (type) world.set(k, type); else world.delete(k);
   }
   function setBlock(x, y, z, type, persist = true) {
-    if (!inWorldXZ(x, z)) return;
     const k = keyOf(x, y, z);
     if (type) world.set(k, type); else world.delete(k);
     if (persist) edits.set(k, type || 0);
@@ -587,7 +574,6 @@
   }
 
   function generateChunk(cx, cz) {
-    if (!chunkInWorld(cx, cz)) return;
     const ck = chunkKey(cx, cz);
     if (loadedChunks.has(ck)) return;
     loadedChunks.add(ck);
@@ -673,17 +659,30 @@
   }
 
   function ensureChunks(force = false) {
-    if (!force && loadedChunks.size >= (WORLD_CHUNK_RADIUS * 2 + 1) ** 2) return;
-    currentChunkX = 0; currentChunkZ = 0;
-    for (let cx = -WORLD_CHUNK_RADIUS; cx <= WORLD_CHUNK_RADIUS; cx++) {
-      for (let cz = -WORLD_CHUNK_RADIUS; cz <= WORLD_CHUNK_RADIUS; cz++) generateChunk(cx, cz);
+    const pcx = chunkCoord(player.pos[0]);
+    const pcz = chunkCoord(player.pos[2]);
+    if (!force && pcx === currentChunkX && pcz === currentChunkZ) return;
+    currentChunkX = pcx;
+    currentChunkZ = pcz;
+    const keep = new Set();
+    for (let cx = pcx - RENDER_RADIUS; cx <= pcx + RENDER_RADIUS; cx++) {
+      for (let cz = pcz - RENDER_RADIUS; cz <= pcz + RENDER_RADIUS; cz++) {
+        keep.add(chunkKey(cx, cz));
+        generateChunk(cx, cz);
+      }
+    }
+    for (const ck of [...loadedChunks]) {
+      if (!keep.has(ck)) {
+        const [cx, cz] = ck.split(',').map(Number);
+        unloadChunk(cx, cz);
+      }
     }
     queueRebuild();
   }
 
   function topSolidY(x, z) {
-    x = Math.max(WORLD_MIN, Math.min(WORLD_MAX, Math.floor(x)));
-    z = Math.max(WORLD_MIN, Math.min(WORLD_MAX, Math.floor(z)));
+    x = Math.floor(x);
+    z = Math.floor(z);
     generateChunk(chunkCoord(x), chunkCoord(z));
     for (let y = MAX_Y + 25; y >= 0; y--) {
       const t = getBlock(x, y, z);
@@ -803,7 +802,7 @@
     rebuildQueued = false;
   }
   function markDirtyChunk(cx, cz) {
-    if (chunkInWorld(cx, cz) && loadedChunks.has(chunkKey(cx, cz))) dirtyChunks.add(chunkKey(cx, cz));
+    if (loadedChunks.has(chunkKey(cx, cz))) dirtyChunks.add(chunkKey(cx, cz));
   }
   function rebuildDirtyChunks() {
     dirtyChunks.forEach(k => {
@@ -870,17 +869,10 @@
     }
     const len = Math.hypot(mx, mz) || 1; mx /= len; mz /= len;
     const sprint = keys.ShiftLeft || keys.ShiftRight || touchInput.sprint;
-    const speed = (player.fly ? 9.5 : 5.35) * (sprint ? 1.55 : 1.0);
+    const speed = 5.35 * (sprint ? 1.55 : 1.0);
     player.vel[0] = mx * speed; player.vel[2] = mz * speed;
-    if (player.fly) {
-      player.vel[1] = 0;
-      if (keys.Space || touchInput.jump) player.vel[1] += speed;
-      if (keys.ControlLeft || keys.ControlRight || keys.KeyC) player.vel[1] -= speed;
-      player.grounded = false;
-    } else {
-      player.vel[1] -= 22 * dt;
-      if ((keys.Space || touchInput.jump) && player.grounded) { player.vel[1] = 8.2; player.grounded = false; }
-    }
+    player.vel[1] -= 22 * dt;
+    if ((keys.Space || touchInput.jump) && player.grounded) { player.vel[1] = 8.2; player.grounded = false; }
     moveAxis(0, player.vel[0] * dt);
     moveAxis(2, player.vel[2] * dt);
     clampToWorld(player.pos);
@@ -897,7 +889,6 @@
       const r = 24 + seededHash(player.pos[2] - i * 17, performance.now() * .002) * 38;
       const x = Math.floor(player.pos[0] + Math.cos(a) * r);
       const z = Math.floor(player.pos[2] + Math.sin(a) * r);
-      if (!inWorldXZ(x, z)) continue;
       generateChunk(chunkCoord(x), chunkCoord(z));
       const y = topSolidY(x, z) + 1;
       if (y > WATER_LEVEL + 1 && !blocksMovement(getBlock(x, y, z))) return { x: x + .5, y, z: z + .5 };
@@ -1123,6 +1114,30 @@
     pickups = pickups.filter(p => !p.collected && Math.hypot(p.x - player.pos[0], p.z - player.pos[2]) < 120);
   }
 
+  function playerInWater() {
+    const x = Math.floor(player.pos[0]);
+    const z = Math.floor(player.pos[2]);
+    const feet = Math.floor(player.pos[1] + 0.08);
+    const waist = Math.floor(player.pos[1] + 0.82);
+    return getBlock(x, feet, z) === BLOCK.WATER || getBlock(x, waist, z) === BLOCK.WATER;
+  }
+
+  function updateWaterHazard(dt) {
+    if (!GAME_OPTIONS.dangerousWater || deathState.active || worldRebuildState.active || isMenuOpen()) {
+      waterDamageTimer = 0;
+      return;
+    }
+    if (!playerInWater()) {
+      waterDamageTimer = 0;
+      return;
+    }
+    waterDamageTimer -= dt;
+    if (waterDamageTimer <= 0) {
+      damagePlayer(6);
+      waterDamageTimer = .75;
+    }
+  }
+
   function aimTarget(maxDist) {
     const e = eyePos();
     const d = lookDir();
@@ -1160,6 +1175,7 @@
       if (player.reloadTimer <= 0) finishReload();
     }
     updateMovement(dt);
+    updateWaterHazard(dt);
     updateEnemies(dt);
     updatePickups(dt);
     updateParticles(dt);
@@ -1189,22 +1205,11 @@
   }
 
   function updateHud() {
-    hudCoords.textContent = `x ${player.pos[0].toFixed(1)}  y ${player.pos[1].toFixed(1)}  z ${player.pos[2].toFixed(1)}`;
-    hudClock.textContent = dayAmount > .62 ? 'day' : (dayAmount > .22 ? 'dusk' : 'night');
-    hudClock.className = 'pill ' + (dayAmount > .62 ? 'good' : (dayAmount > .22 ? 'warn' : 'bad'));
-    hudHp.textContent = 'HP ' + Math.max(0, Math.round(player.health));
-    hudHp.className = 'pill ' + (player.health < 35 ? 'bad' : 'good');
-    hudChunks.textContent = 'chunks ' + loadedChunks.size;
-    hudKills.textContent = 'kills ' + player.kills;
-    hudScore.textContent = 'score ' + player.score;
     const hpNow = Math.max(0, Math.round(player.health));
     healthBigText.textContent = hpNow + '%';
     healthStatus.className = hpNow < 35 ? 'danger' : (hpNow < 65 ? 'warn' : '');
     healthBigFill.style.width = Math.max(0, player.health) + '%';
     updateAmmoDisplay();
-    if (lastTarget && lastTarget.kind === 'enemy') hudTarget.textContent = `Reticle on voxel monster — HP ${Math.max(0, Math.ceil(lastTarget.hp))}/${lastTarget.maxHp}`;
-    else if (lastTarget && lastTarget.kind === 'block') hudTarget.textContent = `Aiming at ${blockName(lastTarget.type)} (${lastTarget.x}, ${lastTarget.y}, ${lastTarget.z}) — bullets break blocks`;
-    else hudTarget.textContent = `Enemies ${enemies.length}/${ENEMY_CAP} - ZomVox ${WORLD_MIN}..${WORLD_MAX} - Blocks ${worldBlockCount.toLocaleString()}`;
   }
 
   function bindVoxelMesh(mesh) {
@@ -1275,15 +1280,21 @@
 
   function render(time) {
     resize();
-    const sunAngle = time * 0.035 + 1.15;
+    const cycleAngle = time * 0.035 + 1.15;
+    let sunAngle = cycleAngle;
+    if (GAME_OPTIONS.timeMode === 'day') sunAngle = Math.PI / 2;
+    else if (GAME_OPTIONS.timeMode === 'night') sunAngle = -Math.PI / 2;
     const sunY = Math.sin(sunAngle);
-    dayAmount = Math.max(0, Math.min(1, (sunY + 0.18) / 0.9));
+    if (GAME_OPTIONS.timeMode === 'day') dayAmount = 1;
+    else if (GAME_OPTIONS.timeMode === 'night') dayAmount = 0;
+    else dayAmount = Math.max(0, Math.min(1, (sunY + 0.18) / 0.9));
     const dusk = 1 - Math.abs(dayAmount - 0.45) / 0.45;
-    const sky = [
+    let sky = [
       0.05 + dayAmount * 0.47 + Math.max(0, dusk) * 0.12,
       0.08 + dayAmount * 0.62 + Math.max(0, dusk) * 0.08,
       0.16 + dayAmount * 0.72
     ];
+    sky = skyOptionColor(sky);
     gl.clearColor(sky[0], sky[1], sky[2], 1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.enable(gl.DEPTH_TEST);
@@ -1303,6 +1314,7 @@
     gl.uniform3f(loc.light, Math.cos(sunAngle) * 0.68, Math.max(-0.18, sunY), Math.sin(sunAngle + 0.7) * 0.68);
     gl.uniform3f(loc.sky, sky[0], sky[1], sky[2]);
     gl.uniform1f(loc.day, dayAmount);
+    gl.uniform1f(loc.fog, GAME_OPTIONS.fog ? 1 : 0);
     gl.disable(gl.BLEND);
     gl.depthMask(true);
     drawWorldMeshes('opaque');
@@ -1324,7 +1336,7 @@
     const dt = Math.min(0.04, (now - lastFrame) / 1000 || 0.016);
     lastFrame = now;
     fpsAvg = fpsAvg * 0.92 + (1 / dt) * 0.08;
-    if ((frameCounter++ & 15) === 0) hudFps.textContent = Math.round(fpsAvg) + ' fps';
+    frameCounter++;
     update(dt);
     render(now / 1000);
     requestAnimationFrame(loop);
@@ -1332,8 +1344,6 @@
 
   function generateWorld(seed) {
     currentSeed = seed;
-    hudSeed.textContent = 'seed ' + currentSeed;
-    settingSeed.value = String(currentSeed);
     world = new Map();
     edits = new Map();
     loadedChunks = new Set();
@@ -1369,16 +1379,23 @@
   function startGame() {
     applySettings();
     if (soundEnabled) getAudio();
+    locked = true;
+    menu.style.display = 'none';
     if (touchMode) {
-      locked = true;
-      menu.style.display = 'none';
       requestMobileFullscreen();
       return;
     }
-    canvas.requestPointerLock();
+    requestPointerLockSafe();
+  }
+  function requestPointerLockSafe() {
+    if (!canvas.requestPointerLock) return;
+    try {
+      const result = canvas.requestPointerLock();
+      if (result && typeof result.catch === 'function') result.catch(() => {});
+    } catch (_) {}
   }
   play.addEventListener('click', startGame);
-  canvas.addEventListener('click', () => { if (!locked && !touchMode) canvas.requestPointerLock(); });
+  canvas.addEventListener('click', () => { if (!locked && !touchMode) requestPointerLockSafe(); });
   document.addEventListener('pointerlockchange', () => {
     if (touchMode) return;
     locked = document.pointerLockElement === canvas;
@@ -1394,12 +1411,11 @@
   document.addEventListener('keydown', (e) => {
     keys[e.code] = true;
     if (e.code === 'KeyR' && !e.repeat) startReload();
-    if (e.code === 'KeyF' && !e.repeat) { player.fly = !player.fly; player.vel[1] = 0; showToast(player.fly ? 'Debug fly on' : 'Debug fly off'); }
     if (e.code === 'KeyN' && !e.repeat) beginWorldRebuild(Math.floor(Math.random() * 999999));
   });
   document.addEventListener('keyup', (e) => { keys[e.code] = false; });
   canvas.addEventListener('mousedown', (e) => {
-    if (!locked) { canvas.requestPointerLock(); return; }
+    if (!locked) { requestPointerLockSafe(); return; }
     if (e.button === 0) shoot();
     if (e.button === 2) startReload();
   });
