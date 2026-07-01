@@ -16,6 +16,7 @@
   const menu = $('menu');
   const play = $('play');
   const toast = $('toast');
+  const gunSprite = $('gunSprite');
   const damageFlash = $('damageFlash');
   const healthStatus = $('healthStatus');
   const healthBigText = $('healthBigText');
@@ -865,6 +866,8 @@
       mx += forward[0] * touchInput.moveY + right[0] * touchInput.moveX;
       mz += forward[2] * touchInput.moveY + right[2] * touchInput.moveX;
     }
+    const movingInput = Math.hypot(mx, mz) > 0.05;
+    gunSprite.classList.toggle('moving', movingInput);
     const len = Math.hypot(mx, mz) || 1; mx /= len; mz /= len;
     const sprint = keys.ShiftLeft || keys.ShiftRight || touchInput.sprint;
     const speed = 5.35 * (sprint ? 1.55 : 1.0);
@@ -1049,6 +1052,10 @@
     if (player.reloading) return;
     if (player.mag <= 0) { showToast('Empty. Reload.'); sound('empty'); startReload(); return; }
     player.mag--;
+    gunSprite.classList.remove('shooting');
+    void gunSprite.offsetWidth;
+    gunSprite.classList.add('shooting');
+    setTimeout(() => gunSprite.classList.remove('shooting'), 120);
     sound('shoot');
     const hit = raycastProjectile(58);
     if (hit.kind === 'enemy') {

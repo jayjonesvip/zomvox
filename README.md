@@ -114,6 +114,7 @@ const GAME_OPTIONS = {
 `-- assets/
     |-- favicon.ico
     |-- favicon.png
+    |-- zomvox-gun-spritesheet.png
     `-- zomvox-splash.png
 ```
 
@@ -122,7 +123,7 @@ const GAME_OPTIONS = {
 - `index.html`: document structure, menu, settings, overlays, HUD containers, mobile controls, and script/style references.
 - `styles.css`: visual styling, responsive mobile layout, splash screen, health/ammo HUD, death overlay, world rebuild overlay, and touch controls.
 - `script.js`: WebGL setup, procedural terrain, fixed world chunks, movement, combat, enemy behavior, pickups, world rebuilding, HUD updates, audio, and game loop.
-- `assets/`: splash screen and favicon files.
+- `assets/`: splash screen, favicon files, and weapon sprite sheet.
 
 ## Hosting
 

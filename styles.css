@@ -51,6 +51,10 @@
   #reserveText{ color:#d6e9f5; font-size:13px; font-weight:900; letter-spacing:.02em; }
   #reloadText{ color:#ffdc7a; font-size:12px; font-weight:900; margin-top:2px; min-height:15px; letter-spacing:.04em; text-transform:uppercase; }
 
+  #gunSprite{ pointer-events:none; position:fixed; right:0; bottom:-16px; width:min(42vw, 430px); aspect-ratio:1/1; z-index:5; background:url("assets/zomvox-gun-spritesheet.png") 0 0 / 300% 100% no-repeat; image-rendering:auto; filter:drop-shadow(0 18px 22px rgba(0,0,0,.55)); transform-origin:72% 78%; transition:transform .08s ease-out; }
+  #gunSprite.moving{ background-position:50% 0; transform:translateY(8px) rotate(-2deg); }
+  #gunSprite.shooting{ background-position:100% 0; transform:translate(8px,-4px) rotate(1deg); }
+
   #scoreFeed{ pointer-events:none; position:fixed; left:50%; top:34%; transform:translateX(-50%); display:flex; flex-direction:column; align-items:center; gap:6px; z-index:6; }
   .scorePop{ font-size:clamp(20px,3.2vw,34px); font-weight:1000; letter-spacing:.02em; color:#fff; text-shadow:0 3px 0 rgba(0,0,0,.75), 0 0 18px rgba(255,255,255,.35); animation:scoreRise 1.05s ease-out forwards; white-space:nowrap; }
   .scorePop.head{ color:#ffe77e; text-shadow:0 3px 0 rgba(0,0,0,.75), 0 0 22px rgba(255,218,92,.55); }
@@ -155,6 +159,7 @@
     .bigHealthBar{ height:8px; }
     .bullet{ height:19px; border-width:1px; }
     .bullet::before{ width:10px; height:8px; top:-6px; border-width:1px; }
+    #gunSprite{ right:-28px; bottom:-42px; width:min(48vw, 280px); }
     .grid{ grid-template-columns:1fr; }
     #mobileControls{ display:block; }
   }
