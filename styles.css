@@ -51,19 +51,14 @@
   #reserveText{ color:#d6e9f5; font-size:13px; font-weight:900; letter-spacing:.02em; }
   #reloadText{ color:#ffdc7a; font-size:12px; font-weight:900; margin-top:2px; min-height:15px; letter-spacing:.04em; text-transform:uppercase; }
 
-  #gun{ pointer-events:none; position:fixed; right:6.5vw; bottom:8px; width:250px; height:126px; transform:rotate(-18deg) translateY(10px); transform-origin:84% 74%; opacity:.98; filter:drop-shadow(0 22px 24px rgba(0,0,0,.58)); image-rendering:pixelated; transition:transform .12s ease-out; }
-  #gun .stock,#gun .body,#gun .grip,#gun .barrel{ position:absolute; border:3px solid rgba(0,0,0,.66); border-radius:3px; background:linear-gradient(180deg,#f1f5f6 0%,#aeb8be 45%,#59636b 46%,#242c33 100%); box-shadow:inset 0 6px 0 rgba(255,255,255,.28), inset 0 -8px 0 rgba(0,0,0,.22), 0 0 0 1px rgba(255,255,255,.08); }
-  #gun .stock{ right:150px; bottom:28px; width:48px; height:28px; }
-  #gun .body{ right:82px; bottom:42px; width:78px; height:34px; }
-  #gun .body::before{ content:""; position:absolute; left:12px; top:-18px; width:38px; height:16px; background:linear-gradient(180deg,#dfe8eb,#77828b); border:3px solid rgba(0,0,0,.62); border-radius:3px; }
-  #gun .body::after{ content:""; position:absolute; right:10px; top:8px; width:18px; height:14px; background:#e5fff1; border:2px solid rgba(0,0,0,.45); box-shadow:-30px 0 0 #8f9aa1; }
-  #gun .grip{ right:118px; bottom:0; width:30px; height:48px; transform:skewX(-8deg); }
-  #gun .barrel{ right:18px; bottom:48px; width:72px; height:24px; }
-  #gun .barrel::after{ content:""; position:absolute; right:-18px; top:2px; width:20px; height:14px; background:#12171b; border:3px solid rgba(0,0,0,.7); border-left:0; border-radius:0 3px 3px 0; }
-  #muzzle{ position:absolute; right:-34px; bottom:35px; width:76px; height:76px; opacity:0; transform:scale(.45); background:radial-gradient(circle, #fff 0 9%, #fff36a 10% 30%, #ffd000 31% 52%, rgba(255,210,0,0) 62%); clip-path:polygon(50% 0,62% 28%,100% 20%,74% 50%,100% 80%,62% 72%,50% 100%,38% 72%,0 80%,26% 50%,0 20%,38% 28%); filter:drop-shadow(0 0 18px #ffd400) drop-shadow(0 0 34px rgba(255,218,0,.75)); }
-  #gun.fire{ animation:gunStraight .16s ease-out; }
-  #gun.fire #muzzle{ opacity:1; transform:scale(1); transition:opacity .05s, transform .05s; }
-  @keyframes gunStraight{ 0%{ transform:rotate(-18deg) translateY(10px); } 42%{ transform:rotate(0deg) translate(8px,-4px); } 100%{ transform:rotate(-18deg) translateY(10px); } }
+  #gun{ pointer-events:none; position:fixed; right:7vw; bottom:16px; width:148px; height:58px; transform:rotate(-14deg); transform-origin:78% 58%; opacity:.96; filter:drop-shadow(0 18px 22px rgba(0,0,0,.6)); image-rendering:pixelated; transition:transform .1s ease-out; }
+  #gun .stock,#gun .grip{ display:none; }
+  #gun .body{ position:absolute; right:34px; bottom:10px; width:92px; height:38px; border:4px solid rgba(0,0,0,.68); border-radius:2px; background:linear-gradient(180deg,#d7dcdf 0%,#9da7ad 48%,#586168 49%,#343b42 100%); box-shadow:inset 0 7px 0 rgba(255,255,255,.22), inset 0 -8px 0 rgba(0,0,0,.25); }
+  #gun .barrel{ position:absolute; right:4px; bottom:18px; width:38px; height:22px; border:4px solid rgba(0,0,0,.68); border-left:0; border-radius:0 2px 2px 0; background:linear-gradient(180deg,#c2c9ce,#545e66); }
+  #muzzle{ position:absolute; right:-28px; bottom:2px; width:64px; height:64px; opacity:0; transform:scale(.25); background:radial-gradient(circle, #fff7aa 0 12%, #ffe100 13% 36%, #ffb000 37% 58%, rgba(255,188,0,0) 66%); clip-path:polygon(50% 0,62% 31%,100% 22%,71% 50%,100% 78%,62% 69%,50% 100%,38% 69%,0 78%,29% 50%,0 22%,38% 31%); filter:drop-shadow(0 0 18px #ffd400); }
+  #gun.fire{ animation:gunKick .12s ease-out; }
+  #gun.fire #muzzle{ opacity:1; transform:scale(1); transition:opacity .04s, transform .04s; }
+  @keyframes gunKick{ 0%{ transform:rotate(-14deg) translateX(0); } 42%{ transform:rotate(-8deg) translateX(8px); } 100%{ transform:rotate(-14deg) translateX(0); } }
 
 
 
@@ -119,6 +114,7 @@
   #splash::before{ content:""; position:absolute; inset:0; background:url("assets/zomvox-splash.png") center/cover no-repeat; filter:saturate(1.06) contrast(1.02); }
   #splash::after{ content:""; position:absolute; inset:0; background:linear-gradient(90deg, rgba(0,0,0,.22), rgba(0,0,0,.02) 46%, rgba(0,0,0,.5)), linear-gradient(0deg, rgba(0,0,0,.28), rgba(0,0,0,0) 44%); }
   .splashLoad{ position:absolute; right:calc(24px + env(safe-area-inset-right)); bottom:calc(24px + env(safe-area-inset-bottom)); width:min(360px, calc(100vw - 48px)); z-index:1; padding:12px; border:1px solid rgba(255,255,255,.2); border-radius:8px; background:rgba(3,8,12,.62); box-shadow:0 18px 48px rgba(0,0,0,.45); backdrop-filter:blur(8px); }
+  .splashVersion{ color:#a8becd; font-size:11px; font-weight:900; letter-spacing:.12em; text-transform:uppercase; text-shadow:0 2px 8px rgba(0,0,0,.75); margin-bottom:5px; }
   .splashStatus{ color:#eaf7ff; font-size:13px; font-weight:900; letter-spacing:.04em; text-transform:uppercase; text-shadow:0 2px 8px rgba(0,0,0,.75); margin-bottom:8px; }
   .splashMeter{ height:12px; overflow:hidden; border-radius:999px; border:1px solid rgba(255,255,255,.22); background:rgba(0,0,0,.5); box-shadow:inset 0 2px 8px rgba(0,0,0,.42); }
   #splashFill{ height:100%; width:0%; border-radius:999px; background:linear-gradient(90deg,#6bf45d,#ffe27a,#ff9b3d); box-shadow:0 0 22px rgba(145,243,110,.45); transition:width .12s linear; }
@@ -129,8 +125,7 @@
   .worldText{ color:#c4d8dc; font-size:12px; font-weight:900; letter-spacing:.1em; text-transform:uppercase; text-align:center; margin-bottom:12px; }
   .worldMeter{ height:13px; border:1px solid rgba(255,255,255,.2); border-radius:999px; overflow:hidden; background:rgba(0,0,0,.48); box-shadow:inset 0 2px 8px rgba(0,0,0,.48); }
   #worldFill{ width:0%; height:100%; background:linear-gradient(90deg,#74ff55,#ffdc55); box-shadow:0 0 20px rgba(145,243,110,.46); transition:width .08s linear; }
-  #toast{ pointer-events:none; position:fixed; right:14px; top:116px; max-width:350px; padding:10px 12px; border-radius:8px; background:rgba(4,11,16,.76); border:1px solid rgba(255,255,255,.16); color:#dff4ff; font-size:13px; opacity:0; transform:translateY(-8px); transition:.2s; backdrop-filter:blur(8px); z-index:13; }
-  #toast.show{ opacity:1; transform:translateY(0); }
+  #toast{ display:none; }
   #mobileControls{ position:fixed; inset:0; pointer-events:none; display:none; z-index:11; touch-action:none; }
   #stickBase{ pointer-events:auto; position:absolute; left:calc(22px + env(safe-area-inset-left)); bottom:calc(22px + env(safe-area-inset-bottom)); width:118px; height:118px; border-radius:50%; border:1px solid rgba(255,255,255,.24); background:rgba(5,10,14,.35); box-shadow:inset 0 0 28px rgba(0,0,0,.25), 0 8px 28px rgba(0,0,0,.26); touch-action:none; }
   #stickKnob{ position:absolute; left:50%; top:50%; width:54px; height:54px; margin:-27px 0 0 -27px; border-radius:50%; border:1px solid rgba(255,255,255,.35); background:rgba(220,245,255,.28); box-shadow:0 8px 22px rgba(0,0,0,.32); }
@@ -155,6 +150,7 @@
     .setting input{ width:16px; height:16px; }
     button#play{ border-radius:10px; padding:8px 14px; font-size:15px; }
     .splashLoad{ right:calc(12px + env(safe-area-inset-right)); bottom:calc(12px + env(safe-area-inset-bottom)); width:min(300px, calc(100vw - 24px)); padding:9px; }
+    .splashVersion{ font-size:9px; margin-bottom:4px; }
     .splashStatus{ font-size:11px; margin-bottom:6px; }
     .splashMeter{ height:10px; }
     #weaponPanel{ right:8px; top:8px; width:90px; min-width:0; padding:7px 8px; text-align:center; }
@@ -168,9 +164,9 @@
     .bigHealthBar{ height:8px; }
     .bullet{ height:19px; border-width:1px; }
     .bullet::before{ width:10px; height:8px; top:-6px; border-width:1px; }
-    #gun{ right:0; transform:scale(.78) rotate(-18deg) translateY(12px); }
-    #gun.fire{ animation:gunStraightMobile .16s ease-out; }
-    @keyframes gunStraightMobile{ 0%{ transform:scale(.78) rotate(-18deg) translateY(12px); } 42%{ transform:scale(.78) rotate(0deg) translate(8px,-4px); } 100%{ transform:scale(.78) rotate(-18deg) translateY(12px); } }
+    #gun{ right:0; bottom:10px; transform:scale(.78) rotate(-14deg); }
+    #gun.fire{ animation:gunKickMobile .12s ease-out; }
+    @keyframes gunKickMobile{ 0%{ transform:scale(.78) rotate(-14deg) translateX(0); } 42%{ transform:scale(.78) rotate(-8deg) translateX(8px); } 100%{ transform:scale(.78) rotate(-14deg) translateX(0); } }
     .grid{ grid-template-columns:1fr; }
     #mobileControls{ display:block; }
   }

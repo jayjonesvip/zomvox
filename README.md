@@ -1,6 +1,6 @@
 # ZomVox
 
-**ZomVox: Zombies and Voxels** is a browser-based voxel zombie survival shooter built for quick static hosting. The player drops into a large streaming voxel wasteland with sand, water, rocks, trees, ammo crates, block-breaking bullets, mobile controls, screen shake, death and respawn flow, and roaming voxel zombies.
+**ZomVox: Zombies and Voxels** is a browser-based voxel zombie survival shooter built for quick static hosting. The player drops into a fixed-size voxel wasteland with sand, water, rocks, trees, ammo crates, block-breaking bullets, mobile controls, screen shake, death and respawn flow, and roaming voxel zombies.
 
 The game runs directly in the browser with WebGL. There is no build step, package install, bundler, backend, or asset pipeline required.
 
@@ -14,10 +14,11 @@ Desktop play uses mouse and keyboard. Mobile play is designed for landscape orie
 
 - Static browser game with split frontend files: `index.html`, `styles.css`, and `script.js`.
 - Branded ZomVox splash screen using `assets/zomvox-splash.png`.
+- Splash screen build label using `BUILD_VERSION` plus the deployed document timestamp.
 - Favicon assets for browser tabs and installed shortcuts.
 - Procedural voxel terrain with grass, dirt, stone, sand, water, wood, leaves, bricks, glow markers, trees, rocks, and beaches.
-- Streaming chunk generation centered around the player so the world keeps generating as the player travels.
-- Chunk unloading outside the active play area to keep memory practical while still making the world feel huge.
+- Fixed-size chunk generation so the game area stays bounded and performance remains predictable.
+- Player movement is clamped inside the generated world.
 - Chunk-level mesh rebuilding for destructible blocks.
 - Six-round blaster magazine with reserve ammo.
 - Ammo pickups that add six rounds at a time.
@@ -120,7 +121,7 @@ const GAME_OPTIONS = {
 
 - `index.html`: document structure, menu, settings, overlays, HUD containers, mobile controls, and script/style references.
 - `styles.css`: visual styling, responsive mobile layout, splash screen, health/ammo HUD, death overlay, world rebuild overlay, and touch controls.
-- `script.js`: WebGL setup, procedural terrain, streaming chunks, movement, combat, enemy behavior, pickups, world rebuilding, HUD updates, audio, and game loop.
+- `script.js`: WebGL setup, procedural terrain, fixed world chunks, movement, combat, enemy behavior, pickups, world rebuilding, HUD updates, audio, and game loop.
 - `assets/`: splash screen and favicon files.
 
 ## Hosting
@@ -131,4 +132,4 @@ For `zomvox.com`, point the domain at the static host or deployment target that 
 
 ## Project Status
 
-ZomVox is in active prototype development. Current work is focused on mobile feel, smoother combat, readable HUD placement, terrain variety, streaming world generation, and keeping the browser game smooth on phones.
+ZomVox is in active prototype development. Current work is focused on mobile feel, smoother combat, readable HUD placement, terrain variety, fixed-size world performance, and keeping the browser game smooth on phones.

@@ -38,6 +38,7 @@
   const splash = $('splash');
   const splashStatus = $('splashStatus');
   const splashFill = $('splashFill');
+  const splashVersion = $('splashVersion');
   const settingHealth = $('settingHealth');
   const settingAmmo = $('settingAmmo');
   const settingControls = $('settingControls');
@@ -64,7 +65,9 @@
   };
 
   const CHUNK_SIZE = 16;
-  const RENDER_RADIUS = 3;
+  const WORLD_CHUNK_RADIUS = 3;
+  const WORLD_MIN = -WORLD_CHUNK_RADIUS * CHUNK_SIZE;
+  const WORLD_MAX = (WORLD_CHUNK_RADIUS + 1) * CHUNK_SIZE - 1;
   const MAX_Y = 46;
   const WATER_LEVEL = 8;
   const PLAYER_HEIGHT = 1.76;
@@ -117,6 +120,7 @@
   let touchMode = matchMedia('(pointer: coarse)').matches;
   let keys = Object.create(null);
   const touchInput = { moveX: 0, moveY: 0, jump: false, sprint: false, lookId: null, lookX: 0, lookY: 0, stickId: null };
+  const BUILD_VERSION = '2026.07.01.1';
   let lastTarget = null;
   let lastFrame = performance.now();
   let fpsAvg = 60;
@@ -130,9 +134,6 @@
 
   function showToast(message) {
     toast.textContent = message;
-    toast.classList.add('show');
-    clearTimeout(showToast.timer);
-    showToast.timer = setTimeout(() => toast.classList.remove('show'), 1500);
   }
 
   function scorePop(message, cls = '') {
@@ -235,7 +236,21 @@
     return fallback;
   }
 
+  function buildVersionText() {
+    const modified = new Date(document.lastModified);
+    if (Number.isNaN(modified.getTime())) return 'Build ' + BUILD_VERSION;
+    const stamp = [
+      modified.getFullYear(),
+      String(modified.getMonth() + 1).padStart(2, '0'),
+      String(modified.getDate()).padStart(2, '0'),
+      String(modified.getHours()).padStart(2, '0'),
+      String(modified.getMinutes()).padStart(2, '0')
+    ].join('');
+    return 'Build ' + BUILD_VERSION + '-' + stamp;
+  }
+
   function runSplash() {
+    if (splashVersion) splashVersion.textContent = buildVersionText();
     const messages = [
       'Getting latest version...',
       'Generating world...',
@@ -513,14 +528,21 @@
   function keyOf(x, y, z) { return x + ',' + y + ',' + z; }
   function chunkKey(cx, cz) { return cx + ',' + cz; }
   function chunkCoord(v) { return Math.floor(v / CHUNK_SIZE); }
-  function clampToWorld(pos) {}
+  function chunkInWorld(cx, cz) { return Math.abs(cx) <= WORLD_CHUNK_RADIUS && Math.abs(cz) <= WORLD_CHUNK_RADIUS; }
+  function inWorldXZ(x, z) { return x >= WORLD_MIN && x <= WORLD_MAX && z >= WORLD_MIN && z <= WORLD_MAX; }
+  function clampToWorld(pos) {
+    pos[0] = Math.max(WORLD_MIN + PLAYER_RADIUS + .4, Math.min(WORLD_MAX - PLAYER_RADIUS - .4, pos[0]));
+    pos[2] = Math.max(WORLD_MIN + PLAYER_RADIUS + .4, Math.min(WORLD_MAX - PLAYER_RADIUS - .4, pos[2]));
+  }
   function getBlock(x, y, z) { return world.get(keyOf(x, y, z)) || 0; }
   function genSetBlock(x, y, z, type) {
+    if (!inWorldXZ(x, z)) return;
     const k = keyOf(x, y, z);
     if (edits.has(k)) return;
     if (type) world.set(k, type); else world.delete(k);
   }
   function setBlock(x, y, z, type, persist = true) {
+    if (!inWorldXZ(x, z)) return;
     const k = keyOf(x, y, z);
     if (type) world.set(k, type); else world.delete(k);
     if (persist) edits.set(k, type || 0);
@@ -574,6 +596,7 @@
   }
 
   function generateChunk(cx, cz) {
+    if (!chunkInWorld(cx, cz)) return;
     const ck = chunkKey(cx, cz);
     if (loadedChunks.has(ck)) return;
     loadedChunks.add(ck);
@@ -643,46 +666,21 @@
     applyEditsForChunk(cx, cz);
   }
 
-  function unloadChunk(cx, cz) {
-    const ck = chunkKey(cx, cz);
-    if (!loadedChunks.has(ck)) return;
-    loadedChunks.delete(ck);
-    const x0 = cx * CHUNK_SIZE, z0 = cz * CHUNK_SIZE;
-    for (let x = x0; x < x0 + CHUNK_SIZE; x++) {
-      for (let z = z0; z < z0 + CHUNK_SIZE; z++) {
-        for (let y = -4; y <= MAX_Y + 26; y++) world.delete(keyOf(x, y, z));
-      }
-    }
-    // Keep living things mostly near the player and currently loaded area.
-    pickups = pickups.filter(p => chunkCoord(p.x) !== cx || chunkCoord(p.z) !== cz || Math.hypot(p.x - player.pos[0], p.z - player.pos[2]) < 28);
-    enemies = enemies.filter(e => chunkCoord(e.x) !== cx || chunkCoord(e.z) !== cz || Math.hypot(e.x - player.pos[0], e.z - player.pos[2]) < 36);
-  }
-
   function ensureChunks(force = false) {
-    const pcx = chunkCoord(player.pos[0]);
-    const pcz = chunkCoord(player.pos[2]);
-    if (!force && pcx === currentChunkX && pcz === currentChunkZ) return;
-    currentChunkX = pcx;
-    currentChunkZ = pcz;
-    const keep = new Set();
-    for (let cx = pcx - RENDER_RADIUS; cx <= pcx + RENDER_RADIUS; cx++) {
-      for (let cz = pcz - RENDER_RADIUS; cz <= pcz + RENDER_RADIUS; cz++) {
-        keep.add(chunkKey(cx, cz));
+    if (!force && loadedChunks.size >= (WORLD_CHUNK_RADIUS * 2 + 1) ** 2) return;
+    currentChunkX = 0;
+    currentChunkZ = 0;
+    for (let cx = -WORLD_CHUNK_RADIUS; cx <= WORLD_CHUNK_RADIUS; cx++) {
+      for (let cz = -WORLD_CHUNK_RADIUS; cz <= WORLD_CHUNK_RADIUS; cz++) {
         generateChunk(cx, cz);
-      }
-    }
-    for (const ck of [...loadedChunks]) {
-      if (!keep.has(ck)) {
-        const [cx, cz] = ck.split(',').map(Number);
-        unloadChunk(cx, cz);
       }
     }
     queueRebuild();
   }
 
   function topSolidY(x, z) {
-    x = Math.floor(x);
-    z = Math.floor(z);
+    x = Math.max(WORLD_MIN, Math.min(WORLD_MAX, Math.floor(x)));
+    z = Math.max(WORLD_MIN, Math.min(WORLD_MAX, Math.floor(z)));
     generateChunk(chunkCoord(x), chunkCoord(z));
     for (let y = MAX_Y + 25; y >= 0; y--) {
       const t = getBlock(x, y, z);
@@ -802,7 +800,7 @@
     rebuildQueued = false;
   }
   function markDirtyChunk(cx, cz) {
-    if (loadedChunks.has(chunkKey(cx, cz))) dirtyChunks.add(chunkKey(cx, cz));
+    if (chunkInWorld(cx, cz) && loadedChunks.has(chunkKey(cx, cz))) dirtyChunks.add(chunkKey(cx, cz));
   }
   function rebuildDirtyChunks() {
     dirtyChunks.forEach(k => {
@@ -889,6 +887,7 @@
       const r = 24 + seededHash(player.pos[2] - i * 17, performance.now() * .002) * 38;
       const x = Math.floor(player.pos[0] + Math.cos(a) * r);
       const z = Math.floor(player.pos[2] + Math.sin(a) * r);
+      if (!inWorldXZ(x, z)) continue;
       generateChunk(chunkCoord(x), chunkCoord(z));
       const y = topSolidY(x, z) + 1;
       if (y > WATER_LEVEL + 1 && !blocksMovement(getBlock(x, y, z))) return { x: x + .5, y, z: z + .5 };
