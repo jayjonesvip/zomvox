@@ -51,24 +51,15 @@
   #reserveText{ color:#d6e9f5; font-size:13px; font-weight:900; letter-spacing:.02em; }
   #reloadText{ color:#ffdc7a; font-size:12px; font-weight:900; margin-top:2px; min-height:15px; letter-spacing:.04em; text-transform:uppercase; }
 
-  #gun{ pointer-events:none; position:fixed; right:7vw; bottom:16px; width:148px; height:58px; transform:rotate(-14deg); transform-origin:78% 58%; opacity:.96; filter:drop-shadow(0 18px 22px rgba(0,0,0,.6)); image-rendering:pixelated; transition:transform .1s ease-out; }
-  #gun .stock,#gun .grip{ display:none; }
-  #gun .body{ position:absolute; right:34px; bottom:10px; width:92px; height:38px; border:4px solid rgba(0,0,0,.68); border-radius:2px; background:linear-gradient(180deg,#d7dcdf 0%,#9da7ad 48%,#586168 49%,#343b42 100%); box-shadow:inset 0 7px 0 rgba(255,255,255,.22), inset 0 -8px 0 rgba(0,0,0,.25); }
-  #gun .barrel{ position:absolute; right:4px; bottom:18px; width:38px; height:22px; border:4px solid rgba(0,0,0,.68); border-left:0; border-radius:0 2px 2px 0; background:linear-gradient(180deg,#c2c9ce,#545e66); }
-  #muzzle{ position:absolute; right:-28px; bottom:2px; width:64px; height:64px; opacity:0; transform:scale(.25); background:radial-gradient(circle, #fff7aa 0 12%, #ffe100 13% 36%, #ffb000 37% 58%, rgba(255,188,0,0) 66%); clip-path:polygon(50% 0,62% 31%,100% 22%,71% 50%,100% 78%,62% 69%,50% 100%,38% 69%,0 78%,29% 50%,0 22%,38% 31%); filter:drop-shadow(0 0 18px #ffd400); }
-  #gun.fire{ animation:gunKick .12s ease-out; }
-  #gun.fire #muzzle{ opacity:1; transform:scale(1); transition:opacity .04s, transform .04s; }
-  @keyframes gunKick{ 0%{ transform:rotate(-14deg) translateX(0); } 42%{ transform:rotate(-8deg) translateX(8px); } 100%{ transform:rotate(-14deg) translateX(0); } }
-
-
-
   #scoreFeed{ pointer-events:none; position:fixed; left:50%; top:34%; transform:translateX(-50%); display:flex; flex-direction:column; align-items:center; gap:6px; z-index:6; }
-  .scorePop{ font-size:clamp(24px,4vw,46px); font-weight:1000; letter-spacing:.02em; color:#fff; text-shadow:0 3px 0 rgba(0,0,0,.75), 0 0 18px rgba(255,255,255,.35); animation:scoreRise 1.05s ease-out forwards; white-space:nowrap; }
+  .scorePop{ font-size:clamp(20px,3.2vw,34px); font-weight:1000; letter-spacing:.02em; color:#fff; text-shadow:0 3px 0 rgba(0,0,0,.75), 0 0 18px rgba(255,255,255,.35); animation:scoreRise 1.05s ease-out forwards; white-space:nowrap; }
   .scorePop.head{ color:#ffe77e; text-shadow:0 3px 0 rgba(0,0,0,.75), 0 0 22px rgba(255,218,92,.55); }
   .scorePop.kill{ color:#aaff86; text-shadow:0 3px 0 rgba(0,0,0,.75), 0 0 22px rgba(130,255,103,.45); }
   .scorePop.block{ color:#bfe7ff; text-shadow:0 3px 0 rgba(0,0,0,.75), 0 0 22px rgba(117,202,255,.42); }
   .scorePop.combo{ color:#ffad66; text-shadow:0 3px 0 rgba(0,0,0,.75), 0 0 24px rgba(255,140,42,.55); transform:scale(1.1); }
   .scorePop.pickup{ color:#8fffc8; text-shadow:0 3px 0 rgba(0,0,0,.75), 0 0 24px rgba(97,255,190,.48); }
+  .scorePop.range{ color:#9fd8ff; text-shadow:0 3px 0 rgba(0,0,0,.75), 0 0 22px rgba(80,185,255,.48); }
+  .scorePop.small{ font-size:clamp(16px,2.4vw,26px); }
   @keyframes scoreRise{ 0%{ opacity:0; transform:translateY(18px) scale(.88); } 14%{ opacity:1; transform:translateY(0) scale(1.05); } 72%{ opacity:1; } 100%{ opacity:0; transform:translateY(-58px) scale(.98); } }
 
   #healthStatus{ pointer-events:none; position:fixed; left:50%; top:12px; width:230px; transform:translateX(-50%); padding:10px 12px; border-radius:8px; background:rgba(4,10,14,.82); border:1px solid rgba(255,255,255,.18); box-shadow:0 15px 42px rgba(0,0,0,.36); backdrop-filter:blur(10px); z-index:9; }
@@ -164,9 +155,6 @@
     .bigHealthBar{ height:8px; }
     .bullet{ height:19px; border-width:1px; }
     .bullet::before{ width:10px; height:8px; top:-6px; border-width:1px; }
-    #gun{ right:0; bottom:10px; transform:scale(.78) rotate(-14deg); }
-    #gun.fire{ animation:gunKickMobile .12s ease-out; }
-    @keyframes gunKickMobile{ 0%{ transform:scale(.78) rotate(-14deg) translateX(0); } 42%{ transform:scale(.78) rotate(-8deg) translateX(8px); } 100%{ transform:scale(.78) rotate(-14deg) translateX(0); } }
     .grid{ grid-template-columns:1fr; }
     #mobileControls{ display:block; }
   }

@@ -16,7 +16,6 @@
   const menu = $('menu');
   const play = $('play');
   const toast = $('toast');
-  const gun = $('gun');
   const damageFlash = $('damageFlash');
   const healthStatus = $('healthStatus');
   const healthBigText = $('healthBigText');
@@ -75,6 +74,7 @@
   const MAG_SIZE = 6;
   const RELOAD_TIME = 1.15;
   const ENEMY_CAP = 18;
+  const LONG_RANGE_KILL_DIST = 34;
 
   for (let i = 0; i < MAG_SIZE; i++) {
     const b = document.createElement('div');
@@ -1049,24 +1049,28 @@
     if (player.reloading) return;
     if (player.mag <= 0) { showToast('Empty. Reload.'); sound('empty'); startReload(); return; }
     player.mag--;
-    gun.classList.remove('fire');
-    void gun.offsetWidth;
-    gun.classList.add('fire');
-    setTimeout(() => gun.classList.remove('fire'), 80);
     sound('shoot');
     const hit = raycastProjectile(58);
     if (hit.kind === 'enemy') {
-      const damage = hit.head ? 52 : 28;
+      const damage = hit.head ? hit.enemy.hp : 28;
       hit.enemy.hp -= damage;
       spawnParticles(hit.point[0], hit.point[1], hit.point[2], hit.head ? 12 : 8, hit.head ? 12 : 15);
       sound(hit.head ? 'head' : 'hit');
-      if (hit.head) { player.score += 50; scorePop('+50 HEADSHOT', 'head'); }
       if (hit.enemy.hp <= 0) {
         player.kills++;
-        player.score += 100;
-        scorePop('+100 ENEMY DOWN', 'kill');
+        if (hit.head) {
+          player.score += 150;
+          scorePop('+150 HEADSHOT KILL', 'head');
+        } else {
+          player.score += 100;
+          scorePop('+100 ENEMY DOWN', 'kill');
+        }
+        if (hit.dist >= LONG_RANGE_KILL_DIST) {
+          player.score += 200;
+          scorePop('+200 LONG RANGE', 'range small');
+        }
         const now = performance.now() / 1000;
-        if (now - lastKillTime < 2.0) { player.score += 150; scorePop('+150 DOUBLE KILL', 'combo'); }
+        if (now - lastKillTime < 2.0) { player.score += 150; scorePop('+150 DOUBLE KILL', 'combo small'); }
         lastKillTime = now;
         sound('kill');
         if (Math.random() < .55) spawnPickupAt(Math.floor(hit.enemy.x), Math.floor(hit.enemy.y), Math.floor(hit.enemy.z));
