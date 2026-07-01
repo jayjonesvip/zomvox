@@ -11,7 +11,7 @@ window.ZOMVOX_CONFIG = {
 
   world: {
     chunkSize: 16,
-    chunkRadius: 2,
+    chunkRadius: 4,
     maxY: 46,
     waterLevel: 8
   },
