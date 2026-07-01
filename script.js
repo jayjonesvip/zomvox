@@ -477,6 +477,7 @@
     uniform vec3 uSky;
     uniform float uDay;
     uniform float uFog;
+    uniform float uLava;
     float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123); }
     float gridLine(vec2 uv){
       float b = min(min(uv.x, 1.0 - uv.x), min(uv.y, 1.0 - uv.y));
@@ -489,7 +490,7 @@
       if(t < 4.5) return vec3(0.52, 0.30, 0.12);
       if(t < 5.5) return vec3(0.12, 0.46, 0.19);
       if(t < 6.5) return vec3(0.78, 0.67, 0.36);
-      if(t < 7.5) return vec3(0.10, 0.37, 0.70);
+      if(t < 7.5) return mix(vec3(0.10, 0.37, 0.70), vec3(0.90, 0.13, 0.04), uLava);
       if(t < 8.5) return vec3(0.62, 0.20, 0.16);
       if(t < 9.5) return vec3(1.00, 0.74, 0.25);
       if(t < 10.5) return vec3(0.14, 0.65, 0.19); /* enemy green */
@@ -497,6 +498,9 @@
       if(t < 12.5) return vec3(1.00, 0.10, 0.07); /* eyes */
       if(t < 13.5) return vec3(0.88, 0.70, 0.18); /* ammo */
       if(t < 14.5) return vec3(0.86, 0.88, 0.82); /* metal */
+      if(t < 15.5) return vec3(1.0, 0.45, 0.18); /* particles */
+      if(t < 16.5) return vec3(0.95, 0.96, 0.92); /* health box */
+      if(t < 17.5) return vec3(0.92, 0.03, 0.04); /* health cross */
       return vec3(1.0, 0.45, 0.18); /* particles */
     }
     void main(){
@@ -506,11 +510,12 @@
       color *= 0.88 + grain * 0.18;
       if(vType > 6.5 && vType < 7.5){
         float ripple = sin((vWorld.x * 2.4 + vWorld.z * 2.1 + uTime * 2.6)) * 0.04;
-        color += vec3(0.03, 0.12, 0.18) + ripple;
+        color += mix(vec3(0.03, 0.12, 0.18), vec3(0.22, 0.03, 0.0), uLava) + ripple;
       }
       if(vType > 8.5 && vType < 9.5) color += vec3(0.55, 0.38, 0.05);
       if(vType > 11.5 && vType < 12.5) color += vec3(0.70, 0.02, 0.0);
-      if(vType > 14.5) color += vec3(0.50, 0.15, 0.04);
+      if(vType > 14.5 && vType < 15.5) color += vec3(0.50, 0.15, 0.04);
+      if(vType > 16.5 && vType < 17.5) color += vec3(0.35, 0.0, 0.0);
       float edge = gridLine(vUv);
       color *= mix(0.58, 1.0, edge);
       float sun = max(dot(n, normalize(uLightDir)), 0.0);
@@ -526,7 +531,7 @@
         color = mix(color, uSky, fog);
       }
       color += vec3(0.03, 0.05, 0.10) * (1.0 - uDay);
-      float alpha = (vType > 6.5 && vType < 7.5) ? 0.63 : 1.0;
+      float alpha = (vType > 6.5 && vType < 7.5) ? mix(0.63, 0.72, uLava) : 1.0;
       gl_FragColor = vec4(color, alpha);
     }
   `;
@@ -554,7 +559,8 @@
     light: gl.getUniformLocation(voxelProgram, 'uLightDir'),
     sky: gl.getUniformLocation(voxelProgram, 'uSky'),
     day: gl.getUniformLocation(voxelProgram, 'uDay'),
-    fog: gl.getUniformLocation(voxelProgram, 'uFog')
+    fog: gl.getUniformLocation(voxelProgram, 'uFog'),
+    lava: gl.getUniformLocation(voxelProgram, 'uLava')
   };
   const lineLoc = {
     pos: gl.getAttribLocation(lineProgram, 'aPosition'),
@@ -676,8 +682,15 @@
     });
   }
 
-  function spawnPickupAt(x, y, z) {
-    pickups.push({ x: x + .5, y: y + .35, z: z + .5, amount: 6, bob: seededHash(x * 5.1, z * 9.3) * 10 });
+  function spawnPickupAt(x, y, z, kind = 'ammo') {
+    pickups.push({
+      x: x + .5,
+      y: y + .35,
+      z: z + .5,
+      kind,
+      amount: kind === 'health' ? 25 : 6,
+      bob: seededHash(x * 5.1, z * 9.3) * 10
+    });
   }
 
   function generateChunk(cx, cz) {
@@ -692,11 +705,12 @@
         const h = terrainHeight(x, z);
         const beach = h <= WATER_LEVEL + 2;
         const desert = noise2(x * 0.035 + 90, z * 0.035 - 30) > 0.66 && h < WATER_LEVEL + 9;
-        const topType = (beach || desert) ? BLOCK.SAND : BLOCK.GRASS;
+        const lavaShore = GAME_OPTIONS.dangerousWater && beach;
+        const topType = lavaShore ? BLOCK.STONE : ((beach || desert) ? BLOCK.SAND : BLOCK.GRASS);
         for (let y = 0; y <= h; y++) {
           let type = BLOCK.STONE;
           if (y === h) type = topType;
-          else if (y > h - 4) type = (beach || desert) ? BLOCK.SAND : BLOCK.DIRT;
+          else if (y > h - 4) type = lavaShore ? BLOCK.STONE : ((beach || desert) ? BLOCK.SAND : BLOCK.DIRT);
           genSetBlock(x, y, z, type);
         }
         if (h < WATER_LEVEL) {
@@ -747,6 +761,12 @@
       const lz = 3 + Math.floor(seededHash(cx - 14, cz + 91) * 10);
       const x = x0 + lx, z = z0 + lz, y = terrainHeight(x, z) + 1;
       if (y > WATER_LEVEL + 1) spawnPickupAt(x, y, z);
+    }
+    if (seededHash(cx * 31.4 - 11, cz * 13.9 + 25) > 0.90) {
+      const lx = 3 + Math.floor(seededHash(cx - 121, cz + 38) * 10);
+      const lz = 3 + Math.floor(seededHash(cx + 49, cz - 83) * 10);
+      const x = x0 + lx, z = z0 + lz, y = terrainHeight(x, z) + 1;
+      if (y > WATER_LEVEL + 1) spawnPickupAt(x, y, z, 'health');
     }
     applyEditsForChunk(cx, cz);
   }
@@ -1190,7 +1210,9 @@
         lastKillTime = now;
         sound('kill');
         checkHordeLevel();
-        if (Math.random() < .55) spawnPickupAt(Math.floor(hit.enemy.x), Math.floor(hit.enemy.y), Math.floor(hit.enemy.z));
+        const dropRoll = Math.random();
+        if (dropRoll < .12) spawnPickupAt(Math.floor(hit.enemy.x), Math.floor(hit.enemy.y), Math.floor(hit.enemy.z), 'health');
+        else if (dropRoll < .55) spawnPickupAt(Math.floor(hit.enemy.x), Math.floor(hit.enemy.y), Math.floor(hit.enemy.z));
         showToast('Enemy down. Kills: ' + player.kills);
       } else {
         pulseHitMarker('hit');
@@ -1226,11 +1248,22 @@
       p.bob += dt * 3.2;
       const dist = Math.hypot(p.x - player.pos[0], p.z - player.pos[2]);
       if (dist < 1.45 && Math.abs(p.y - player.pos[1]) < 2.2) {
-        player.reserve += p.amount;
-        p.collected = true;
-        showToast('Ammo +' + p.amount);
-        scorePop('+' + p.amount + ' AMMO PICKUP', 'pickup');
-        sound('pickup');
+        if (p.kind === 'health') {
+          if (player.health >= 100) continue;
+          const healed = Math.min(p.amount, 100 - player.health);
+          player.health += healed;
+          p.collected = true;
+          showToast('Health +' + Math.round(healed));
+          scorePop('+' + Math.round(healed) + ' HEALTH', 'pickup');
+          sound('pickup');
+          spawnParticles(p.x, p.y + .3, p.z, 10, 17);
+        } else {
+          player.reserve += p.amount;
+          p.collected = true;
+          showToast('Ammo +' + p.amount);
+          scorePop('+' + p.amount + ' AMMO PICKUP', 'pickup');
+          sound('pickup');
+        }
       }
     }
     pickups = pickups.filter(p => !p.collected && Math.hypot(p.x - player.pos[0], p.z - player.pos[2]) < 120);
@@ -1348,6 +1381,23 @@
     chunkMeshes.forEach(entry => drawMesh(entry[kind]));
   }
 
+  function pushHealthPickup(arr, p, y) {
+    const cx = p.x, cz = p.z, red = 17, t = .032;
+    pushBox(arr, cx - .32, y, cz - .32, .64, .46, .64, 16);
+    pushBox(arr, cx - .20, y + .18, cz - .356, .40, .10, t, red);
+    pushBox(arr, cx - .05, y + .05, cz - .358, .10, .36, t, red);
+    pushBox(arr, cx - .20, y + .18, cz + .324, .40, .10, t, red);
+    pushBox(arr, cx - .05, y + .05, cz + .326, .10, .36, t, red);
+    pushBox(arr, cx - .356, y + .18, cz - .20, t, .10, .40, red);
+    pushBox(arr, cx - .358, y + .05, cz - .05, t, .36, .10, red);
+    pushBox(arr, cx + .324, y + .18, cz - .20, t, .10, .40, red);
+    pushBox(arr, cx + .326, y + .05, cz - .05, t, .36, .10, red);
+    pushBox(arr, cx - .20, y + .462, cz - .05, .40, t, .10, red);
+    pushBox(arr, cx - .05, y + .464, cz - .20, .10, t, .40, red);
+    pushBox(arr, cx - .20, y - .034, cz - .05, .40, t, .10, red);
+    pushBox(arr, cx - .05, y - .036, cz - .20, .10, t, .40, red);
+  }
+
   function buildDynamicMesh(time) {
     const arr = [];
     for (const e of enemies) {
@@ -1367,8 +1417,12 @@
     }
     for (const p of pickups) {
       const y = p.y + Math.sin(p.bob) * .16;
-      pushBox(arr, p.x - .32, y, p.z - .32, .64, .38, .64, 13);
-      pushBox(arr, p.x - .22, y + .38, p.z - .22, .44, .12, .44, 14);
+      if (p.kind === 'health') {
+        pushHealthPickup(arr, p, y);
+      } else {
+        pushBox(arr, p.x - .32, y, p.z - .32, .64, .38, .64, 13);
+        pushBox(arr, p.x - .22, y + .38, p.z - .22, .44, .12, .44, 14);
+      }
     }
     for (const p of particles) {
       const s = .07 + p.life * .05;
@@ -1438,6 +1492,7 @@
     gl.uniform3f(loc.sky, sky[0], sky[1], sky[2]);
     gl.uniform1f(loc.day, dayAmount);
     gl.uniform1f(loc.fog, GAME_OPTIONS.fog ? 1 : 0);
+    gl.uniform1f(loc.lava, GAME_OPTIONS.dangerousWater ? 1 : 0);
     gl.disable(gl.BLEND);
     gl.depthMask(true);
     drawWorldMeshes('opaque');
