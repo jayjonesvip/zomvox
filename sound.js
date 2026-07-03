@@ -65,6 +65,9 @@
     else if (name === 'head') { noise(.025, .06, 1900); tone(980, .045, 'square', .065, 1450); setTimeout(() => tone(520, .055, 'triangle', .045, 780), 45); }
     else if (name === 'kill') { tone(260, .075, 'square', .055, 390); setTimeout(() => tone(520, .08, 'triangle', .05, 780), 80); }
     else if (name === 'pickup') { tone(520, .06, 'triangle', .045, 780); }
+    else if (name === 'pickupAmmo') { tone(520, .06, 'triangle', .045, 780); }
+    else if (name === 'pickupHealth') { tone(660, .07, 'sine', .04, 880); setTimeout(() => tone(990, .08, 'triangle', .035, 1320), 70); }
+    else if (name === 'bite') { noise(.08, .08, 430); tone(72, .09, 'sawtooth', .045, 38); }
     else if (name === 'hurt') { tone(85, .12, 'sawtooth', .07, 45); }
     else if (name === 'wave') { tone(180, .08, 'sawtooth', .05, 120); setTimeout(() => tone(330, .09, 'triangle', .045, 480), 85); }
     else if (name === 'heartbeat') { tone(55, .11, 'sine', .045, 45); }
@@ -100,7 +103,10 @@
     },
     play(name) {
       if (!enabled) return;
-      const fileName = soundFiles[name] || null;
+      const hasOverride = Object.prototype.hasOwnProperty.call(soundFiles, name);
+      const fileName = hasOverride
+        ? soundFiles[name]
+        : ((name === 'pickupAmmo' || name === 'pickupHealth') ? soundFiles.pickup : null);
       if (playFile(name, fileName)) return;
       synth(name);
     }
