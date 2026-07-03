@@ -496,6 +496,7 @@
       if(t < 18.5) return vec3(0.21, 0.72, 0.18); /* bright zombie */
       if(t < 19.5) return vec3(0.55, 0.54, 0.10); /* yellow zombie */
       if(t < 20.5) return vec3(1.00, 0.82, 0.10); /* yellow eyes */
+      if(t < 21.5) return vec3(0.025, 0.055, 0.025); /* closed eyes */
       return vec3(1.0, 0.45, 0.18); /* particles */
     }
     void main(){
@@ -1016,7 +1017,7 @@
     const big = seededHash(p.x * 9.1, p.z * 3.2) > 0.82;
     const variant = Math.floor(seededHash(p.x * 12.7 - 4, p.z * 8.4 + 6) * 4);
     const dx = player.pos[0] - p.x, dz = player.pos[2] - p.z;
-    enemies.push({ x: p.x, y: p.y, z: p.z, hp: big ? 80 : 48, maxHp: big ? 80 : 48, speed: big ? 2.0 : 2.55, attack: 0, retreat: 0, phase: seededHash(p.x, p.z) * 10, big, variant, face: Math.atan2(dx, -dz) });
+    enemies.push({ x: p.x, y: p.y, z: p.z, hp: big ? 80 : 48, maxHp: big ? 80 : 48, speed: big ? 2.0 : 2.55, attack: 0, retreat: 0, phase: seededHash(p.x, p.z) * 10, blinkSeed: seededHash(p.x * 3.7 + 18, p.z * 5.9 - 22), big, variant, face: Math.atan2(dx, -dz) });
   }
 
   function lerpAngle(a, b, t) {
@@ -1053,7 +1054,7 @@
       e.retreat = Math.max(0, (e.retreat || 0) - dt);
       e.attack -= dt;
       if (dist < (e.big ? 1.75 : 1.58) && Math.abs(player.pos[1] - e.y) < 2.25 && e.attack <= 0) {
-        damagePlayer(e.big ? 22 : 14);
+        damagePlayer(e.big ? 22 : 14, 'bite');
         e.attack = e.big ? 1.25 : .9;
         e.retreat = e.big ? .42 : .34;
       }
@@ -1061,12 +1062,13 @@
     enemies = enemies.filter(e => e.hp > 0 && Math.hypot(e.x - player.pos[0], e.z - player.pos[2]) < 130);
   }
 
-  function damagePlayer(amount) {
+  function damagePlayer(amount, impactSound = null) {
     if (deathState.active || worldRebuildState.active || player.invuln > 0 || isMenuOpen()) return;
     player.health -= amount;
     player.invuln = .45;
     pulseDamage();
     shakeScreen();
+    if (impactSound) sound(impactSound);
     sound('hurt');
     if (player.health <= 0) beginDeathSequence();
   }
@@ -1265,14 +1267,14 @@
           p.collected = true;
           showToast('Health +' + Math.round(healed));
           scorePop('+' + Math.round(healed) + ' HEALTH', 'pickup');
-          sound('pickup');
+          sound('pickupHealth');
           spawnParticles(p.x, p.y + .3, p.z, 10, 17);
         } else {
           player.reserve += p.amount;
           p.collected = true;
           showToast('Ammo +' + p.amount);
           scorePop('+' + p.amount + ' AMMO PICKUP', 'pickup');
-          sound('pickup');
+          sound('pickupAmmo');
         }
       }
     }
@@ -1419,7 +1421,11 @@
       const variant = e.variant || 0;
       const bodyType = variant === 1 ? 18 : (variant === 2 ? 19 : 10);
       const limbType = variant === 2 ? 19 : (variant === 3 ? 18 : 11);
-      const eyeType = variant === 3 ? 20 : 12;
+      const blinkCycle = 2.7 + (e.blinkSeed || 0) * 2.2;
+      const blinkPhase = (time + (e.blinkSeed || 0) * 9.0) % blinkCycle;
+      const doubleBlink = (e.blinkSeed || 0) > .68 && blinkPhase > .20 && blinkPhase < .30;
+      const blinking = blinkPhase < .10 || doubleBlink;
+      const eyeType = blinking ? 21 : (variant === 3 ? 20 : 12);
       pushBoxY(arr, x, y, z, -.18*scale, 0, -.18*scale, .22*scale, .45*scale, .22*scale, yaw, limbType);
       pushBoxY(arr, x, y, z,  .02*scale, 0, -.18*scale, .22*scale, .45*scale, .22*scale, yaw, limbType);
       pushBoxY(arr, x, y, z, -.18*scale, 0,  .02*scale, .22*scale, .45*scale, .22*scale, yaw, limbType);

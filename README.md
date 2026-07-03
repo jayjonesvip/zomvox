@@ -131,7 +131,10 @@ audio: {
   files: {
     shoot: 'shoot.mp3',
     empty: null,
-    reloadStart: null
+    reloadStart: null,
+    pickupAmmo: 'pickup.mp3',
+    pickupHealth: null,
+    bite: null
   }
 }
 ```
