@@ -81,7 +81,7 @@ window.ZOMVOX_CONFIG = {
       Example:
       4 = 9 x 9 chunks
     */
-    chunkRadius: 4,
+    chunkRadius: 5,
 
     /*
       Max terrain height.
@@ -89,7 +89,7 @@ window.ZOMVOX_CONFIG = {
       Higher values allow taller hills and terrain features.
       Very high values can hurt performance.
     */
-    maxY: 18,
+    maxY: 24,
 
     /*
       Water height level.
@@ -97,7 +97,7 @@ window.ZOMVOX_CONFIG = {
       Higher value = more flooded/lake areas.
       Lower value = drier world.
     */
-    waterLevel: 4
+    waterLevel: 16
   },
 
   player: {
