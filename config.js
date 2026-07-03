@@ -1,4 +1,4 @@
-/*
+9/*
   ZOMVOX CONFIG
 
   This file is for gameplay tuning only.
@@ -25,7 +25,7 @@ window.ZOMVOX_CONFIG = {
     Same seed = same world layout.
     Change this to any whole number to generate a different map.
   */
-  initialSeed: 31337,
+  initialSeed: 2919,
 
   environment: {
     /*
@@ -89,7 +89,7 @@ window.ZOMVOX_CONFIG = {
       Higher values allow taller hills and terrain features.
       Very high values can hurt performance.
     */
-    maxY: 36,
+    maxY: 18,
 
     /*
       Water height level.
@@ -97,7 +97,7 @@ window.ZOMVOX_CONFIG = {
       Higher value = more flooded/lake areas.
       Lower value = drier world.
     */
-    waterLevel: 8
+    waterLevel: 4
   },
 
   player: {
