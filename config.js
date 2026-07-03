@@ -290,7 +290,7 @@ window.ZOMVOX_CONFIG = {
       pickup: 'pickup.mp3',
       pickupAmmo: 'freesound_community-item-equip-6904.mp3',
       pickupHealth: 'pickup.mp3',
-      bite: null,
+      bite: 'freesound_community-zombie-bite-96528.mp3',
       hurt: 'hurt.mp3',
       wave: null,
       heartbeat: null
