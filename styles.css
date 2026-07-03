@@ -145,7 +145,32 @@
   #touchShoot{ right:calc(24px + env(safe-area-inset-right)); top:48%; bottom:auto; width:78px; height:78px; border:0; background:rgba(220,28,28,.34); box-shadow:0 0 0 7px rgba(0,0,0,.18), 0 0 0 12px rgba(120,0,0,.58), 0 8px 26px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.18); }
   #touchJump{ right:calc(24px + env(safe-area-inset-right)); top:calc(48% - 82px); bottom:auto; width:64px; height:64px; }
   #touchSprint{ left:calc(154px + env(safe-area-inset-left)); bottom:calc(32px + env(safe-area-inset-bottom)); width:58px; height:58px; }
-  #portraitBlock{ position:fixed; inset:0; display:none; align-items:center; justify-content:center; text-align:center; padding:24px; background:#06111c; color:#eaf7ff; z-index:40; font-weight:1000; letter-spacing:.02em; }
+  #portraitBlock{ position:fixed; inset:0; display:none; overflow:hidden; align-items:stretch; justify-content:center; text-align:center; padding:0; background:#02070b; color:#eaf7ff; z-index:40; font-weight:1000; letter-spacing:0; }
+  #portraitBlock::before{ content:""; position:absolute; inset:0; background:url("assets/zomvox-splash.png") center/cover no-repeat; filter:saturate(1.1) contrast(1.05) brightness(.58); transform:scale(1.08); }
+  #portraitBlock::after{ content:""; position:absolute; inset:0; background:radial-gradient(circle at 50% 30%, rgba(145,243,110,.16), rgba(0,0,0,.2) 34%, rgba(0,0,0,.88) 80%), linear-gradient(180deg, rgba(0,0,0,.18), rgba(0,0,0,.86)); }
+  .portraitBackdrop{ position:absolute; inset:0; z-index:1; pointer-events:none; }
+  .portraitMoon{ position:absolute; left:9vw; top:8dvh; width:54px; height:54px; transform:rotate(10deg); background:linear-gradient(135deg,#f6fbff,#b9d6f3); box-shadow:0 0 26px rgba(178,220,255,.58); clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%); opacity:.92; }
+  .portraitGround{ position:absolute; left:-8vw; right:-8vw; bottom:-3dvh; height:21dvh; background:linear-gradient(180deg, rgba(50,37,22,.12), rgba(16,12,9,.92)), repeating-linear-gradient(90deg, rgba(120,89,45,.55) 0 15px, rgba(70,60,46,.5) 15px 30px); clip-path:polygon(0 28%,9% 20%,17% 34%,28% 25%,38% 38%,51% 22%,62% 34%,72% 24%,82% 36%,92% 22%,100% 30%,100% 100%,0 100%); }
+  .portraitZombie{ position:absolute; width:58px; height:86px; opacity:.72; filter:drop-shadow(0 10px 18px rgba(0,0,0,.62)); }
+  .portraitZombie::before{ content:""; position:absolute; left:14px; top:0; width:32px; height:32px; background:#577e2f; border:3px solid rgba(0,0,0,.42); box-shadow:inset -7px -8px 0 rgba(0,0,0,.16); }
+  .portraitZombie::after{ content:""; position:absolute; left:9px; top:31px; width:42px; height:40px; background:#314b28; border:3px solid rgba(0,0,0,.42); box-shadow:inset -9px -8px 0 rgba(0,0,0,.18); }
+  .portraitZombie span{ position:absolute; left:22px; top:11px; width:6px; height:6px; background:#f2ff59; box-shadow:13px 0 0 #f2ff59, 0 0 12px rgba(214,255,68,.85), 13px 0 12px rgba(214,255,68,.85); z-index:1; }
+  .portraitZombie.z1{ left:7vw; bottom:11dvh; transform:rotate(-7deg) scale(.92); }
+  .portraitZombie.z2{ right:6vw; bottom:18dvh; transform:rotate(8deg) scale(.78); opacity:.54; }
+  .portraitContent{ position:relative; z-index:2; width:min(100%, 430px); min-height:100dvh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:calc(28px + env(safe-area-inset-top)) 24px calc(28px + env(safe-area-inset-bottom)); text-shadow:0 3px 0 rgba(0,0,0,.8), 0 0 28px rgba(0,0,0,.55); }
+  .portraitBrand{ font-size:clamp(48px, 17vw, 86px); line-height:.82; font-weight:1000; color:#dff7d2; }
+  .portraitBrand b{ color:#91f36e; text-shadow:0 3px 0 rgba(0,0,0,.82), 0 0 26px rgba(145,243,110,.48); }
+  .portraitKicker{ margin-top:9px; color:#d7e9f4; font-size:12px; text-transform:uppercase; letter-spacing:.16em; }
+  .rotateGlyph{ position:relative; width:118px; height:118px; margin:30px 0 18px; display:grid; place-items:center; filter:drop-shadow(0 16px 26px rgba(0,0,0,.52)); }
+  .phoneShape{ position:relative; width:48px; height:80px; border:5px solid #eaf7ff; border-radius:12px; background:linear-gradient(180deg, rgba(145,243,110,.24), rgba(0,0,0,.2)); box-shadow:inset 0 0 0 3px rgba(0,0,0,.35), 0 0 24px rgba(145,243,110,.28); animation:phoneRoll 1.8s ease-in-out infinite; }
+  .phoneShape::after{ content:""; position:absolute; left:50%; bottom:23px; width:8px; height:8px; transform:translateX(-50%); border-radius:50%; background:#eaf7ff; }
+  .rotateArc{ position:absolute; inset:9px; border-radius:50%; border:4px solid transparent; border-top-color:#ffd45d; border-right-color:#ffd45d; animation:arcSpin 1.8s ease-in-out infinite; }
+  .rotateArc::after{ content:""; position:absolute; right:8px; top:5px; width:0; height:0; border-top:8px solid transparent; border-bottom:8px solid transparent; border-left:13px solid #ffd45d; transform:rotate(38deg); }
+  #portraitBlock h2{ margin:0; color:#fff; font-size:clamp(29px, 8.8vw, 44px); line-height:.95; text-transform:uppercase; }
+  #portraitBlock p{ width:min(100%, 360px); margin:14px 0 16px; color:#d8e9ef; font-size:clamp(15px, 4.2vw, 18px); line-height:1.35; font-weight:800; }
+  .portraitCallout{ width:min(100%, 360px); color:#160606; background:linear-gradient(180deg,#ffe784,#ff5b42); border:1px solid rgba(255,255,255,.24); border-radius:8px; padding:10px 12px; box-shadow:0 16px 36px rgba(0,0,0,.42), inset 0 2px 0 rgba(255,255,255,.38); font-size:clamp(13px,3.7vw,16px); line-height:1.2; text-shadow:none; text-transform:uppercase; }
+  @keyframes phoneRoll{ 0%,100%{ transform:rotate(0deg); } 48%,62%{ transform:rotate(90deg); } }
+  @keyframes arcSpin{ 0%,100%{ transform:rotate(-25deg); opacity:.85; } 50%{ transform:rotate(62deg); opacity:1; } }
   @media (max-width: 720px), (pointer: coarse){
     #menu{ padding:max(4px, env(safe-area-inset-top)) 6px max(4px, env(safe-area-inset-bottom)); align-items:flex-start; }
     .card{ width:min(98vw, 640px); max-height:calc(100dvh - 12px); overflow:auto; overscroll-behavior:contain; border-radius:14px; padding:10px 12px; }
@@ -188,4 +213,11 @@
   body.hide-reticle #reticle{ display:none !important; }
   @media (orientation: portrait){
     #portraitBlock{ display:flex; }
+  }
+  @media (orientation: portrait) and (max-height: 690px){
+    .portraitContent{ justify-content:flex-start; padding-top:calc(22px + env(safe-area-inset-top)); }
+    .rotateGlyph{ width:92px; height:92px; margin:18px 0 12px; }
+    .phoneShape{ width:38px; height:64px; border-width:4px; border-radius:10px; }
+    .phoneShape::after{ bottom:19px; width:6px; height:6px; }
+    .portraitCallout{ padding:8px 10px; }
   }

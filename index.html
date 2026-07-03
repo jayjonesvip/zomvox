@@ -49,7 +49,25 @@
   <button class="touchBtn" id="touchJump" type="button">Jump</button>
   <button class="touchBtn" id="touchShoot" type="button" aria-label="Shoot"></button>
 </div>
-<div id="portraitBlock">Rotate to landscape to start killing zombies</div>
+<div id="portraitBlock" aria-live="polite">
+  <div class="portraitBackdrop" aria-hidden="true">
+    <div class="portraitMoon"></div>
+    <div class="portraitZombie z1"><span></span></div>
+    <div class="portraitZombie z2"><span></span></div>
+    <div class="portraitGround"></div>
+  </div>
+  <div class="portraitContent">
+    <div class="portraitBrand">Zom<b>Vox</b></div>
+    <div class="portraitKicker">Zombies and Voxels</div>
+    <div class="rotateGlyph" aria-hidden="true">
+      <div class="phoneShape"></div>
+      <div class="rotateArc"></div>
+    </div>
+    <h2>Rotate to Landscape</h2>
+    <p>Turn sideways, shoulder the Block Blaster, and clear the voxel frontier before the dead swarm the shoreline.</p>
+    <div class="portraitCallout">Kill zombies. Grab ammo. Survive nightfall.</div>
+  </div>
+</div>
 <div id="splash" aria-live="polite">
   <div class="splashLoad">
     <div class="splashVersion" id="splashVersion">Build</div>
