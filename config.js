@@ -17,7 +17,7 @@ window.ZOMVOX_CONFIG = {
     Bump this when you make visible changes so you can tell the browser
     loaded the newest version.
   */
-  buildVersion: '2026.07.02.1',
+  buildVersion: '2026.07.03.1',
 
   /*
     Seed used for deterministic world generation.
@@ -25,7 +25,7 @@ window.ZOMVOX_CONFIG = {
     Same seed = same world layout.
     Change this to any whole number to generate a different map.
   */
-  initialSeed: 2919,
+  initialSeed: 2919888,
 
   environment: {
     /*
@@ -54,7 +54,7 @@ window.ZOMVOX_CONFIG = {
       This also makes shoreline terrain feel more dangerous visually.
       Set false if you want water to be safe.
     */
-    dangerousWater: true,
+    dangerousWater: false,
 
     /*
       Enables distance fog.
@@ -81,7 +81,7 @@ window.ZOMVOX_CONFIG = {
       Example:
       4 = 9 x 9 chunks
     */
-    chunkRadius: 6,
+    chunkRadius: 4,
 
     /*
       Max terrain height.
@@ -89,7 +89,7 @@ window.ZOMVOX_CONFIG = {
       Higher values allow taller hills and terrain features.
       Very high values can hurt performance.
     */
-    maxY: 32,
+    maxY: 45,
 
     /*
       Water height level.
