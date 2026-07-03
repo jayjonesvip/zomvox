@@ -89,7 +89,7 @@ window.ZOMVOX_CONFIG = {
       Higher values allow taller hills and terrain features.
       Very high values can hurt performance.
     */
-    maxY: 45,
+    maxY: 32,
 
     /*
       Water height level.
