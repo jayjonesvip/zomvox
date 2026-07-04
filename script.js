@@ -106,6 +106,8 @@
   const RESPAWN_RESERVE_FLOOR = Math.max(0, Math.floor(configNumber(PLAYER_CONFIG, 'respawnReserveFloor', 24)));
   const LOW_HEALTH_THRESHOLD = configNumber(PLAYER_CONFIG, 'lowHealthThreshold', 25);
   const MAG_SIZE = Math.max(1, Math.floor(configNumber(WEAPON_CONFIG, 'magSize', 6)));
+  const EXTENDED_MAG_SIZE = Math.max(MAG_SIZE, 12);
+  const EXTENDED_MAG_KILLS = 25;
   const RELOAD_TIME = Math.max(0.1, configNumber(WEAPON_CONFIG, 'reloadTime', 1.15));
   const ENEMY_CAP = Math.max(1, Math.floor(configNumber(ENEMY_CONFIG, 'baseCap', 18)));
   const HORDE_KILLS_PER_LEVEL = Math.max(1, Math.floor(configNumber(ENEMY_CONFIG, 'hordeKillsPerLevel', 5)));
@@ -121,12 +123,6 @@
   const WORLD_REBUILD_DURATION = Math.max(0.25, configNumber(TIMER_CONFIG, 'worldRebuildDuration', 2.35));
   const HEARTBEAT_INTERVAL = Math.max(0.2, configNumber(TIMER_CONFIG, 'heartbeatInterval', 0.95));
   const CYCLE_HALF_DAY_MS = Math.max(1000, configNumber(TIMER_CONFIG, 'cycleHalfDayMs', 360000));
-
-  for (let i = 0; i < MAG_SIZE; i++) {
-    const b = document.createElement('div');
-    b.className = 'bullet';
-    bulletRack.appendChild(b);
-  }
 
   let currentSeed = Math.floor(configNumber(CONFIG, 'initialSeed', 729641));
   let world = new Map();
@@ -148,6 +144,7 @@
     pitch: 0,
     grounded: false,
     health: STARTING_HEALTH,
+    magSize: MAG_SIZE,
     mag: MAG_SIZE,
     reserve: STARTING_RESERVE,
     reloading: false,
@@ -171,13 +168,14 @@
   let touchMode = matchMedia('(pointer: coarse)').matches;
   let keys = Object.create(null);
   const touchInput = { moveX: 0, moveY: 0, jump: false, sprint: false, lookId: null, lookX: 0, lookY: 0, stickId: null };
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.02.1');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.04.1');
   let lastTarget = null;
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
   let frameCounter = 0;
   let lastKillTime = -999;
+  let killComboCount = 0;
   let dayAmount = 1;
   let soundEnabled = true;
   let waterDamageTimer = 0;
@@ -185,6 +183,27 @@
   let heartbeatTimer = 0;
   const deathState = { active: false, timer: 0, duration: DEATH_READY_DELAY, ready: false };
   const worldRebuildState = { active: false, timer: 0, startedAt: 0, duration: WORLD_REBUILD_DURATION, seed: null };
+
+  function syncBulletRack(size) {
+    while (bulletRack.children.length < size) {
+      const b = document.createElement('div');
+      b.className = 'bullet';
+      bulletRack.appendChild(b);
+    }
+    while (bulletRack.children.length > size) bulletRack.lastChild.remove();
+  }
+
+  function setPlayerMagSize(size, refill = false) {
+    player.magSize = Math.max(1, Math.floor(size));
+    syncBulletRack(player.magSize);
+    if (refill) player.mag = player.magSize;
+    else player.mag = Math.min(player.mag, player.magSize);
+    const label = weaponPanel.querySelector('.label');
+    if (label) label.textContent = 'Block Blaster / ' + player.magSize + '-Round Mag';
+    updateAmmoDisplay();
+  }
+
+  setPlayerMagSize(MAG_SIZE, true);
 
   function showToast(message) {
     toast.textContent = message;
@@ -751,8 +770,9 @@
       for (let lz = 3; lz < CHUNK_SIZE - 3; lz += 2) {
         const x = x0 + lx, z = z0 + lz;
         const h = terrainHeight(x, z);
+        const rockyShore = GAME_OPTIONS.dangerousWater && h <= WATER_LEVEL + 3;
         const rockNoise = seededHash(x * 4.13 + 15, z * 6.71 - 8);
-        if (h > WATER_LEVEL + 1 && rockNoise > 0.965) {
+        if (rockyShore && h > WATER_LEVEL + 1 && rockNoise > 0.935) {
           const radius = 1 + Math.floor(seededHash(x - 21, z + 32) * 2.2);
           const height = 1 + Math.floor(seededHash(x + 5, z - 17) * 3.3);
           for (let dx = -radius; dx <= radius; dx++) for (let dz = -radius; dz <= radius; dz++) {
@@ -1108,10 +1128,12 @@
     deathState.timer = 0;
     player.deaths++;
     player.health = STARTING_HEALTH;
-    player.mag = MAG_SIZE;
+    player.mag = player.magSize;
     player.reserve = Math.max(player.reserve, RESPAWN_RESERVE_FLOOR);
     player.reloading = false;
     player.reloadTimer = 0;
+    lastKillTime = -999;
+    killComboCount = 0;
     resetLifeStats();
     document.body.classList.remove('dead', 'low-health');
     deathOverlay.classList.remove('show', 'ready');
@@ -1132,7 +1154,7 @@
 
   function startReload() {
     if (deathState.active || worldRebuildState.active) return;
-    if (player.reloading || player.mag >= MAG_SIZE || player.reserve <= 0) return;
+    if (player.reloading || player.mag >= player.magSize || player.reserve <= 0) return;
     player.reloading = true;
     player.reloadTimer = RELOAD_TIME;
     reloadText.textContent = 'Reloading...';
@@ -1141,7 +1163,7 @@
     sound('reloadStart');
   }
   function finishReload() {
-    const need = MAG_SIZE - player.mag;
+    const need = player.magSize - player.mag;
     const take = Math.min(need, player.reserve);
     player.mag += take;
     player.reserve -= take;
@@ -1218,8 +1240,20 @@
           scorePop('+200 LONG RANGE', 'range small');
         }
         const now = performance.now() / 1000;
-        if (now - lastKillTime < 2.0) { player.score += 150; scorePop('+150 DOUBLE KILL', 'combo small'); }
+        killComboCount = now - lastKillTime < 2.0 ? killComboCount + 1 : 1;
+        if (killComboCount === 2) {
+          player.score += 150;
+          scorePop('+150 DOUBLE KILL', 'combo small');
+        } else if (killComboCount === 3) {
+          player.score += 300;
+          scorePop('+300 TRIPLE KILL', 'combo');
+        }
         lastKillTime = now;
+        if (player.kills >= EXTENDED_MAG_KILLS && player.magSize < EXTENDED_MAG_SIZE) {
+          setPlayerMagSize(EXTENDED_MAG_SIZE, true);
+          scorePop('EXTENDED MAG UNLOCKED', 'wave');
+          showToast('Extended mag unlocked: ' + EXTENDED_MAG_SIZE + ' rounds');
+        }
         sound('kill');
         checkHordeLevel();
         const dropRoll = Math.random();
@@ -1365,7 +1399,7 @@
   }
   function updateAmmoDisplay() {
     const bullets = bulletRack.children;
-    for (let i = 0; i < MAG_SIZE; i++) {
+    for (let i = 0; i < player.magSize; i++) {
       bullets[i].classList.toggle('spent', i >= player.mag);
     }
     reserveText.textContent = player.mag + '/' + player.reserve;
@@ -1551,8 +1585,8 @@
     pickups = [];
     particles = [];
     player.health = STARTING_HEALTH;
-    player.mag = MAG_SIZE;
     player.reserve = STARTING_RESERVE;
+    setPlayerMagSize(MAG_SIZE, true);
     player.kills = 0;
     player.headshots = 0;
     player.score = 0;
@@ -1564,6 +1598,7 @@
     hordeLevel = 0;
     heartbeatTimer = 0;
     lastKillTime = -999;
+    killComboCount = 0;
     deathState.active = false;
     deathState.ready = false;
     deathState.timer = 0;
