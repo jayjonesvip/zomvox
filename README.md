@@ -16,11 +16,11 @@ Desktop play uses mouse and keyboard. Mobile play is designed for landscape orie
 - Branded ZomVox splash screen using `assets/zomvox-splash.png`.
 - Splash screen build label using `BUILD_VERSION` plus the deployed document timestamp.
 - Favicon assets for browser tabs and installed shortcuts.
-- Procedural voxel terrain with grass, dirt, stone, sand, water, wood, leaves, bricks, glow markers, trees, rocks, and beaches.
+- Procedural voxel terrain with grass, dirt, stone, sand, water, wood, leaves, bricks, glow markers, trees, and shorelines that switch between safe sand and dangerous rock.
 - Fixed-size chunk generation so the game area stays bounded and performance remains predictable.
 - Player movement is clamped inside the generated world.
 - Chunk-level mesh rebuilding for destructible blocks.
-- Six-round blaster magazine with reserve ammo.
+- Six-round blaster magazine with reserve ammo and a 12-round extended-mag unlock after 25 kills.
 - Ammo pickups that add six rounds at a time.
 - Zombie spawning, pursuit, attack cooldowns, retreat steps after attacks, deaths, score popups, and pickup drops.
 - Mobile-only landscape gate.
@@ -74,7 +74,7 @@ Common tuning options live in `config.js` under `window.ZOMVOX_CONFIG`. Edit tha
 
 ```js
 window.ZOMVOX_CONFIG = {
-  buildVersion: '2026.07.02.1',
+  buildVersion: '2026.07.04.1',
   initialSeed: 729641,
 
   environment: {
