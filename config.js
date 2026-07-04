@@ -70,7 +70,7 @@ window.ZOMVOX_CONFIG = {
       Higher values create larger chunks.
       Lower values can make chunk rebuilds lighter.
     */
-    chunkSize: 25,
+    chunkSize: 16,
 
     /*
       How many chunks generate outward from the center.
@@ -81,7 +81,7 @@ window.ZOMVOX_CONFIG = {
       Example:
       4 = 9 x 9 chunks
     */
-    chunkRadius: 5,
+    chunkRadius: 4,
 
     /*
       Max terrain height.
@@ -89,7 +89,7 @@ window.ZOMVOX_CONFIG = {
       Higher values allow taller hills and terrain features.
       Very high values can hurt performance.
     */
-    maxY: 60,
+    maxY: 50,
 
     /*
       Water height level.
