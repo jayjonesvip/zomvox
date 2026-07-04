@@ -25,7 +25,7 @@ window.ZOMVOX_CONFIG = {
     Same seed = same world layout.
     Change this to any whole number to generate a different map.
   */
-  initialSeed: 2919888,
+  initialSeed: 2919,
 
   environment: {
     /*
@@ -70,7 +70,7 @@ window.ZOMVOX_CONFIG = {
       Higher values create larger chunks.
       Lower values can make chunk rebuilds lighter.
     */
-    chunkSize: 16,
+    chunkSize: 20,
 
     /*
       How many chunks generate outward from the center.
@@ -97,7 +97,7 @@ window.ZOMVOX_CONFIG = {
       Higher value = more flooded/lake areas.
       Lower value = drier world.
     */
-    waterLevel: 8
+    waterLevel: 10
   },
 
   player: {
