@@ -25,7 +25,7 @@ window.ZOMVOX_CONFIG = {
     Same seed = same world layout.
     Change this to any whole number to generate a different map.
   */
-  initialSeed: 2919,
+  initialSeed: 29192919,
 
   environment: {
     /*
@@ -112,7 +112,7 @@ window.ZOMVOX_CONFIG = {
 
       Range is roughly 0.00 to 1.00.
     */
-    caveThreshold: 0.72,
+    caveThreshold: 0.66,
 
     /*
       Lowest Y level that caves are allowed to carve.
