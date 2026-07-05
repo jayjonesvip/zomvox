@@ -21,6 +21,11 @@
   const healthStatus = $('healthStatus');
   const healthBigText = $('healthBigText');
   const healthBigFill = $('healthBigFill');
+  const objectiveText = $('objectiveText');
+  const objectiveMeta = $('objectiveMeta');
+  const disableOverlay = $('disableOverlay');
+  const disableFill = $('disableFill');
+  const disablePercent = $('disablePercent');
   const scoreFeed = $('scoreFeed');
   const reticle = $('reticle');
   const reloadOverlay = $('reloadOverlay');
@@ -71,6 +76,7 @@
   const PLAYER_CONFIG = configSection('player');
   const WEAPON_CONFIG = configSection('weapon');
   const ENEMY_CONFIG = configSection('enemies');
+  const MISSION_CONFIG = configSection('mission');
   const PICKUP_CONFIG = configSection('pickups');
   const TIMER_CONFIG = configSection('timers');
 
@@ -113,6 +119,11 @@
   const ENEMY_CAP = Math.max(1, Math.floor(configNumber(ENEMY_CONFIG, 'baseCap', 18)));
   const HORDE_KILLS_PER_LEVEL = Math.max(1, Math.floor(configNumber(ENEMY_CONFIG, 'hordeKillsPerLevel', 5)));
   const HORDE_CAP_BONUS = Math.max(0, Math.floor(configNumber(ENEMY_CONFIG, 'hordeCapBonus', 2)));
+  const TOXIN_DAMAGE_PER_SECOND = Math.max(0, configNumber(MISSION_CONFIG, 'toxinDamagePerSecond', 1.15));
+  const MACHINE_DISABLE_SECONDS = Math.max(0.5, configNumber(MISSION_CONFIG, 'disableSeconds', 3));
+  const MACHINE_ACTION_RADIUS = Math.max(1.5, configNumber(MISSION_CONFIG, 'machineActionRadius', 3.6));
+  const MISSION_INFECTED_GOAL = Math.max(1, Math.floor(configNumber(MISSION_CONFIG, 'infectedGoal', 50)));
+  const FIRST_WAVE_SIZE = Math.max(0, Math.floor(configNumber(MISSION_CONFIG, 'firstWaveSize', 3)));
   const AMMO_PICKUP_ROUNDS = Math.max(1, Math.floor(configNumber(PICKUP_CONFIG, 'ammoRounds', 6)));
   const HEALTH_PICKUP_AMOUNT = Math.max(1, configNumber(PICKUP_CONFIG, 'healthAmount', 25));
   const MAP_AMMO_PICKUP_CHANCE = Math.max(0, Math.min(1, configNumber(PICKUP_CONFIG, 'mapAmmoChance', 0.28)));
@@ -124,6 +135,9 @@
   const WORLD_REBUILD_DURATION = Math.max(0.25, configNumber(TIMER_CONFIG, 'worldRebuildDuration', 2.35));
   const HEARTBEAT_INTERVAL = Math.max(0.2, configNumber(TIMER_CONFIG, 'heartbeatInterval', 0.95));
   const CYCLE_HALF_DAY_MS = Math.max(1000, configNumber(TIMER_CONFIG, 'cycleHalfDayMs', 360000));
+  const PHASE_DROP = 'drop';
+  const PHASE_DISABLE_MACHINE = 'disableMachine';
+  const PHASE_ZOMBIE_THREAT = 'zombieThreat';
 
   let currentSeed = Math.floor(configNumber(CONFIG, 'initialSeed', 729641));
   let world = new Map();
@@ -169,7 +183,7 @@
   let touchMode = matchMedia('(pointer: coarse)').matches;
   let keys = Object.create(null);
   const touchInput = { moveX: 0, moveY: 0, jump: false, sprint: false, lookId: null, lookX: 0, lookY: 0, stickId: null };
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.04.1');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.05.2');
   let lastTarget = null;
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
@@ -184,6 +198,16 @@
   let heartbeatTimer = 0;
   const deathState = { active: false, timer: 0, duration: DEATH_READY_DELAY, ready: false };
   const worldRebuildState = { active: false, timer: 0, startedAt: 0, duration: WORLD_REBUILD_DURATION, seed: null };
+  const mission = {
+    phase: PHASE_DROP,
+    machine: null,
+    supplyCrate: null,
+    actionHeld: false,
+    disableProgress: 0,
+    toxinRemainder: 0,
+    smokeTimer: 0,
+    firstWaveSpawned: false
+  };
 
   function syncBulletRack(size) {
     while (bulletRack.children.length < size) {
@@ -518,6 +542,7 @@
       if(t < 20.5) return vec3(1.00, 0.82, 0.10); /* yellow eyes */
       if(t < 21.5) return vec3(0.025, 0.055, 0.025); /* closed eyes */
       if(t < 22.5) return vec3(0.30, 0.32, 0.31); /* cracked stone */
+      if(t < 23.5) return vec3(0.38, 0.95, 0.24); /* toxin smoke */
       return vec3(1.0, 0.45, 0.18); /* particles */
     }
     void main(){
@@ -789,7 +814,7 @@
         }
       }
     }
-    if (seededHash(cx * 20.2 + 19, cz * 17.7 - 3) > 1 - MAP_AMMO_PICKUP_CHANCE) {
+    if (gunUnlocked() && seededHash(cx * 20.2 + 19, cz * 17.7 - 3) > 1 - MAP_AMMO_PICKUP_CHANCE) {
       const lx = 3 + Math.floor(seededHash(cx + 77, cz - 42) * 10);
       const lz = 3 + Math.floor(seededHash(cx - 14, cz + 91) * 10);
       const x = x0 + lx, z = z0 + lz, y = terrainHeight(x, z) + 1;
@@ -825,6 +850,82 @@
       if (t && t !== BLOCK.WATER && t !== BLOCK.LEAF) return y;
     }
     return terrainHeight(x, z);
+  }
+
+  function highestMissionPoint() {
+    let best = { x: 0, z: 0, h: terrainHeight(0, 0), score: -Infinity };
+    for (let x = WORLD_MIN + 4; x <= WORLD_MAX - 4; x++) {
+      for (let z = WORLD_MIN + 4; z <= WORLD_MAX - 4; z++) {
+        const h = terrainHeight(x, z);
+        if (h <= WATER_LEVEL + 3) continue;
+        const distanceFromDrop = Math.hypot(x, z);
+        if (distanceFromDrop < 15) continue;
+        const slope =
+          Math.abs(h - terrainHeight(x + 1, z)) +
+          Math.abs(h - terrainHeight(x - 1, z)) +
+          Math.abs(h - terrainHeight(x, z + 1)) +
+          Math.abs(h - terrainHeight(x, z - 1));
+        if (slope > 10) continue;
+        const score = h * 10 + distanceFromDrop * .06 - slope * 1.4 + seededHash(x * 1.7, z * 2.1);
+        if (score > best.score) best = { x, z, h, score };
+      }
+    }
+    return best;
+  }
+
+  function clearMissionBuildSpace(cx, baseY, cz) {
+    for (let dx = -2; dx <= 2; dx++) {
+      for (let dz = -2; dz <= 2; dz++) {
+        const x = cx + dx, z = cz + dz;
+        for (let y = baseY; y <= baseY + 5; y++) {
+          const type = getBlock(x, y, z);
+          if (type === BLOCK.WOOD || type === BLOCK.LEAF) setBlock(x, y, z, 0, true);
+        }
+      }
+    }
+  }
+
+  function setMachineBlock(x, y, z, type, glowBlocks) {
+    setBlock(x, y, z, type, true);
+    if (type === BLOCK.LAMP) glowBlocks.push([x, y, z]);
+  }
+
+  function placeContaminationMachine() {
+    const spot = highestMissionPoint();
+    const x = spot.x, z = spot.z, baseY = terrainHeight(x, z) + 1;
+    const glowBlocks = [];
+    clearMissionBuildSpace(x, baseY, z);
+    // Machine placement is intentionally blocky: a brick/stone plinth,
+    // lamp-powered toxin core, and no custom model work.
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dz = -1; dz <= 1; dz++) {
+        setMachineBlock(x + dx, baseY, z + dz, Math.abs(dx) + Math.abs(dz) > 1 ? BLOCK.STONE : BLOCK.BRICK, glowBlocks);
+      }
+    }
+    setMachineBlock(x - 1, baseY + 1, z - 1, BLOCK.STONE, glowBlocks);
+    setMachineBlock(x + 1, baseY + 1, z - 1, BLOCK.STONE, glowBlocks);
+    setMachineBlock(x - 1, baseY + 1, z + 1, BLOCK.STONE, glowBlocks);
+    setMachineBlock(x + 1, baseY + 1, z + 1, BLOCK.STONE, glowBlocks);
+    setMachineBlock(x, baseY + 1, z, BLOCK.LAMP, glowBlocks);
+    setMachineBlock(x, baseY + 2, z, BLOCK.LAMP, glowBlocks);
+    setMachineBlock(x - 1, baseY + 2, z, BLOCK.BRICK, glowBlocks);
+    setMachineBlock(x + 1, baseY + 2, z, BLOCK.BRICK, glowBlocks);
+    setMachineBlock(x, baseY + 3, z, BLOCK.LAMP, glowBlocks);
+    mission.machine = { x: x + .5, y: baseY, z: z + .5, active: true, glowBlocks };
+    mission.supplyCrate = null;
+    queueRebuild(x, z);
+  }
+
+  function machineDistance() {
+    if (!mission.machine) return Infinity;
+    const dx = player.pos[0] - mission.machine.x;
+    const dz = player.pos[2] - mission.machine.z;
+    const dy = Math.abs(player.pos[1] - mission.machine.y);
+    return Math.hypot(dx, dz) + Math.max(0, dy - 2) * .35;
+  }
+
+  function playerNearMachine() {
+    return !!mission.machine && mission.machine.active && machineDistance() <= MACHINE_ACTION_RADIUS;
   }
 
   const faces = [
@@ -1049,6 +1150,7 @@
   }
 
   function updateEnemies(dt) {
+    if (!gunUnlocked()) return;
     nextSpawnTimer -= dt;
     const enemyCap = ENEMY_CAP + hordeLevel * HORDE_CAP_BONUS;
     if (nextSpawnTimer <= 0 && enemies.length < enemyCap) {
@@ -1135,6 +1237,10 @@
     player.reserve = Math.max(player.reserve, RESPAWN_RESERVE_FLOOR);
     player.reloading = false;
     player.reloadTimer = 0;
+    mission.actionHeld = false;
+    mission.disableProgress = 0;
+    mission.toxinRemainder = 0;
+    setWeaponUnlocked(gunUnlocked());
     lastKillTime = -999;
     killComboCount = 0;
     resetLifeStats();
@@ -1156,6 +1262,7 @@
   }
 
   function startReload() {
+    if (!gunUnlocked()) return;
     if (deathState.active || worldRebuildState.active) return;
     if (player.reloading || player.mag >= player.magSize || player.reserve <= 0) return;
     player.reloading = true;
@@ -1206,6 +1313,10 @@
   }
   function shoot() {
     if (deathState.active) return;
+    if (!gunUnlocked()) {
+      showToast('Disable the contamination source first.');
+      return;
+    }
     if (player.reloading) return;
     if (player.mag <= 0) { showToast('Empty. Reload.'); sound('empty'); startReload(); return; }
     player.mag--;
@@ -1342,6 +1453,147 @@
     }
   }
 
+  function gunUnlocked() {
+    return mission.phase === PHASE_ZOMBIE_THREAT;
+  }
+
+  function setWeaponUnlocked(unlocked) {
+    document.body.classList.toggle('no-gun', !unlocked);
+    document.body.classList.toggle('action-mode', !unlocked);
+    if (touchShoot) {
+      touchShoot.textContent = unlocked ? 'SHOOT' : 'ACTION';
+      touchShoot.setAttribute('aria-label', unlocked ? 'Shoot' : 'Action');
+    }
+    if (unlocked) {
+      player.mag = player.magSize;
+      player.reserve = Math.max(player.reserve, STARTING_RESERVE);
+      updateAmmoDisplay();
+    } else {
+      player.reloading = false;
+      player.reloadTimer = 0;
+      reloadOverlay.classList.remove('show');
+      reloadOverlayFill.style.width = '0%';
+    }
+  }
+
+  function spawnInitialWave() {
+    if (mission.firstWaveSpawned) return;
+    mission.firstWaveSpawned = true;
+    for (let i = 0; i < FIRST_WAVE_SIZE; i++) spawnEnemy();
+    nextSpawnTimer = 4.5;
+  }
+
+  function spawnSupplyCrate() {
+    if (!mission.machine) return;
+    const mx = Math.floor(mission.machine.x), mz = Math.floor(mission.machine.z);
+    const candidates = [[3, 0], [-3, 0], [0, 3], [0, -3], [3, 2], [-3, -2]];
+    let spot = null;
+    for (const c of candidates) {
+      const x = mx + c[0], z = mz + c[1];
+      if (!inWorldXZ(x, z)) continue;
+      const y = pickupAirY(x, z);
+      if (y > WATER_LEVEL + 1 && !blocksMovement(getBlock(x, y, z))) {
+        spot = { x, y, z };
+        break;
+      }
+    }
+    if (!spot) spot = { x: mx + 2, y: pickupAirY(mx + 2, mz), z: mz };
+    mission.supplyCrate = { x: spot.x + .5, y: spot.y, z: spot.z + .5, open: true };
+    spawnPickupAt(spot.x, spot.y, spot.z, 'ammo');
+    spawnPickupAt(spot.x + 1, spot.y, spot.z, 'ammo');
+    spawnPickupAt(spot.x, spot.y, spot.z + 1, 'health');
+  }
+
+  function disableMachine() {
+    if (!mission.machine || !mission.machine.active) return;
+    mission.machine.active = false;
+    mission.disableProgress = 0;
+    mission.actionHeld = false;
+    disableOverlay.classList.remove('show');
+    // Gun unlock happens only after shutdown: toxin stops, lamps go dark,
+    // a supply crate appears, and zombie spawning is allowed to begin.
+    for (const b of mission.machine.glowBlocks) setBlock(b[0], b[1], b[2], BLOCK.STONE, true);
+    queueRebuild(Math.floor(mission.machine.x), Math.floor(mission.machine.z));
+    spawnSupplyCrate();
+    mission.phase = PHASE_ZOMBIE_THREAT;
+    setWeaponUnlocked(true);
+    scorePop('CONTAMINATION SOURCE DISABLED', 'wave');
+    showToast('Block Blaster unlocked. Eliminate infected.');
+    sound('wave');
+    spawnInitialWave();
+  }
+
+  function updateToxinDamage(dt) {
+    if (!mission.machine || !mission.machine.active || deathState.active || worldRebuildState.active || isMenuOpen()) {
+      mission.toxinRemainder = 0;
+      return;
+    }
+    // Toxin damage is a slow environmental drain during the opening drop,
+    // separate from bite/lava hits so it does not constantly restart invuln.
+    mission.toxinRemainder += TOXIN_DAMAGE_PER_SECOND * dt;
+    if (mission.toxinRemainder < 1) return;
+    const amount = Math.floor(mission.toxinRemainder);
+    mission.toxinRemainder -= amount;
+    player.health -= amount;
+    if (amount > 0) pulseDamage();
+    if (player.health <= 0) beginDeathSequence();
+  }
+
+  function updateMachineSmoke(dt) {
+    if (!mission.machine || !mission.machine.active || isMenuOpen() || deathState.active) return;
+    mission.smokeTimer -= dt;
+    if (mission.smokeTimer > 0) return;
+    mission.smokeTimer = .12;
+    const jitterX = (Math.random() - .5) * .9;
+    const jitterZ = (Math.random() - .5) * .9;
+    particles.push({
+      x: mission.machine.x + jitterX,
+      y: mission.machine.y + 3.7,
+      z: mission.machine.z + jitterZ,
+      vx: (Math.random() - .5) * .7,
+      vy: 1.6 + Math.random() * .9,
+      vz: (Math.random() - .5) * .7,
+      life: .75 + Math.random() * .55,
+      type: 23
+    });
+  }
+
+  function updateDisableInteraction(dt) {
+    if (!mission.machine || !mission.machine.active) {
+      disableOverlay.classList.remove('show');
+      return;
+    }
+    const near = playerNearMachine();
+    mission.phase = near ? PHASE_DISABLE_MACHINE : PHASE_DROP;
+    // Disable interaction requires a held action. Releasing or stepping away
+    // resets the meter so the player has a clear committed shutdown moment.
+    if (near && (keys.KeyE || mission.actionHeld)) {
+      mission.disableProgress = Math.min(1, mission.disableProgress + dt / MACHINE_DISABLE_SECONDS);
+      disableOverlay.classList.add('show');
+      disableFill.style.width = (mission.disableProgress * 100).toFixed(1) + '%';
+      disablePercent.textContent = Math.floor(mission.disableProgress * 100) + '%';
+      if (mission.disableProgress >= 1) disableMachine();
+      return;
+    }
+    mission.disableProgress = 0;
+    disableFill.style.width = '0%';
+    disablePercent.textContent = '0%';
+    disableOverlay.classList.remove('show');
+  }
+
+  function updateMissionHud() {
+    if (!objectiveText || !objectiveMeta) return;
+    if (mission.phase === PHASE_ZOMBIE_THREAT) {
+      objectiveText.textContent = 'Eliminate infected: ' + Math.min(player.kills, MISSION_INFECTED_GOAL) + ' / ' + MISSION_INFECTED_GOAL;
+      objectiveMeta.textContent = player.kills >= MISSION_INFECTED_GOAL ? 'Island breach contained' : 'Gun online';
+      return;
+    }
+    objectiveText.textContent = 'Locate the contamination source';
+    objectiveMeta.textContent = playerNearMachine()
+      ? (touchMode ? 'Hold ACTION to disable' : 'Hold E to disable')
+      : 'Toxin exposure active';
+  }
+
   function aimTarget(maxDist) {
     const e = eyePos();
     const d = lookDir();
@@ -1379,10 +1631,13 @@
       if (player.reloadTimer <= 0) finishReload();
     }
     updateMovement(dt);
+    updateDisableInteraction(dt);
+    updateToxinDamage(dt);
     updateWaterHazard(dt);
     updateLowHealthFeedback(dt);
     updateEnemies(dt);
     updatePickups(dt);
+    updateMachineSmoke(dt);
     updateParticles(dt);
     lastTarget = aimTarget(42);
     updateHud();
@@ -1416,6 +1671,7 @@
     healthStatus.className = hpNow < 35 ? 'danger' : (hpNow < 65 ? 'warn' : '');
     healthBigFill.style.width = Math.max(0, player.health) + '%';
     updateAmmoDisplay();
+    updateMissionHud();
   }
 
   function bindVoxelMesh(mesh) {
@@ -1481,6 +1737,14 @@
         pushBox(arr, p.x - .32, y, p.z - .32, .64, .38, .64, 13);
         pushBox(arr, p.x - .22, y + .38, p.z - .22, .44, .12, .44, 14);
       }
+    }
+    if (mission.supplyCrate) {
+      const c = mission.supplyCrate;
+      const lidBob = Math.sin(time * 2.5) * .025;
+      pushBox(arr, c.x - .48, c.y, c.z - .48, .96, .42, .96, 14);
+      pushBox(arr, c.x - .40, c.y + .42, c.z - .50, .80, .12, .18, 13);
+      pushBox(arr, c.x - .40, c.y + .42 + lidBob, c.z + .26, .80, .10, .28, 13);
+      pushBox(arr, c.x - .12, c.y + .52, c.z - .51, .24, .12, .035, 9);
     }
     for (const p of particles) {
       const s = .07 + p.life * .05;
@@ -1597,6 +1861,14 @@
     player.deaths = 0;
     player.reloading = false;
     player.reloadTimer = 0;
+    mission.phase = PHASE_DROP;
+    mission.machine = null;
+    mission.supplyCrate = null;
+    mission.actionHeld = false;
+    mission.disableProgress = 0;
+    mission.toxinRemainder = 0;
+    mission.smokeTimer = 0;
+    mission.firstWaveSpawned = false;
     resetLifeStats();
     nextSpawnTimer = 3.5;
     hordeLevel = 0;
@@ -1613,6 +1885,10 @@
     deathFill.style.width = '0%';
     reloadOverlay.classList.remove('show');
     reloadOverlayFill.style.width = '0%';
+    disableOverlay.classList.remove('show');
+    disableFill.style.width = '0%';
+    disablePercent.textContent = '0%';
+    setWeaponUnlocked(false);
     currentChunkX = 999999;
     currentChunkZ = 999999;
     // Center landmark and starting chunks.
@@ -1620,6 +1896,7 @@
     ensureChunks(true);
     for (let y = WATER_LEVEL + 1; y <= WATER_LEVEL + 5; y++) setBlock(2, y, 2, BLOCK.BRICK, true);
     setBlock(2, WATER_LEVEL + 6, 2, BLOCK.LAMP, true);
+    placeContaminationMachine();
     player.pos = [0.5, topSolidY(0, 0) + 2.2, 0.5];
     player.vel = [0, 0, 0];
     ensureChunks(true);
@@ -1723,7 +2000,10 @@
     btn.addEventListener('pointerup', clear);
     btn.addEventListener('pointercancel', clear);
   }
-  bindTouchButton(touchShoot, () => shoot());
+  bindTouchButton(touchShoot, () => {
+    if (gunUnlocked()) shoot();
+    else mission.actionHeld = true;
+  }, () => { mission.actionHeld = false; });
   bindTouchButton(touchJump, () => { touchInput.jump = true; }, () => { touchInput.jump = false; });
   bindTouchButton(touchSprint, () => { touchInput.sprint = true; }, () => { touchInput.sprint = false; });
 

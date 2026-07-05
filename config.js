@@ -1,4 +1,4 @@
-9/*
+/*
   ZOMVOX CONFIG
 
   This file is for gameplay tuning only.
@@ -17,7 +17,7 @@ window.ZOMVOX_CONFIG = {
     Bump this when you make visible changes so you can tell the browser
     loaded the newest version.
   */
-  buildVersion: '2026.07.04.1',
+  buildVersion: '2026.07.05.2',
 
   /*
     Seed used for deterministic world generation.
@@ -189,6 +189,33 @@ window.ZOMVOX_CONFIG = {
       baseCap + hordeLevel * hordeCapBonus
     */
     hordeCapBonus: 2
+  },
+
+  mission: {
+    /*
+      Health drained per second while the contamination machine is active.
+    */
+    toxinDamagePerSecond: 1.15,
+
+    /*
+      Seconds the player must hold action near the source to disable it.
+    */
+    disableSeconds: 3,
+
+    /*
+      Distance from the machine where the action prompt works.
+    */
+    machineActionRadius: 3.6,
+
+    /*
+      Opening combat objective after the gun unlocks.
+    */
+    infectedGoal: 50,
+
+    /*
+      Zombies spawned immediately after shutdown before normal horde pressure.
+    */
+    firstWaveSize: 3
   },
 
   pickups: {
