@@ -90,7 +90,8 @@
     SAND: 6,
     WATER: 7,
     BRICK: 8,
-    LAMP: 9
+    LAMP: 9,
+    CRACKED_STONE: 22
   };
 
   const CHUNK_SIZE = Math.max(4, Math.floor(configNumber(WORLD_CONFIG, 'chunkSize', 16)));
@@ -103,6 +104,7 @@
   const CAVE_THRESHOLD = Math.max(0, Math.min(1, configNumber(WORLD_CONFIG, 'caveThreshold', 0.72)));
   const CAVE_MIN_Y = Math.max(1, Math.floor(configNumber(WORLD_CONFIG, 'caveMinY', 5)));
   const CAVE_SURFACE_PADDING = Math.max(1, Math.floor(configNumber(WORLD_CONFIG, 'caveSurfacePadding', 5)));
+  const CAVE_ENTRANCE_CHANCE = Math.max(0, Math.min(1, configNumber(WORLD_CONFIG, 'caveEntranceChance', 0.045)));
   const PLAYER_HEIGHT = configNumber(PLAYER_CONFIG, 'height', 1.76);
   const PLAYER_RADIUS = configNumber(PLAYER_CONFIG, 'radius', 0.31);
   const STARTING_HEALTH = configNumber(PLAYER_CONFIG, 'startingHealth', 100);
@@ -520,6 +522,7 @@
       if(t < 19.5) return vec3(0.55, 0.54, 0.10); /* yellow zombie */
       if(t < 20.5) return vec3(1.00, 0.82, 0.10); /* yellow eyes */
       if(t < 21.5) return vec3(0.025, 0.055, 0.025); /* closed eyes */
+      if(t < 22.5) return vec3(0.30, 0.32, 0.31); /* cracked stone */
       return vec3(1.0, 0.45, 0.18); /* particles */
     }
     void main(){
@@ -536,6 +539,7 @@
       if(vType > 14.5 && vType < 15.5) color += vec3(0.50, 0.15, 0.04);
       if(vType > 16.5 && vType < 17.5) color += vec3(0.35, 0.0, 0.0);
       if(vType > 19.5 && vType < 20.5) color += vec3(0.55, 0.35, 0.0);
+      if(vType > 21.5 && vType < 22.5) color *= 0.70 + step(0.58, hash(floor(vWorld.xz * 3.0 + vWorld.yy))) * 0.42;
       float edge = gridLine(vUv);
       color *= mix(0.58, 1.0, edge);
       float sun = max(dot(n, normalize(uLightDir)), 0.0);
@@ -761,9 +765,24 @@
     }
   }
 
+  function markCaveEntrance(x, y, z, dir) {
+    const side = [-dir[1], dir[0]];
+    const marks = [
+      [x, y + 2, z],
+      [x + side[0], y, z + side[1]],
+      [x - side[0], y, z - side[1]],
+      [x + side[0], y + 1, z + side[1]],
+      [x - side[0], y + 1, z - side[1]]
+    ];
+    for (const m of marks) {
+      const type = getBlock(m[0], m[1], m[2]);
+      if (type === BLOCK.STONE || type === BLOCK.DIRT) genSetBlock(m[0], m[1], m[2], BLOCK.CRACKED_STONE);
+    }
+  }
+
   function carveCaveEntrance(x, z, h, caveOpenings) {
     if (!CAVES_ENABLED || h <= WATER_LEVEL + 6) return;
-    if (seededHash(x * 2.77 + 40, z * 4.91 - 17) < 0.982) return;
+    if (seededHash(x * 2.77 + 40, z * 4.91 - 17) < 1 - CAVE_ENTRANCE_CHANCE) return;
     const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
     const dir = dirs[Math.floor(seededHash(x - 19, z + 31) * dirs.length)];
     const sideH = terrainHeight(x + dir[0], z + dir[1]);
@@ -779,6 +798,7 @@
       }
       caveOpenings.push({ x: bx, y: entranceY, z: bz, h, kind: 'entrance' });
     }
+    markCaveEntrance(x, entranceY, z, dir);
   }
 
   function placeCaveFinds(caveOpenings) {
@@ -1497,6 +1517,7 @@
     if (type === BLOCK.SAND) return 'Sand';
     if (type === BLOCK.BRICK) return 'Brick';
     if (type === BLOCK.LAMP) return 'Glow marker';
+    if (type === BLOCK.CRACKED_STONE) return 'Cracked stone';
     return 'Block';
   }
   function updateAmmoDisplay() {
