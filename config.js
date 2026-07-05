@@ -1,4 +1,4 @@
-9/*
+/*
   ZOMVOX CONFIG
 
   This file is for gameplay tuning only.
@@ -17,7 +17,7 @@ window.ZOMVOX_CONFIG = {
     Bump this when you make visible changes so you can tell the browser
     loaded the newest version.
   */
-  buildVersion: '2026.07.04.1',
+  buildVersion: '2026.07.05.1',
 
   /*
     Seed used for deterministic world generation.
@@ -97,7 +97,33 @@ window.ZOMVOX_CONFIG = {
       Higher value = more flooded/lake areas.
       Lower value = drier world.
     */
-    waterLevel: 8
+    waterLevel: 8,
+
+    /*
+      Lightweight deterministic caves.
+
+      Caves are carved after base terrain is placed by sampling cheap
+      fake 3D noise from the existing seeded 2D noise function.
+    */
+    caves: true,
+
+    /*
+      Higher = fewer caves.
+
+      Range is roughly 0.00 to 1.00.
+    */
+    caveThreshold: 0.72,
+
+    /*
+      Lowest Y level that caves are allowed to carve.
+    */
+    caveMinY: 5,
+
+    /*
+      Blocks of solid terrain kept below the surface so caves do not
+      shred grass or flatten the visible hills.
+    */
+    caveSurfacePadding: 5
   },
 
   player: {
