@@ -1,6 +1,6 @@
 # ZomVox
 
-**ZomVox: Zombies and Voxels** is a browser-based voxel zombie survival shooter built for quick static hosting. The player drops into a fixed-size voxel wasteland with sand, water, rocks, trees, ammo crates, block-breaking bullets, mobile controls, screen shake, death and respawn flow, and roaming voxel zombies.
+**ZomVox: Zombies and Voxels** is a browser-based voxel zombie survival shooter built for quick static hosting. The player drops onto a fixed-size voxel island, hunts down a blocky contamination machine, disables it under toxin pressure, then unlocks the blaster and fights roaming voxel zombies.
 
 The game runs directly in the browser with WebGL. There is no build step, package install, bundler, backend, or asset pipeline required.
 
@@ -20,6 +20,7 @@ Desktop play uses mouse and keyboard. Mobile play is designed for landscape orie
 - Fixed-size chunk generation so the game area stays bounded and performance remains predictable.
 - Player movement is clamped inside the generated world.
 - Chunk-level mesh rebuilding for destructible blocks.
+- Mission-based opening loop with a no-gun exploration phase, contamination-source shutdown objective, supply crate reward, and delayed zombie threat.
 - Six-round blaster magazine with reserve ammo and a 12-round extended-mag unlock after 25 kills.
 - Ammo pickups that add six rounds at a time.
 - Zombie spawning, pursuit, attack cooldowns, retreat steps after attacks, deaths, score popups, and pickup drops.
@@ -38,6 +39,7 @@ Desktop play uses mouse and keyboard. Mobile play is designed for landscape orie
 
 - `WASD` or arrow keys: move
 - Mouse: aim
+- Hold `E`: disable the contamination source when nearby
 - Left click: shoot
 - Right click or `R`: reload
 - `Space`: jump
@@ -50,7 +52,7 @@ Mobile is intended for landscape play.
 
 - Left joystick: move
 - Swipe open play area: aim
-- Shoot button: fire
+- Action/Shoot button: hold to disable the source before unlock, then fire after the gun is awarded
 - Jump button: jump
 - Run button: sprint
 
@@ -74,7 +76,7 @@ Common tuning options live in `config.js` under `window.ZOMVOX_CONFIG`. Edit tha
 
 ```js
 window.ZOMVOX_CONFIG = {
-  buildVersion: '2026.07.04.1',
+  buildVersion: '2026.07.05.2',
   initialSeed: 729641,
 
   environment: {
@@ -86,6 +88,14 @@ window.ZOMVOX_CONFIG = {
 
   timers: {
     cycleHalfDayMs: 360000
+  },
+
+  mission: {
+    toxinDamagePerSecond: 1.15,
+    disableSeconds: 3,
+    machineActionRadius: 3.6,
+    infectedGoal: 50,
+    firstWaveSize: 3
   }
 };
 ```
@@ -120,6 +130,7 @@ Other sections in `config.js` expose safe defaults for:
 - `player`: collision size, starting health, starting ammo reserve, respawn reserve floor, and low-health heartbeat threshold.
 - `weapon`: magazine size, reload time, and long-range kill distance.
 - `enemies`: base enemy cap and horde escalation values.
+- `mission`: toxin drain, source disable timing/radius, infected objective goal, and first wave size.
 - `pickups`: ammo/health pickup amounts and drop chances.
 - `timers`: death overlay delay, world rebuild meter duration, heartbeat interval, and day/night cycle length.
 - `audio`: optional mp3/wav overrides for each sound effect.

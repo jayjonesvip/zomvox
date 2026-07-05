@@ -24,7 +24,17 @@
   <div class="healthTop"><span class="healthLabel">Health Status</span><span id="healthBigText">100%</span></div>
   <div class="bigHealthBar"><div id="healthBigFill"></div></div>
 </div>
+<div id="missionPanel">
+  <div class="missionLabel">Objective</div>
+  <div id="objectiveText">Locate the contamination source</div>
+  <div id="objectiveMeta">Toxin exposure active</div>
+</div>
 <div id="scoreFeed"></div>
+<div id="disableOverlay">
+  <div class="disableTitle">DISABLING SOURCE</div>
+  <div class="disableBar"><div id="disableFill"></div></div>
+  <div id="disablePercent">0%</div>
+</div>
 <div id="reloadOverlay"><div class="reloadTitle">Reloading</div><div class="reloadBar"><div id="reloadOverlayFill"></div></div></div>
 <div id="worldOverlay">
   <div class="worldCard">
@@ -79,14 +89,14 @@
 <div id="menu">
   <div class="card">
     <h1>Zom<b>Vox</b></h1>
-    <p class="subtitle">Zombies and Voxels. Survive a fixed-size voxel wasteland with day/night lighting, dangerous water, sand beaches, rocks, block-breaking bullets, ammo crates, and the dead wandering in from the hills.</p>
+    <p class="subtitle">Zombies and Voxels. Find the contamination source, shut it down, grab the Block Blaster, and survive the infected wave rolling over the island.</p>
     <div class="grid">
       <div class="tip desktopTip"><kbd>WASD</kbd> move &nbsp; <kbd>Mouse</kbd> aim</div>
-      <div class="tip desktopTip"><kbd>Left</kbd> shoot &nbsp; <kbd>Right</kbd>/<kbd>R</kbd> reload</div>
+      <div class="tip desktopTip"><kbd>E</kbd> hold action &nbsp; <kbd>Left</kbd> shoot</div>
       <div class="tip desktopTip"><kbd>Space</kbd> jump &nbsp; <kbd>Shift</kbd> sprint</div>
       <div class="tip desktopTip"><kbd>N</kbd> new world &nbsp; <kbd>Shift</kbd> sprint</div>
       <div class="tip mobileTip"><kbd>Stick</kbd> move &nbsp; <kbd>Swipe</kbd> aim</div>
-      <div class="tip mobileTip"><kbd>Shoot</kbd> fire &nbsp; <kbd>Jump</kbd> hop</div>
+      <div class="tip mobileTip"><kbd>Action</kbd> disable/fire &nbsp; <kbd>Jump</kbd> hop</div>
     </div>
     <div class="settingsPanel">
       <label class="setting"><input id="settingHealth" type="checkbox" checked />Health</label>
