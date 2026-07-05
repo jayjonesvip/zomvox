@@ -209,7 +209,7 @@
     #healthStatus .healthLabel{ display:none; }
     #healthBigText{ font-size:18px; }
     .bigHealthBar{ height:8px; }
-    #missionPanel{ left:144px; right:8px; top:8px; width:auto; padding:7px 8px; }
+    #missionPanel{ left:8px; right:8px; top:52px; width:auto; padding:7px 8px; }
     .missionLabel{ display:none; }
     #objectiveText{ font-size:12px; }
     #objectiveMeta{ font-size:9px; margin-top:2px; }
@@ -234,6 +234,7 @@
   body.no-gun #gunSprite,
   body.no-gun #reticle{ display:none !important; }
   body.action-mode #touchShoot{ color:#05220e; background:rgba(132,245,95,.58); border:1px solid rgba(220,255,200,.48); box-shadow:0 0 0 7px rgba(0,0,0,.18), 0 0 0 12px rgba(52,135,36,.54), 0 8px 26px rgba(0,0,0,.28), inset 0 2px 0 rgba(255,255,255,.28); font-size:11px; }
+  body.action-mode #touchShoot.unavailable{ opacity:.42; filter:grayscale(.65); background:rgba(70,88,78,.44); box-shadow:0 0 0 7px rgba(0,0,0,.16), 0 0 0 12px rgba(40,60,45,.46), 0 8px 26px rgba(0,0,0,.24), inset 0 2px 0 rgba(255,255,255,.16); }
   @media (orientation: portrait){
     #portraitBlock{ display:flex; }
   }
