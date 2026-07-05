@@ -206,6 +206,7 @@
     disableProgress: 0,
     toxinRemainder: 0,
     smokeTimer: 0,
+    commandMessageCooldown: 0,
     firstWaveSpawned: false
   };
 
@@ -1405,6 +1406,21 @@
 
   function updatePickups(dt) {
     for (const p of pickups) {
+      if (p.vx || p.vy || p.vz) {
+        p.x += (p.vx || 0) * dt;
+        p.y += (p.vy || 0) * dt;
+        p.z += (p.vz || 0) * dt;
+        p.vy = (p.vy || 0) - 12 * dt;
+        p.vx = (p.vx || 0) * Math.max(0, 1 - dt * 1.9);
+        p.vz = (p.vz || 0) * Math.max(0, 1 - dt * 1.9);
+        const floor = pickupAirY(p.x, p.z) + .35;
+        if (p.y <= floor) {
+          p.y = floor;
+          p.vx = 0;
+          p.vy = 0;
+          p.vz = 0;
+        }
+      }
       p.bob += dt * 3.2;
       const dist = Math.hypot(p.x - player.pos[0], p.z - player.pos[2]);
       if (dist < 1.45 && Math.abs(p.y - player.pos[1]) < 2.2) {
@@ -1476,6 +1492,25 @@
     }
   }
 
+  function missionCommandNothingHere() {
+    if (mission.commandMessageCooldown > 0) return;
+    mission.commandMessageCooldown = 2.1;
+    scorePop('MISSION COMMAND', 'small');
+    showToast('Mission Command: nothing to do here. Find the source of the toxin.');
+  }
+
+  function beginMissionAction() {
+    if (gunUnlocked()) {
+      shoot();
+      return;
+    }
+    if (playerNearMachine()) {
+      mission.actionHeld = true;
+      return;
+    }
+    missionCommandNothingHere();
+  }
+
   function spawnInitialWave() {
     if (mission.firstWaveSpawned) return;
     mission.firstWaveSpawned = true;
@@ -1498,10 +1533,40 @@
       }
     }
     if (!spot) spot = { x: mx + 2, y: pickupAirY(mx + 2, mz), z: mz };
-    mission.supplyCrate = { x: spot.x + .5, y: spot.y, z: spot.z + .5, open: true };
-    spawnPickupAt(spot.x, spot.y, spot.z, 'ammo');
-    spawnPickupAt(spot.x + 1, spot.y, spot.z, 'ammo');
-    spawnPickupAt(spot.x, spot.y, spot.z + 1, 'health');
+    mission.supplyCrate = { x: spot.x + .5, y: spot.y, z: spot.z + .5, looted: false };
+  }
+
+  function burstSupplyCrate() {
+    const c = mission.supplyCrate;
+    if (!c || c.looted) return;
+    c.looted = true;
+    mission.supplyCrate = null;
+    for (let i = 0; i < 18; i++) {
+      const angle = (Math.PI * 2 * i) / 18;
+      particles.push({
+        x: c.x,
+        y: c.y + .45,
+        z: c.z,
+        vx: Math.cos(angle) * (1.6 + Math.random() * 2.4),
+        vy: 1.6 + Math.random() * 3.2,
+        vz: Math.sin(angle) * (1.6 + Math.random() * 2.4),
+        life: .42 + Math.random() * .35,
+        type: i % 3 === 0 ? 14 : 4
+      });
+    }
+    for (let i = 0; i < 4; i++) {
+      const angle = -Math.PI * .75 + i * (Math.PI * .5);
+      spawnThrownPickup(c.x, c.y + .75, c.z, i < 2 ? 'health' : 'ammo', angle, 3.7 + i * .35);
+    }
+    scorePop('SUPPLY CRATE OPENED', 'pickup small');
+    showToast('Crate popped: 2 health, 2 ammo.');
+    sound('pickup');
+  }
+
+  function updateSupplyCrate() {
+    const c = mission.supplyCrate;
+    if (!c) return;
+    if (Math.hypot(c.x - player.pos[0], c.z - player.pos[2]) < 2.05 && Math.abs(c.y - player.pos[1]) < 2.4) burstSupplyCrate();
   }
 
   function disableMachine() {
@@ -1518,7 +1583,8 @@
     mission.phase = PHASE_ZOMBIE_THREAT;
     setWeaponUnlocked(true);
     scorePop('CONTAMINATION SOURCE DISABLED', 'wave');
-    showToast('Block Blaster unlocked. Eliminate infected.');
+    setTimeout(() => scorePop('MISSION UPDATED: ELIMINATE ' + MISSION_INFECTED_GOAL + ' INFECTED', 'wave small'), 850);
+    showToast('Mission Command: source disabled. Open the supply crate, then eliminate ' + MISSION_INFECTED_GOAL + ' infected.');
     sound('wave');
     spawnInitialWave();
   }
@@ -1555,6 +1621,20 @@
       vz: (Math.random() - .5) * .7,
       life: .75 + Math.random() * .55,
       type: 23
+    });
+  }
+
+  function spawnThrownPickup(x, y, z, kind, angle, force = 4.2) {
+    pickups.push({
+      x,
+      y,
+      z,
+      vx: Math.cos(angle) * force,
+      vy: 4.2 + seededHash(x * 4.2, z * 7.1) * 1.8,
+      vz: Math.sin(angle) * force,
+      kind,
+      amount: kind === 'health' ? HEALTH_PICKUP_AMOUNT : AMMO_PICKUP_ROUNDS,
+      bob: seededHash(x * 5.1, z * 9.3) * 10
     });
   }
 
@@ -1624,6 +1704,7 @@
       return;
     }
     if (player.invuln > 0) player.invuln -= dt;
+    if (mission.commandMessageCooldown > 0) mission.commandMessageCooldown -= dt;
     if (player.reloading) {
       player.reloadTimer -= dt;
       reloadText.textContent = 'Reloading ' + Math.max(0, player.reloadTimer).toFixed(1) + 's';
@@ -1636,6 +1717,7 @@
     updateWaterHazard(dt);
     updateLowHealthFeedback(dt);
     updateEnemies(dt);
+    updateSupplyCrate();
     updatePickups(dt);
     updateMachineSmoke(dt);
     updateParticles(dt);
@@ -1741,10 +1823,13 @@
     if (mission.supplyCrate) {
       const c = mission.supplyCrate;
       const lidBob = Math.sin(time * 2.5) * .025;
-      pushBox(arr, c.x - .48, c.y, c.z - .48, .96, .42, .96, 14);
-      pushBox(arr, c.x - .40, c.y + .42, c.z - .50, .80, .12, .18, 13);
-      pushBox(arr, c.x - .40, c.y + .42 + lidBob, c.z + .26, .80, .10, .28, 13);
-      pushBox(arr, c.x - .12, c.y + .52, c.z - .51, .24, .12, .035, 9);
+      pushBox(arr, c.x - .52, c.y, c.z - .52, 1.04, .46, 1.04, 4);
+      pushBox(arr, c.x - .56, c.y + .13, c.z - .12, 1.12, .12, .24, 14);
+      pushBox(arr, c.x - .12, c.y + .13, c.z - .56, .24, .12, 1.12, 14);
+      pushBox(arr, c.x - .48, c.y + .46 + lidBob, c.z - .48, .96, .12, .96, 4);
+      pushBox(arr, c.x - .50, c.y + .50 + lidBob, c.z - .08, 1.00, .08, .16, 14);
+      pushBox(arr, c.x - .08, c.y + .50 + lidBob, c.z - .50, .16, .08, 1.00, 14);
+      pushBox(arr, c.x - .12, c.y + .60, c.z - .53, .24, .10, .035, 9);
     }
     for (const p of particles) {
       const s = .07 + p.life * .05;
@@ -1868,6 +1953,7 @@
     mission.disableProgress = 0;
     mission.toxinRemainder = 0;
     mission.smokeTimer = 0;
+    mission.commandMessageCooldown = 0;
     mission.firstWaveSpawned = false;
     resetLifeStats();
     nextSpawnTimer = 3.5;
@@ -1949,6 +2035,7 @@
   });
   document.addEventListener('keydown', (e) => {
     keys[e.code] = true;
+    if (e.code === 'KeyE' && !e.repeat && !gunUnlocked() && !playerNearMachine()) missionCommandNothingHere();
     if (e.code === 'KeyR' && !e.repeat) startReload();
     if (e.code === 'KeyN' && !e.repeat) beginWorldRebuild(Math.floor(Math.random() * 999999));
   });
@@ -2001,8 +2088,7 @@
     btn.addEventListener('pointercancel', clear);
   }
   bindTouchButton(touchShoot, () => {
-    if (gunUnlocked()) shoot();
-    else mission.actionHeld = true;
+    beginMissionAction();
   }, () => { mission.actionHeld = false; });
   bindTouchButton(touchJump, () => { touchInput.jump = true; }, () => { touchInput.jump = false; });
   bindTouchButton(touchSprint, () => { touchInput.sprint = true; }, () => { touchInput.sprint = false; });
