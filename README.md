@@ -16,7 +16,7 @@ Desktop play uses mouse and keyboard. Mobile play is designed for landscape orie
 - Branded ZomVox splash screen using `assets/zomvox-splash.png`.
 - Splash screen build label using `BUILD_VERSION` plus the deployed document timestamp.
 - Favicon assets for browser tabs and installed shortcuts.
-- Procedural voxel terrain with grass, dirt, stone, sand, water, wood, leaves, bricks, glow markers, trees, cave pockets, cave entrances, and shorelines that switch between safe sand and dangerous rock.
+- Procedural voxel terrain with grass, dirt, stone, sand, water, wood, leaves, bricks, glow markers, trees, cave pockets, cracked-stone cave entrances, and shorelines that switch between safe sand and dangerous rock.
 - Fixed-size chunk generation so the game area stays bounded and performance remains predictable.
 - Player movement is clamped inside the generated world.
 - Chunk-level mesh rebuilding for destructible blocks.
@@ -90,9 +90,10 @@ window.ZOMVOX_CONFIG = {
 
   world: {
     caves: true,
-    caveThreshold: 0.72,
-    caveMinY: 5,
-    caveSurfacePadding: 5
+    caveThreshold: 0.66,
+    caveMinY: 8,
+    caveSurfacePadding: 5,
+    caveEntranceChance: 0.045
   }
 };
 ```

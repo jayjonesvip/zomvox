@@ -123,7 +123,15 @@ window.ZOMVOX_CONFIG = {
       Blocks of solid terrain kept below the surface so caves do not
       shred grass or flatten the visible hills.
     */
-    caveSurfacePadding: 5
+    caveSurfacePadding: 5,
+
+    /*
+      Chance for a valid hillside column to carve a cave entrance.
+
+      This only affects surface discoverability. Underground cave density
+      still comes from caveThreshold.
+    */
+    caveEntranceChance: 0.045
   },
 
   player: {
