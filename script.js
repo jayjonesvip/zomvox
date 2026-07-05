@@ -90,7 +90,8 @@
     SAND: 6,
     WATER: 7,
     BRICK: 8,
-    LAMP: 9
+    LAMP: 9,
+    CRACKED_STONE: 22
   };
 
   const CHUNK_SIZE = Math.max(4, Math.floor(configNumber(WORLD_CONFIG, 'chunkSize', 16)));
@@ -516,6 +517,7 @@
       if(t < 19.5) return vec3(0.55, 0.54, 0.10); /* yellow zombie */
       if(t < 20.5) return vec3(1.00, 0.82, 0.10); /* yellow eyes */
       if(t < 21.5) return vec3(0.025, 0.055, 0.025); /* closed eyes */
+      if(t < 22.5) return vec3(0.30, 0.32, 0.31); /* cracked stone */
       return vec3(1.0, 0.45, 0.18); /* particles */
     }
     void main(){
@@ -532,6 +534,7 @@
       if(vType > 14.5 && vType < 15.5) color += vec3(0.50, 0.15, 0.04);
       if(vType > 16.5 && vType < 17.5) color += vec3(0.35, 0.0, 0.0);
       if(vType > 19.5 && vType < 20.5) color += vec3(0.55, 0.35, 0.0);
+      if(vType > 21.5 && vType < 22.5) color *= 0.70 + step(0.58, hash(floor(vWorld.xz * 3.0 + vWorld.yy))) * 0.42;
       float edge = gridLine(vUv);
       color *= mix(0.58, 1.0, edge);
       float sun = max(dot(n, normalize(uLightDir)), 0.0);
@@ -1395,6 +1398,7 @@
     if (type === BLOCK.SAND) return 'Sand';
     if (type === BLOCK.BRICK) return 'Brick';
     if (type === BLOCK.LAMP) return 'Glow marker';
+    if (type === BLOCK.CRACKED_STONE) return 'Cracked stone';
     return 'Block';
   }
   function updateAmmoDisplay() {
