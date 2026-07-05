@@ -89,7 +89,7 @@ window.ZOMVOX_CONFIG = {
       Higher values allow taller hills and terrain features.
       Very high values can hurt performance.
     */
-    maxY: 52,
+    maxY: 42,
 
     /*
       Water height level.
@@ -117,7 +117,7 @@ window.ZOMVOX_CONFIG = {
     /*
       Lowest Y level that caves are allowed to carve.
     */
-    caveMinY: 5,
+    caveMinY: 8,
 
     /*
       Blocks of solid terrain kept below the surface so caves do not
