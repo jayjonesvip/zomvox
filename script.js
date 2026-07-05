@@ -99,10 +99,6 @@
   const WORLD_MAX = (WORLD_CHUNK_RADIUS + 1) * CHUNK_SIZE - 1;
   const MAX_Y = Math.max(16, Math.floor(configNumber(WORLD_CONFIG, 'maxY', 46)));
   const WATER_LEVEL = Math.max(1, Math.floor(configNumber(WORLD_CONFIG, 'waterLevel', 8)));
-  const CAVES_ENABLED = configBoolean(WORLD_CONFIG, 'caves', true);
-  const CAVE_THRESHOLD = Math.max(0, Math.min(1, configNumber(WORLD_CONFIG, 'caveThreshold', 0.72)));
-  const CAVE_MIN_Y = Math.max(1, Math.floor(configNumber(WORLD_CONFIG, 'caveMinY', 5)));
-  const CAVE_SURFACE_PADDING = Math.max(1, Math.floor(configNumber(WORLD_CONFIG, 'caveSurfacePadding', 5)));
   const PLAYER_HEIGHT = configNumber(PLAYER_CONFIG, 'height', 1.76);
   const PLAYER_RADIUS = configNumber(PLAYER_CONFIG, 'radius', 0.31);
   const STARTING_HEALTH = configNumber(PLAYER_CONFIG, 'startingHealth', 100);
@@ -172,7 +168,7 @@
   let touchMode = matchMedia('(pointer: coarse)').matches;
   let keys = Object.create(null);
   const touchInput = { moveX: 0, moveY: 0, jump: false, sprint: false, lookId: null, lookX: 0, lookY: 0, stickId: null };
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.05.1');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.04.1');
   let lastTarget = null;
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
@@ -726,81 +722,12 @@
     });
   }
 
-  function spawnPickupExactAt(x, y, z, kind = 'ammo') {
-    if (!inWorldXZ(x, z) || y <= WATER_LEVEL + 1) return;
-    if (blocksMovement(getBlock(x, y, z)) || blocksMovement(getBlock(x, y + 1, z))) return;
-    pickups.push({
-      x: Math.floor(x) + .5,
-      y: Math.floor(y) + .35,
-      z: Math.floor(z) + .5,
-      kind,
-      amount: kind === 'health' ? HEALTH_PICKUP_AMOUNT : AMMO_PICKUP_ROUNDS,
-      bob: seededHash(x * 5.1, z * 9.3 + y * 1.7) * 10
-    });
-  }
-
-  function caveNoiseAt(x, y, z) {
-    return noise2(
-      x * 0.08 + y * 0.17 + 400,
-      z * 0.08 - y * 0.11 - 250
-    );
-  }
-
-  function carveCavesForColumn(x, z, h, caveOpenings) {
-    if (!CAVES_ENABLED) return;
-    const maxCaveY = h - CAVE_SURFACE_PADDING;
-    if (maxCaveY <= CAVE_MIN_Y) return;
-    for (let y = CAVE_MIN_Y + 1; y < maxCaveY; y++) {
-      const type = getBlock(x, y, z);
-      if ((type === BLOCK.STONE || type === BLOCK.DIRT) && caveNoiseAt(x, y, z) > CAVE_THRESHOLD) {
-        genSetBlock(x, y, z, 0);
-        if (seededHash(x * 9.31 + y * 1.17, z * 4.19 - y * .83) > 0.985) {
-          caveOpenings.push({ x, y, z, h, kind: 'pocket' });
-        }
-      }
-    }
-  }
-
-  function carveCaveEntrance(x, z, h, caveOpenings) {
-    if (!CAVES_ENABLED || h <= WATER_LEVEL + 6) return;
-    if (seededHash(x * 2.77 + 40, z * 4.91 - 17) < 0.982) return;
-    const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
-    const dir = dirs[Math.floor(seededHash(x - 19, z + 31) * dirs.length)];
-    const sideH = terrainHeight(x + dir[0], z + dir[1]);
-    if (sideH > h - 3) return;
-    const entranceY = Math.max(CAVE_MIN_Y + 2, Math.min(h - CAVE_SURFACE_PADDING, sideH + 2));
-    for (let step = 0; step < 4; step++) {
-      const bx = x - dir[0] * step;
-      const bz = z - dir[1] * step;
-      if (!inWorldXZ(bx, bz)) continue;
-      for (let y = entranceY; y <= entranceY + 1; y++) {
-        const type = getBlock(bx, y, bz);
-        if (type === BLOCK.STONE || type === BLOCK.DIRT) genSetBlock(bx, y, bz, 0);
-      }
-      caveOpenings.push({ x: bx, y: entranceY, z: bz, h, kind: 'entrance' });
-    }
-  }
-
-  function placeCaveFinds(caveOpenings) {
-    if (!CAVES_ENABLED || caveOpenings.length === 0) return;
-    for (const spot of caveOpenings) {
-      if (spot.y <= WATER_LEVEL + 1) continue;
-      const floorY = spot.y - 1;
-      if (!blocksMovement(getBlock(spot.x, floorY, spot.z))) continue;
-      if (getBlock(spot.x, spot.y, spot.z) || getBlock(spot.x, spot.y + 1, spot.z)) continue;
-      const roll = seededHash(spot.x * 6.13 + spot.y * 1.41, spot.z * 8.73 - spot.y * .67);
-      if (roll > 0.992) spawnPickupExactAt(spot.x, spot.y, spot.z, roll > 0.997 ? 'health' : 'ammo');
-      if (roll > 0.986 && roll < 0.990 && enemies.length < ENEMY_CAP) spawnEnemyAt(spot.x + .5, spot.y, spot.z + .5);
-    }
-  }
-
   function generateChunk(cx, cz) {
     if (!chunkInWorld(cx, cz)) return;
     const ck = chunkKey(cx, cz);
     if (loadedChunks.has(ck)) return;
     loadedChunks.add(ck);
     const x0 = cx * CHUNK_SIZE, z0 = cz * CHUNK_SIZE;
-    const caveOpenings = [];
     for (let lx = 0; lx < CHUNK_SIZE; lx++) {
       for (let lz = 0; lz < CHUNK_SIZE; lz++) {
         const x = x0 + lx, z = z0 + lz;
@@ -820,18 +747,6 @@
         }
       }
     }
-    // Caves are carved from existing stone/dirt only, below the surface padding.
-    // This keeps grass caps and water/lava columns stable while still producing
-    // deterministic tunnels from the same seed as the rest of the terrain.
-    for (let lx = 0; lx < CHUNK_SIZE; lx++) {
-      for (let lz = 0; lz < CHUNK_SIZE; lz++) {
-        const x = x0 + lx, z = z0 + lz;
-        const h = terrainHeight(x, z);
-        carveCavesForColumn(x, z, h, caveOpenings);
-        carveCaveEntrance(x, z, h, caveOpenings);
-      }
-    }
-    placeCaveFinds(caveOpenings);
     // Trees are limited away from chunk borders so chunks can be generated/unloaded cleanly.
     for (let lx = 2; lx < CHUNK_SIZE - 2; lx++) {
       for (let lz = 2; lz < CHUNK_SIZE - 2; lz++) {
@@ -907,17 +822,6 @@
       if (t && t !== BLOCK.WATER && t !== BLOCK.LEAF) return y;
     }
     return terrainHeight(x, z);
-  }
-
-  function floorNearY(x, z, aroundY) {
-    x = Math.max(WORLD_MIN, Math.min(WORLD_MAX, Math.floor(x)));
-    z = Math.max(WORLD_MIN, Math.min(WORLD_MAX, Math.floor(z)));
-    const start = Math.min(MAX_Y + 25, Math.floor(aroundY + 2));
-    const end = Math.max(0, Math.floor(aroundY - 5));
-    for (let y = start; y >= end; y--) {
-      if (blocksMovement(getBlock(x, y, z)) && !blocksMovement(getBlock(x, y + 1, z))) return y;
-    }
-    return topSolidY(x, z);
   }
 
   const faces = [
@@ -1130,16 +1034,10 @@
   function spawnEnemy() {
     const p = enemySpawnPoint();
     if (!p) return;
-    spawnEnemyAt(p.x, p.y, p.z);
-  }
-
-  function spawnEnemyAt(x, y, z) {
-    if (!inWorldXZ(x, z) || Math.hypot(x - player.pos[0], z - player.pos[2]) < 14) return;
-    if (blocksMovement(getBlock(Math.floor(x), Math.floor(y), Math.floor(z)))) return;
-    const big = seededHash(x * 9.1, z * 3.2) > 0.82;
-    const variant = Math.floor(seededHash(x * 12.7 - 4, z * 8.4 + 6) * 4);
-    const dx = player.pos[0] - x, dz = player.pos[2] - z;
-    enemies.push({ x, y, z, hp: big ? 80 : 48, maxHp: big ? 80 : 48, speed: big ? 2.0 : 2.55, attack: 0, retreat: 0, phase: seededHash(x, z) * 10, blinkSeed: seededHash(x * 3.7 + 18, z * 5.9 - 22), big, variant, face: Math.atan2(dx, -dz) });
+    const big = seededHash(p.x * 9.1, p.z * 3.2) > 0.82;
+    const variant = Math.floor(seededHash(p.x * 12.7 - 4, p.z * 8.4 + 6) * 4);
+    const dx = player.pos[0] - p.x, dz = player.pos[2] - p.z;
+    enemies.push({ x: p.x, y: p.y, z: p.z, hp: big ? 80 : 48, maxHp: big ? 80 : 48, speed: big ? 2.0 : 2.55, attack: 0, retreat: 0, phase: seededHash(p.x, p.z) * 10, blinkSeed: seededHash(p.x * 3.7 + 18, p.z * 5.9 - 22), big, variant, face: Math.atan2(dx, -dz) });
   }
 
   function lerpAngle(a, b, t) {
@@ -1168,7 +1066,7 @@
         const nx = e.x + (dx / dist) * step * dir;
         const nz = e.z + (dz / dist) * step * dir;
         const gx = Math.floor(nx), gz = Math.floor(nz);
-        const ground = floorNearY(gx, gz, e.y);
+        const ground = topSolidY(gx, gz);
         if (ground > WATER_LEVEL - 1 && ground < e.y + 2.5) {
           e.x = nx; e.z = nz; e.y += ((ground + 1) - e.y) * Math.min(1, dt * 8);
         }
