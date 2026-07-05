@@ -16,7 +16,7 @@ Desktop play uses mouse and keyboard. Mobile play is designed for landscape orie
 - Branded ZomVox splash screen using `assets/zomvox-splash.png`.
 - Splash screen build label using `BUILD_VERSION` plus the deployed document timestamp.
 - Favicon assets for browser tabs and installed shortcuts.
-- Procedural voxel terrain with grass, dirt, stone, sand, water, wood, leaves, bricks, glow markers, trees, cave pockets, cracked-stone cave entrances, and shorelines that switch between safe sand and dangerous rock.
+- Procedural voxel terrain with grass, dirt, stone, sand, water, wood, leaves, bricks, glow markers, trees, and shorelines that switch between safe sand and dangerous rock.
 - Fixed-size chunk generation so the game area stays bounded and performance remains predictable.
 - Player movement is clamped inside the generated world.
 - Chunk-level mesh rebuilding for destructible blocks.
@@ -74,7 +74,7 @@ Common tuning options live in `config.js` under `window.ZOMVOX_CONFIG`. Edit tha
 
 ```js
 window.ZOMVOX_CONFIG = {
-  buildVersion: '2026.07.05.1',
+  buildVersion: '2026.07.04.1',
   initialSeed: 729641,
 
   environment: {
@@ -86,19 +86,9 @@ window.ZOMVOX_CONFIG = {
 
   timers: {
     cycleHalfDayMs: 360000
-  },
-
-  world: {
-    caves: true,
-    caveThreshold: 0.66,
-    caveMinY: 8,
-    caveSurfacePadding: 5,
-    caveEntranceChance: 0.045
   }
 };
 ```
-
-`initialSeed` affects terrain, caves, cave loot, cave entrance placement, and other seeded world details. Same seed means the same generated world; changing it produces a different deterministic layout.
 
 `environment.timeMode` controls the lighting mode:
 
@@ -126,7 +116,7 @@ When cycling is enabled, `timers.cycleHalfDayMs` controls the pace in millisecon
 
 Other sections in `config.js` expose safe defaults for:
 
-- `world`: chunk size, fixed map radius, max terrain height, water level, and cave generation options.
+- `world`: chunk size, fixed map radius, max terrain height, and water level.
 - `player`: collision size, starting health, starting ammo reserve, respawn reserve floor, and low-health heartbeat threshold.
 - `weapon`: magazine size, reload time, and long-range kill distance.
 - `enemies`: base enemy cap and horde escalation values.

@@ -1,4 +1,4 @@
-/*
+9/*
   ZOMVOX CONFIG
 
   This file is for gameplay tuning only.
@@ -17,7 +17,7 @@ window.ZOMVOX_CONFIG = {
     Bump this when you make visible changes so you can tell the browser
     loaded the newest version.
   */
-  buildVersion: '2026.07.05.1',
+  buildVersion: '2026.07.04.1',
 
   /*
     Seed used for deterministic world generation.
@@ -25,7 +25,7 @@ window.ZOMVOX_CONFIG = {
     Same seed = same world layout.
     Change this to any whole number to generate a different map.
   */
-  initialSeed: 29192919,
+  initialSeed: 2919,
 
   environment: {
     /*
@@ -70,7 +70,7 @@ window.ZOMVOX_CONFIG = {
       Higher values create larger chunks.
       Lower values can make chunk rebuilds lighter.
     */
-    chunkSize: 14,
+    chunkSize: 16,
 
     /*
       How many chunks generate outward from the center.
@@ -89,7 +89,7 @@ window.ZOMVOX_CONFIG = {
       Higher values allow taller hills and terrain features.
       Very high values can hurt performance.
     */
-    maxY: 42,
+    maxY: 50,
 
     /*
       Water height level.
@@ -97,41 +97,7 @@ window.ZOMVOX_CONFIG = {
       Higher value = more flooded/lake areas.
       Lower value = drier world.
     */
-    waterLevel: 8,
-
-    /*
-      Lightweight deterministic caves.
-
-      Caves are carved after base terrain is placed by sampling cheap
-      fake 3D noise from the existing seeded 2D noise function.
-    */
-    caves: true,
-
-    /*
-      Higher = fewer caves.
-
-      Range is roughly 0.00 to 1.00.
-    */
-    caveThreshold: 0.66,
-
-    /*
-      Lowest Y level that caves are allowed to carve.
-    */
-    caveMinY: 8,
-
-    /*
-      Blocks of solid terrain kept below the surface so caves do not
-      shred grass or flatten the visible hills.
-    */
-    caveSurfacePadding: 5,
-
-    /*
-      Chance for a valid hillside column to carve a cave entrance.
-
-      This only affects surface discoverability. Underground cave density
-      still comes from caveThreshold.
-    */
-    caveEntranceChance: 0.045
+    waterLevel: 11
   },
 
   player: {
