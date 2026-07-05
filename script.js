@@ -97,7 +97,9 @@
     WATER: 7,
     BRICK: 8,
     LAMP: 9,
-    CRACKED_STONE: 22
+    METAL: 14,
+    CRACKED_STONE: 22,
+    RED_LIGHT: 24
   };
 
   const CHUNK_SIZE = Math.max(4, Math.floor(configNumber(WORLD_CONFIG, 'chunkSize', 16)));
@@ -544,6 +546,7 @@
       if(t < 21.5) return vec3(0.025, 0.055, 0.025); /* closed eyes */
       if(t < 22.5) return vec3(0.30, 0.32, 0.31); /* cracked stone */
       if(t < 23.5) return vec3(0.38, 0.95, 0.24); /* toxin smoke */
+      if(t < 24.5) return vec3(0.90, 0.02, 0.015) * (0.35 + step(0.45, sin(uTime * 6.0)) * 0.75); /* red beacon */
       return vec3(1.0, 0.45, 0.18); /* particles */
     }
     void main(){
@@ -561,6 +564,7 @@
       if(vType > 16.5 && vType < 17.5) color += vec3(0.35, 0.0, 0.0);
       if(vType > 19.5 && vType < 20.5) color += vec3(0.55, 0.35, 0.0);
       if(vType > 21.5 && vType < 22.5) color *= 0.70 + step(0.58, hash(floor(vWorld.xz * 3.0 + vWorld.yy))) * 0.42;
+      if(vType > 23.5 && vType < 24.5) color += vec3(0.70, 0.0, 0.0) * step(0.45, sin(uTime * 6.0));
       float edge = gridLine(vUv);
       color *= mix(0.58, 1.0, edge);
       float sun = max(dot(n, normalize(uLightDir)), 0.0);
@@ -569,6 +573,7 @@
       if(vType > 8.5 && vType < 9.5) light += 0.65;
       if(vType > 11.5 && vType < 12.5) light += 0.75;
       if(vType > 19.5 && vType < 20.5) light += 0.75;
+      if(vType > 23.5 && vType < 24.5) light += 1.05;
       if(vType > 12.5) light += 0.22;
       color *= light;
       if(uFog > 0.5){
@@ -878,7 +883,7 @@
     for (let dx = -2; dx <= 2; dx++) {
       for (let dz = -2; dz <= 2; dz++) {
         const x = cx + dx, z = cz + dz;
-        for (let y = baseY; y <= baseY + 5; y++) {
+        for (let y = baseY; y <= baseY + 8; y++) {
           const type = getBlock(x, y, z);
           if (type === BLOCK.WOOD || type === BLOCK.LEAF) setBlock(x, y, z, 0, true);
         }
@@ -886,33 +891,34 @@
     }
   }
 
-  function setMachineBlock(x, y, z, type, glowBlocks) {
+  function setMachineBlock(x, y, z, type, machineBlocks) {
     setBlock(x, y, z, type, true);
-    if (type === BLOCK.LAMP) glowBlocks.push([x, y, z]);
+    machineBlocks.push([x, y, z]);
   }
 
   function placeContaminationMachine() {
     const spot = highestMissionPoint();
     const x = spot.x, z = spot.z, baseY = terrainHeight(x, z) + 1;
-    const glowBlocks = [];
+    const machineBlocks = [];
     clearMissionBuildSpace(x, baseY, z);
-    // Machine placement is intentionally blocky: a brick/stone plinth,
-    // lamp-powered toxin core, and no custom model work.
+    // Machine placement is intentionally voxel/simple: a low stone footing,
+    // stacked metal column, side braces, and one blinking red beacon on top.
     for (let dx = -1; dx <= 1; dx++) {
       for (let dz = -1; dz <= 1; dz++) {
-        setMachineBlock(x + dx, baseY, z + dz, Math.abs(dx) + Math.abs(dz) > 1 ? BLOCK.STONE : BLOCK.BRICK, glowBlocks);
+        setMachineBlock(x + dx, baseY, z + dz, Math.abs(dx) + Math.abs(dz) > 1 ? BLOCK.STONE : BLOCK.METAL, machineBlocks);
       }
     }
-    setMachineBlock(x - 1, baseY + 1, z - 1, BLOCK.STONE, glowBlocks);
-    setMachineBlock(x + 1, baseY + 1, z - 1, BLOCK.STONE, glowBlocks);
-    setMachineBlock(x - 1, baseY + 1, z + 1, BLOCK.STONE, glowBlocks);
-    setMachineBlock(x + 1, baseY + 1, z + 1, BLOCK.STONE, glowBlocks);
-    setMachineBlock(x, baseY + 1, z, BLOCK.LAMP, glowBlocks);
-    setMachineBlock(x, baseY + 2, z, BLOCK.LAMP, glowBlocks);
-    setMachineBlock(x - 1, baseY + 2, z, BLOCK.BRICK, glowBlocks);
-    setMachineBlock(x + 1, baseY + 2, z, BLOCK.BRICK, glowBlocks);
-    setMachineBlock(x, baseY + 3, z, BLOCK.LAMP, glowBlocks);
-    mission.machine = { x: x + .5, y: baseY, z: z + .5, active: true, glowBlocks };
+    for (let y = 1; y <= 5; y++) setMachineBlock(x, baseY + y, z, BLOCK.METAL, machineBlocks);
+    setMachineBlock(x - 1, baseY + 1, z, BLOCK.METAL, machineBlocks);
+    setMachineBlock(x + 1, baseY + 1, z, BLOCK.METAL, machineBlocks);
+    setMachineBlock(x, baseY + 1, z - 1, BLOCK.METAL, machineBlocks);
+    setMachineBlock(x, baseY + 1, z + 1, BLOCK.METAL, machineBlocks);
+    setMachineBlock(x - 1, baseY + 2, z, BLOCK.STONE, machineBlocks);
+    setMachineBlock(x + 1, baseY + 2, z, BLOCK.STONE, machineBlocks);
+    setMachineBlock(x, baseY + 2, z - 1, BLOCK.STONE, machineBlocks);
+    setMachineBlock(x, baseY + 2, z + 1, BLOCK.STONE, machineBlocks);
+    setMachineBlock(x, baseY + 6, z, BLOCK.RED_LIGHT, machineBlocks);
+    mission.machine = { x: x + .5, y: baseY, z: z + .5, active: true, blocks: machineBlocks };
     mission.supplyCrate = null;
     queueRebuild(x, z);
   }
@@ -1492,6 +1498,14 @@
     }
   }
 
+  function updateActionButtonState() {
+    if (!touchShoot) return;
+    const unlocked = gunUnlocked();
+    const ready = unlocked || playerNearMachine();
+    touchShoot.classList.toggle('unavailable', !ready);
+    touchShoot.setAttribute('aria-disabled', ready ? 'false' : 'true');
+  }
+
   function missionCommandNothingHere() {
     if (mission.commandMessageCooldown > 0) return;
     mission.commandMessageCooldown = 2.1;
@@ -1520,20 +1534,8 @@
 
   function spawnSupplyCrate() {
     if (!mission.machine) return;
-    const mx = Math.floor(mission.machine.x), mz = Math.floor(mission.machine.z);
-    const candidates = [[3, 0], [-3, 0], [0, 3], [0, -3], [3, 2], [-3, -2]];
-    let spot = null;
-    for (const c of candidates) {
-      const x = mx + c[0], z = mz + c[1];
-      if (!inWorldXZ(x, z)) continue;
-      const y = pickupAirY(x, z);
-      if (y > WATER_LEVEL + 1 && !blocksMovement(getBlock(x, y, z))) {
-        spot = { x, y, z };
-        break;
-      }
-    }
-    if (!spot) spot = { x: mx + 2, y: pickupAirY(mx + 2, mz), z: mz };
-    mission.supplyCrate = { x: spot.x + .5, y: spot.y, z: spot.z + .5, looted: false };
+    const x = Math.floor(mission.machine.x), z = Math.floor(mission.machine.z);
+    mission.supplyCrate = { x: x + .5, y: pickupAirY(x, z), z: z + .5, looted: false };
   }
 
   function burstSupplyCrate() {
@@ -1569,15 +1571,44 @@
     if (Math.hypot(c.x - player.pos[0], c.z - player.pos[2]) < 2.05 && Math.abs(c.y - player.pos[1]) < 2.4) burstSupplyCrate();
   }
 
+  function explodeMachine() {
+    if (!mission.machine) return;
+    const m = mission.machine;
+    for (let i = 0; i < 42; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 2.2 + Math.random() * 7.4;
+      particles.push({
+        x: m.x,
+        y: m.y + 2.4 + Math.random() * 2.4,
+        z: m.z,
+        vx: Math.cos(angle) * speed,
+        vy: 2.2 + Math.random() * 6.8,
+        vz: Math.sin(angle) * speed,
+        life: .45 + Math.random() * .7,
+        type: i % 4 === 0 ? 17 : (i % 3 === 0 ? 14 : 15)
+      });
+    }
+    const dx = player.pos[0] - m.x;
+    const dz = player.pos[2] - m.z;
+    const dist = Math.max(.001, Math.hypot(dx, dz));
+    const force = Math.max(4.2, 11 - dist * .85);
+    player.vel[0] += (dx / dist) * force;
+    player.vel[2] += (dz / dist) * force;
+    player.vel[1] = Math.max(player.vel[1], 5.3);
+    shakeScreen();
+    sound('block');
+  }
+
   function disableMachine() {
     if (!mission.machine || !mission.machine.active) return;
     mission.machine.active = false;
     mission.disableProgress = 0;
     mission.actionHeld = false;
     disableOverlay.classList.remove('show');
-    // Gun unlock happens only after shutdown: toxin stops, lamps go dark,
-    // a supply crate appears, and zombie spawning is allowed to begin.
-    for (const b of mission.machine.glowBlocks) setBlock(b[0], b[1], b[2], BLOCK.STONE, true);
+    // Gun unlock happens only after shutdown: the spire detonates, its blocks
+    // are cleared, a supply crate takes its footprint, and zombie spawning begins.
+    explodeMachine();
+    for (const b of mission.machine.blocks) setBlock(b[0], b[1], b[2], 0, true);
     queueRebuild(Math.floor(mission.machine.x), Math.floor(mission.machine.z));
     spawnSupplyCrate();
     mission.phase = PHASE_ZOMBIE_THREAT;
@@ -1614,7 +1645,7 @@
     const jitterZ = (Math.random() - .5) * .9;
     particles.push({
       x: mission.machine.x + jitterX,
-      y: mission.machine.y + 3.7,
+      y: mission.machine.y + 6.7,
       z: mission.machine.z + jitterZ,
       vx: (Math.random() - .5) * .7,
       vy: 1.6 + Math.random() * .9,
@@ -1735,7 +1766,9 @@
     if (type === BLOCK.SAND) return 'Sand';
     if (type === BLOCK.BRICK) return 'Brick';
     if (type === BLOCK.LAMP) return 'Glow marker';
+    if (type === BLOCK.METAL) return 'Metal';
     if (type === BLOCK.CRACKED_STONE) return 'Cracked stone';
+    if (type === BLOCK.RED_LIGHT) return 'Red beacon';
     return 'Block';
   }
   function updateAmmoDisplay() {
@@ -1754,6 +1787,7 @@
     healthBigFill.style.width = Math.max(0, player.health) + '%';
     updateAmmoDisplay();
     updateMissionHud();
+    updateActionButtonState();
   }
 
   function bindVoxelMesh(mesh) {

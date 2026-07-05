@@ -1,6 +1,6 @@
 # ZomVox
 
-**ZomVox: Zombies and Voxels** is a browser-based voxel zombie survival shooter built for quick static hosting. The player drops onto a fixed-size voxel island, hunts down a blocky contamination machine, disables it under toxin pressure, then unlocks the blaster and fights roaming voxel zombies.
+**ZomVox: Zombies and Voxels** is a browser-based voxel zombie survival shooter built for quick static hosting. The player drops onto a fixed-size voxel island, hunts down a blinking metal contamination spire, disables it under toxin pressure, then unlocks the blaster and fights roaming voxel zombies.
 
 The game runs directly in the browser with WebGL. There is no build step, package install, bundler, backend, or asset pipeline required.
 
@@ -20,7 +20,7 @@ Desktop play uses mouse and keyboard. Mobile play is designed for landscape orie
 - Fixed-size chunk generation so the game area stays bounded and performance remains predictable.
 - Player movement is clamped inside the generated world.
 - Chunk-level mesh rebuilding for destructible blocks.
-- Mission-based opening loop with a no-gun exploration phase, contamination-source shutdown objective, supply crate reward, and delayed zombie threat.
+- Mission-based opening loop with a no-gun exploration phase, metal-spire shutdown objective, explosive supply crate reward, and delayed zombie threat.
 - Six-round blaster magazine with reserve ammo and a 12-round extended-mag unlock after 25 kills.
 - Ammo pickups that add six rounds at a time.
 - Zombie spawning, pursuit, attack cooldowns, retreat steps after attacks, deaths, score popups, and pickup drops.
