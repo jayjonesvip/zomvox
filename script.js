@@ -2576,7 +2576,7 @@ function currentWaterIsDangerous() {
       hudMeta: 'Toxin exposure active',
       afterOk: startInsertionDrop
     });
-    showToast('New ZomVox world generated');
+    showToast('Drop beacon online. Locate the contamination source.');
   }
 
   function startGame() {
