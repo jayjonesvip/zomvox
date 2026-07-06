@@ -1219,14 +1219,35 @@
     queueRebuild();
   }
 
-  function playerOnMachinePad() {
-    const pad = mission.machine && mission.machine.pad;
-    if (!pad || !mission.machine.active || !player.grounded) return false;
-    return Math.abs(player.pos[0] - (pad.x + .5)) < .72 &&
-      Math.abs(player.pos[2] - (pad.z + .5)) < .72 &&
-      Math.abs(player.pos[1] - (pad.y + 1)) < .75;
-  }
+function playerOnMachinePad() {
+  const pad = mission.machine && mission.machine.pad;
+  if (!pad || !mission.machine.active) return false;
 
+  // Player body box
+  const pxMin = player.pos[0] - PLAYER_RADIUS;
+  const pxMax = player.pos[0] + PLAYER_RADIUS;
+  const pyMin = player.pos[1];
+  const pyMax = player.pos[1] + PLAYER_HEIGHT;
+  const pzMin = player.pos[2] - PLAYER_RADIUS;
+  const pzMax = player.pos[2] + PLAYER_RADIUS;
+
+  // Yellow shutdown block box, slightly expanded so "touching" counts
+  const touchPad = 0.18;
+  const bxMin = pad.x - touchPad;
+  const bxMax = pad.x + 1 + touchPad;
+  const byMin = pad.y - touchPad;
+  const byMax = pad.y + 1 + touchPad;
+  const bzMin = pad.z - touchPad;
+  const bzMax = pad.z + 1 + touchPad;
+
+  return pxMax >= bxMin &&
+         pxMin <= bxMax &&
+         pyMax >= byMin &&
+         pyMin <= byMax &&
+         pzMax >= bzMin &&
+         pzMin <= bzMax;
+}
+  
   const faces = [
     { n: [ 1, 0, 0], v: [[1,0,0],[1,1,0],[1,1,1],[1,0,1]] },
     { n: [-1, 0, 0], v: [[0,0,1],[0,1,1],[0,1,0],[0,0,0]] },
