@@ -133,6 +133,8 @@
   const TOXIN_DAMAGE_PER_SECOND = Math.max(0, configNumber(MISSION_CONFIG, 'toxinDamagePerSecond', 1.15));
   const MACHINE_DISABLE_SECONDS = Math.max(0.5, configNumber(MISSION_CONFIG, 'disableSeconds', 3));
   const MACHINE_ACTION_RADIUS = Math.max(1.5, configNumber(MISSION_CONFIG, 'machineActionRadius', 3.6));
+  const INSERTION_DROP_HEIGHT = Math.max(10, configNumber(MISSION_CONFIG, 'insertionDropHeight', 30));
+  const INSERTION_FALL_SPEED = Math.max(2, configNumber(MISSION_CONFIG, 'insertionFallSpeed', 5.8));
   const FIRST_WAVE_SIZE = Math.max(0, Math.floor(configNumber(MISSION_CONFIG, 'firstWaveSize', 3)));
   const INITIAL_SEED = Math.floor(configNumber(CONFIG, 'initialSeed', 729641));
   const CONFIGURED_MISSION_SEEDS = configNumberArray(MISSION_CONFIG, 'islandSeeds', [INITIAL_SEED, 482177, 735331, 918244, 126509]).slice(0, 5);
@@ -200,7 +202,7 @@
   let touchMode = matchMedia('(pointer: coarse)').matches;
   let keys = Object.create(null);
   const touchInput = { moveX: 0, moveY: 0, jump: false, sprint: false, lookId: null, lookX: 0, lookY: 0, stickId: null };
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.05.3');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.05.5');
   let lastTarget = null;
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
@@ -225,6 +227,8 @@
     smokeTimer: 0,
     commandMessageCooldown: 0,
     firstWaveSpawned: false,
+    insertionActive: false,
+    insertionTargetY: 0,
     islandIndex: 0,
     objectiveAcknowledged: false,
     hudTitle: '',
@@ -1192,15 +1196,45 @@
     }
   }
 
+  function startInsertionDrop() {
+    const x = Math.floor(player.pos[0]);
+    const z = Math.floor(player.pos[2]);
+    const groundY = topSolidY(x, z) + 1.001;
+    mission.insertionActive = true;
+    mission.insertionTargetY = groundY;
+    mission.actionHeld = false;
+    mission.disableProgress = 0;
+    touchInput.moveX = 0;
+    touchInput.moveY = 0;
+    touchInput.jump = false;
+    touchInput.sprint = false;
+    player.grounded = false;
+    player.vel = [0, -INSERTION_FALL_SPEED * .55, 0];
+    player.pos[1] = Math.min(MAX_Y + INSERTION_DROP_HEIGHT, groundY + INSERTION_DROP_HEIGHT);
+    scorePop('DROP INBOUND', 'small');
+    showToast('Mission Command: insertion started. Look around. Movement unlocks on touchdown.');
+  }
+
+  function finishInsertionDrop() {
+    if (!mission.insertionActive) return;
+    mission.insertionActive = false;
+    player.pos[1] = Math.max(player.pos[1], mission.insertionTargetY);
+    player.vel = [0, 0, 0];
+    player.grounded = true;
+    scorePop('TOUCHDOWN', 'pickup small');
+    showToast('Boots down. Locate the contamination source.');
+  }
+
   function updateMovement(dt) {
     const forward = [Math.sin(player.yaw), 0, Math.cos(player.yaw)];
     const right = [Math.cos(player.yaw), 0, -Math.sin(player.yaw)];
     let mx = 0, mz = 0;
-    if (keys.KeyW || keys.ArrowUp) { mx += forward[0]; mz += forward[2]; }
-    if (keys.KeyS || keys.ArrowDown) { mx -= forward[0]; mz -= forward[2]; }
-    if (keys.KeyD || keys.ArrowRight) { mx += right[0]; mz += right[2]; }
-    if (keys.KeyA || keys.ArrowLeft) { mx -= right[0]; mz -= right[2]; }
-    if (touchInput.moveY || touchInput.moveX) {
+    const insertion = mission.insertionActive;
+    if (!insertion && (keys.KeyW || keys.ArrowUp)) { mx += forward[0]; mz += forward[2]; }
+    if (!insertion && (keys.KeyS || keys.ArrowDown)) { mx -= forward[0]; mz -= forward[2]; }
+    if (!insertion && (keys.KeyD || keys.ArrowRight)) { mx += right[0]; mz += right[2]; }
+    if (!insertion && (keys.KeyA || keys.ArrowLeft)) { mx -= right[0]; mz -= right[2]; }
+    if (!insertion && (touchInput.moveY || touchInput.moveX)) {
       mx += forward[0] * touchInput.moveY + right[0] * touchInput.moveX;
       mz += forward[2] * touchInput.moveY + right[2] * touchInput.moveX;
     }
@@ -1209,14 +1243,17 @@
     const len = Math.hypot(mx, mz) || 1; mx /= len; mz /= len;
     const sprint = keys.ShiftLeft || keys.ShiftRight || touchInput.sprint;
     const speed = 5.35 * (sprint ? 1.55 : 1.0);
-    player.vel[0] = mx * speed; player.vel[2] = mz * speed;
-    player.vel[1] -= 22 * dt;
-    if ((keys.Space || touchInput.jump) && player.grounded) { player.vel[1] = 8.2; player.grounded = false; }
+    player.vel[0] = insertion ? 0 : mx * speed;
+    player.vel[2] = insertion ? 0 : mz * speed;
+    player.vel[1] -= (insertion ? 9 : 22) * dt;
+    if (insertion) player.vel[1] = Math.max(player.vel[1], -INSERTION_FALL_SPEED);
+    if (!insertion && (keys.Space || touchInput.jump) && player.grounded) { player.vel[1] = 8.2; player.grounded = false; }
     moveAxis(0, player.vel[0] * dt);
     moveAxis(2, player.vel[2] * dt);
     clampToWorld(player.pos);
     player.grounded = false;
     moveAxis(1, player.vel[1] * dt);
+    if (insertion && player.grounded) finishInsertionDrop();
     clampToWorld(player.pos);
     ensureChunks();
     if (player.pos[1] < -20) damagePlayer(999);
@@ -1595,7 +1632,7 @@
   function updateActionButtonState() {
     if (!touchShoot) return;
     const unlocked = gunUnlocked();
-    const ready = unlocked || playerNearMachine();
+    const ready = !mission.insertionActive && (unlocked || playerNearMachine());
     touchShoot.classList.toggle('unavailable', !ready);
     touchShoot.setAttribute('aria-disabled', ready ? 'false' : 'true');
   }
@@ -1608,6 +1645,7 @@
   }
 
   function beginMissionAction() {
+    if (mission.insertionActive) return;
     if (gunUnlocked()) {
       shoot();
       return;
@@ -1746,7 +1784,7 @@
   }
 
   function updateToxinDamage(dt) {
-    if (!mission.machine || !mission.machine.active || deathState.active || worldRebuildState.active || isMenuOpen()) {
+    if (!mission.machine || !mission.machine.active || mission.insertionActive || deathState.active || worldRebuildState.active || isMenuOpen()) {
       mission.toxinRemainder = 0;
       return;
     }
@@ -1822,6 +1860,11 @@
     if (!mission.objectiveAcknowledged) {
       objectiveText.textContent = '[ orders ]';
       objectiveMeta.textContent = currentIslandLabel();
+      return;
+    }
+    if (mission.insertionActive) {
+      objectiveText.textContent = '[ dropping ]';
+      objectiveMeta.textContent = 'Insertion active';
       return;
     }
     if (mission.phase === PHASE_ZOMBIE_THREAT) {
@@ -2126,6 +2169,8 @@
     mission.smokeTimer = 0;
     mission.commandMessageCooldown = 0;
     mission.firstWaveSpawned = false;
+    mission.insertionActive = false;
+    mission.insertionTargetY = 0;
     mission.objectiveAcknowledged = false;
     mission.hudTitle = '';
     mission.hudMeta = '';
@@ -2171,7 +2216,8 @@
       meta: currentIslandLabel() + ' // Drop Phase',
       body: 'Mission Command: toxin readings are climbing. You are unarmed until the source is shut down. Find the blinking metal spire on the high ground and hold action to disable it.',
       hudTitle: 'Locate the contamination source',
-      hudMeta: 'Toxin exposure active'
+      hudMeta: 'Toxin exposure active',
+      afterOk: startInsertionDrop
     });
     showToast('New ZomVox world generated');
   }
