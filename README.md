@@ -81,7 +81,7 @@ Common tuning options live in `config.js` under `window.ZOMVOX_CONFIG`. Edit tha
 
 ```js
 window.ZOMVOX_CONFIG = {
-  buildVersion: '2026.07.06.5',
+  buildVersion: '2026.07.06.6',
   initialSeed: 729641,
 
   environment: {
@@ -93,6 +93,20 @@ window.ZOMVOX_CONFIG = {
 
   timers: {
     cycleHalfDayMs: 360000
+  },
+
+  world: {
+    chunkSize: 16,
+    chunkRadius: 4,
+    maxY: 38,
+    waterLevel: 7,
+    terrainBaseHeight: 4,
+    terrainDetailAmount: 12,
+    terrainBroadAmount: 10,
+    terrainRidgeAmount: 2,
+    terrainLakeADepth: 16,
+    terrainLakeBDepth: 13,
+    terrainMarshDepth: 16
   },
 
   weapon: {
@@ -141,6 +155,11 @@ When cycling is enabled, `timers.cycleHalfDayMs` controls the pace in millisecon
 - `true`: water renders as red lava, damages the player over time, and generates rocky shorelines. This is the default.
 - `false`: water stays blue and is visual only.
 
+Biome water notes:
+
+- Dunes are dry and do not fill low terrain with water.
+- Swamps render water as murky green-brown toxic water.
+
 `environment.fog` controls distance fog:
 
 - `true`: fog is enabled. This is the default.
@@ -148,7 +167,7 @@ When cycling is enabled, `timers.cycleHalfDayMs` controls the pace in millisecon
 
 Other sections in `config.js` expose safe defaults for:
 
-- `world`: chunk size, fixed map radius, max terrain height, and water level.
+- `world`: chunk size, fixed map radius, max terrain height, water level, and terrain roughness/depression tuning.
 - `player`: collision size, starting health, starting ammo reserve, respawn reserve floor, and low-health heartbeat threshold.
 - `weapon`: magazine size, reload time, fire cooldown, recoil, upgrade multipliers, and long-range kill distance.
 - `enemies`: base enemy cap and horde escalation values.

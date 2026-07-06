@@ -17,7 +17,7 @@ window.ZOMVOX_CONFIG = {
     Bump this when you make visible changes so you can tell the browser
     loaded the newest version.
   */
-  buildVersion: '2026.07.06.5',
+  buildVersion: '2026.07.06.6',
 
   /*
     Seed used for deterministic world generation.
@@ -97,7 +97,21 @@ window.ZOMVOX_CONFIG = {
       Higher value = more flooded/lake areas.
       Lower value = drier world.
     */
-    waterLevel: 7
+    waterLevel: 7,
+
+    /*
+      Terrain height tuning.
+
+      Lower detail/ridge/depth values create flatter, more playable islands.
+      Higher values create rougher, more dramatic terrain.
+    */
+    terrainBaseHeight: 4,
+    terrainDetailAmount: 12,
+    terrainBroadAmount: 10,
+    terrainRidgeAmount: 2,
+    terrainLakeADepth: 16,
+    terrainLakeBDepth: 13,
+    terrainMarshDepth: 16
   },
 
   player: {
