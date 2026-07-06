@@ -17,7 +17,7 @@ window.ZOMVOX_CONFIG = {
     Bump this when you make visible changes so you can tell the browser
     loaded the newest version.
   */
-  buildVersion: '2026.07.06.6',
+  buildVersion: '2026.07.06.7',
 
   /*
     Seed used for deterministic world generation.
@@ -182,7 +182,8 @@ window.ZOMVOX_CONFIG = {
     /*
       Random aim kick applied after every shot.
 
-      Premium Grip multiplies this by premiumGripMultiplier.
+      Premium Grip reduces this by premiumGripMultiplier.
+      Values above 1 are clamped so the upgrade cannot add recoil.
     */
     recoilAmount: 0.08,
 
@@ -253,7 +254,7 @@ window.ZOMVOX_CONFIG = {
     toxinDamagePerSecond: 1.15,
 
     /*
-      Seconds the player must hold action near the source to disable it.
+      Seconds the player must hold the disable control near the source.
     */
     disableSeconds: 3,
 

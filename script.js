@@ -146,7 +146,7 @@
   const FIRE_COOLDOWN = Math.max(0.05, configNumber(WEAPON_CONFIG, 'fireCooldown', 0.42));
   const HAIR_TRIGGER_MULTIPLIER = Math.max(0.1, configNumber(WEAPON_CONFIG, 'hairTriggerMultiplier', 0.5));
   const RECOIL_AMOUNT = Math.max(0, configNumber(WEAPON_CONFIG, 'recoilAmount', 0.08));
-  const PREMIUM_GRIP_MULTIPLIER = Math.max(0, configNumber(WEAPON_CONFIG, 'premiumGripMultiplier', 0.38));
+  const PREMIUM_GRIP_MULTIPLIER = Math.max(0, Math.min(1, configNumber(WEAPON_CONFIG, 'premiumGripMultiplier', 0.38)));
   const ENEMY_CAP = Math.max(1, Math.floor(configNumber(ENEMY_CONFIG, 'baseCap', 18)));
   const HORDE_KILLS_PER_LEVEL = Math.max(1, Math.floor(configNumber(ENEMY_CONFIG, 'hordeKillsPerLevel', 5)));
   const HORDE_CAP_BONUS = Math.max(0, Math.floor(configNumber(ENEMY_CONFIG, 'hordeCapBonus', 2)));
@@ -226,7 +226,7 @@
   let touchMode = matchMedia('(pointer: coarse)').matches;
   let keys = Object.create(null);
   const touchInput = { moveX: 0, moveY: 0, jump: false, lookId: null, lookX: 0, lookY: 0, stickId: null };
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.06.5');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.06.7');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -303,6 +303,8 @@
   }
 
   function currentRecoilAmount() {
+    // Premium Grip is a recoil reducer. Clamp the multiplier above so config
+    // tweaks can never accidentally make the upgrade kick harder.
     return RECOIL_AMOUNT * (weaponUpgrades.premiumGrip ? PREMIUM_GRIP_MULTIPLIER : 1);
   }
 
@@ -529,6 +531,9 @@
   function currentBiomeLabel() {
     const biome = currentBiome();
     return biome.charAt(0).toUpperCase() + biome.slice(1);
+  }
+  function disableControlLabel() {
+    return touchMode ? 'the ACTION button' : 'the E key';
   }
 
   function currentInfectedGoal() {
@@ -1396,8 +1401,8 @@
     const insertion = mission.insertionActive;
     if (!insertion && (keys.KeyW || keys.ArrowUp)) { mx += forward[0]; mz += forward[2]; }
     if (!insertion && (keys.KeyS || keys.ArrowDown)) { mx -= forward[0]; mz -= forward[2]; }
-    if (!insertion && (keys.KeyD || keys.ArrowRight)) { mx += right[0]; mz += right[2]; }
-    if (!insertion && (keys.KeyA || keys.ArrowLeft)) { mx -= right[0]; mz -= right[2]; }
+    if (!insertion && (keys.KeyD || keys.ArrowRight)) { mx -= right[0]; mz -= right[2]; }
+    if (!insertion && (keys.KeyA || keys.ArrowLeft)) { mx += right[0]; mz += right[2]; }
     if (!insertion && (touchInput.moveY || touchInput.moveX)) {
       mx += forward[0] * touchInput.moveY + right[0] * touchInput.moveX;
       mz += forward[2] * touchInput.moveY + right[2] * touchInput.moveX;
@@ -2063,7 +2068,7 @@
       objectiveMeta.textContent = mission.completed ? 'Island breach contained' : (mission.hudMeta || 'Gun online');
       return;
     }
-    objectiveText.textContent = playerNearMachine() ? '[ hold action ]' : '[ locate source ]';
+    objectiveText.textContent = playerNearMachine() ? (touchMode ? '[ hold action ]' : '[ hold E ]') : '[ locate source ]';
     objectiveMeta.textContent = playerNearMachine()
       ? (touchMode ? 'Hold ACTION to disable' : 'Hold E to disable')
       : (mission.hudMeta || 'Toxin exposure active');
@@ -2362,7 +2367,7 @@
     queueObjectiveBriefing({
       title: 'Locate the contamination source',
       meta: currentIslandLabel() + ' // ' + currentBiomeLabel() + ' // Drop Phase',
-      body: 'Mission Command: toxin readings are climbing. You are unarmed until the source is shut down. Find the blinking metal spire on the high ground and hold action to disable it.',
+      body: 'Mission Command: toxin readings are climbing. You are unarmed until the source is shut down. Find the blinking metal spire on the high ground and hold ' + disableControlLabel() + ' to disable it.',
       hudTitle: 'Locate the contamination source',
       hudMeta: 'Toxin exposure active',
       afterOk: startInsertionDrop
