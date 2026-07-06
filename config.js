@@ -17,7 +17,7 @@ window.ZOMVOX_CONFIG = {
     Bump this when you make visible changes so you can tell the browser
     loaded the newest version.
   */
-  buildVersion: '2026.07.05.4',
+  buildVersion: '2026.07.05.5',
 
   /*
     Seed used for deterministic world generation.
@@ -213,6 +213,14 @@ window.ZOMVOX_CONFIG = {
       Distance from the machine where the action prompt works.
     */
     machineActionRadius: 3.6,
+
+    /*
+      Cinematic insertion after accepting each island briefing.
+
+      Height is in world blocks. Fall speed is blocks per second.
+    */
+    insertionDropHeight: 30,
+    insertionFallSpeed: 5.8,
 
     /*
       Combat objective for each island after the gun unlocks.

@@ -1,5 +1,11 @@
 # ZomVox
 
+![HTML](https://img.shields.io/badge/HTML-5-E34F26?style=for-the-badge&logo=html5&logoColor=white)
+![CSS](https://img.shields.io/badge/CSS-3-1572B6?style=for-the-badge&logo=css&logoColor=white)
+![JavaScript](https://img.shields.io/badge/JavaScript-ES6-F7DF1E?style=for-the-badge&logo=javascript&logoColor=111)
+![WebGL](https://img.shields.io/badge/WebGL-voxel_engine-990000?style=for-the-badge&logo=webgl&logoColor=white)
+![100% Vibe Coded](https://img.shields.io/badge/100%25-vibe_coded-ff3f7f?style=for-the-badge)
+
 **ZomVox: Zombies and Voxels** is a browser-based voxel zombie survival shooter built for quick static hosting. The player drops onto a fixed-size voxel island, hunts down a blinking metal contamination spire, disables it under toxin pressure, then unlocks the blaster and fights roaming voxel zombies.
 
 The game runs directly in the browser with WebGL. There is no build step, package install, bundler, backend, or asset pipeline required.
@@ -20,7 +26,7 @@ Desktop play uses mouse and keyboard. Mobile play is designed for landscape orie
 - Fixed-size chunk generation so the game area stays bounded and performance remains predictable.
 - Player movement is clamped inside the generated world.
 - Chunk-level mesh rebuilding for destructible blocks.
-- Mission-based opening loop with military-style objective briefings, a no-gun exploration phase, metal-spire shutdown objective, explosive supply crate reward, delayed zombie threat, and escalating redeployment objectives across five seeded islands.
+- Mission-based opening loop with military-style objective briefings, cinematic insertion drops, a no-gun exploration phase, metal-spire shutdown objective, explosive supply crate reward, delayed zombie threat, and escalating redeployment objectives across five seeded islands.
 - Compact ammo HUD on desktop and mobile, plus a six-round blaster magazine with reserve ammo and a 12-round extended-mag unlock after 25 kills.
 - Ammo pickups that add six rounds at a time.
 - Zombie spawning, pursuit, attack cooldowns, retreat steps after attacks, deaths, score popups, and pickup drops.
@@ -76,7 +82,7 @@ Common tuning options live in `config.js` under `window.ZOMVOX_CONFIG`. Edit tha
 
 ```js
 window.ZOMVOX_CONFIG = {
-  buildVersion: '2026.07.05.4',
+  buildVersion: '2026.07.05.5',
   initialSeed: 729641,
 
   environment: {
@@ -95,6 +101,8 @@ window.ZOMVOX_CONFIG = {
     toxinDamagePerSecond: 1.15,
     disableSeconds: 3,
     machineActionRadius: 3.6,
+    insertionDropHeight: 30,
+    insertionFallSpeed: 5.8,
     infectedGoals: [25, 50, 100, 250, 500],
     infectedGoal: 50,
     firstWaveSize: 3
@@ -132,7 +140,7 @@ Other sections in `config.js` expose safe defaults for:
 - `player`: collision size, starting health, starting ammo reserve, respawn reserve floor, and low-health heartbeat threshold.
 - `weapon`: magazine size, reload time, and long-range kill distance.
 - `enemies`: base enemy cap and horde escalation values.
-- `mission`: five island seeds, toxin drain, source disable timing/radius, per-island infected objectives, fallback infected objective, and first wave size.
+- `mission`: five island seeds, toxin drain, source disable timing/radius, insertion drop tuning, per-island infected objectives, fallback infected objective, and first wave size.
 - `pickups`: ammo/health pickup amounts and drop chances.
 - `timers`: death overlay delay, world rebuild meter duration, heartbeat interval, and day/night cycle length.
 - `audio`: optional mp3/wav overrides for each sound effect.
