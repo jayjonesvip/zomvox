@@ -17,7 +17,7 @@ window.ZOMVOX_CONFIG = {
     Bump this when you make visible changes so you can tell the browser
     loaded the newest version.
   */
-  buildVersion: '2026.07.05.2',
+  buildVersion: '2026.07.05.3',
 
   /*
     Seed used for deterministic world generation.
@@ -192,6 +192,13 @@ window.ZOMVOX_CONFIG = {
   },
 
   mission: {
+    /*
+      Five deterministic mission islands.
+
+      Clearing the infected objective redeploys to the next seed.
+    */
+    islandSeeds: [29190007, 482177, 735331, 918244, 126509],
+
     /*
       Health drained per second while the contamination machine is active.
     */
