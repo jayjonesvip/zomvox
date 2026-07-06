@@ -50,15 +50,15 @@
   .fill{ height:100%; width:100%; background:linear-gradient(90deg, #5ded70, #c4ff72); box-shadow:0 0 18px rgba(145,243,110,.28); }
   .fill.ammo{ background:linear-gradient(90deg, #ffe47b, #ffb347); }
 
-  #weaponPanel{ position:fixed; right:14px; top:12px; width:230px; padding:10px 12px; border-radius:8px; background:rgba(5,10,15,.78); border:1px solid var(--line); backdrop-filter:blur(10px); box-shadow:0 14px 40px rgba(0,0,0,.32); pointer-events:none; z-index:9; }
-  #weaponPanel .label{ color:#b9cad7; font-size:10px; letter-spacing:.09em; text-transform:uppercase; font-weight:900; white-space:nowrap; }
-  #bulletRack{ display:grid; grid-template-columns:repeat(6, 1fr); gap:6px; margin:8px 0 7px; }
+  #weaponPanel{ position:fixed; right:14px; top:12px; width:118px; padding:9px 10px; border-radius:8px; background:rgba(5,10,15,.78); border:1px solid var(--line); backdrop-filter:blur(10px); box-shadow:0 14px 40px rgba(0,0,0,.32); pointer-events:none; z-index:9; text-align:center; }
+  #weaponPanel .label{ display:none; }
+  #bulletRack{ display:none; grid-template-columns:repeat(6, 1fr); gap:6px; margin:8px 0 7px; }
   .bullet{ position:relative; height:24px; border-radius:6px 6px 4px 4px; background:linear-gradient(180deg,#fff4a8 0%,#ffd35b 48%,#b56b24 49%,#7b411c 100%); border:2px solid rgba(0,0,0,.58); box-shadow:inset 0 4px 0 rgba(255,255,255,.28), 0 0 18px rgba(255,210,75,.18); transform-origin:50% 100%; transition:opacity .14s, transform .14s, filter .14s; }
   .bullet::before{ content:""; position:absolute; left:50%; top:-7px; width:13px; height:10px; transform:translateX(-50%); clip-path:polygon(50% 0,100% 100%,0 100%); background:#fff2a2; border:2px solid rgba(0,0,0,.5); border-bottom:0; }
   .bullet.spent{ opacity:.22; filter:grayscale(1); transform:translateY(5px) scale(.86); box-shadow:none; }
   #weaponPanel.reloading .bullet.spent{ animation:bulletPulse .35s ease-in-out infinite alternate; }
   @keyframes bulletPulse{ from{ opacity:.18; } to{ opacity:.45; } }
-  #reserveText{ color:#d6e9f5; font-size:13px; font-weight:900; letter-spacing:.02em; }
+  #reserveText{ color:#f5fbff; font-size:24px; line-height:1; font-weight:1000; letter-spacing:.02em; text-shadow:0 2px 0 rgba(0,0,0,.6); }
   #reloadText{ color:#ffdc7a; font-size:12px; font-weight:900; margin-top:2px; min-height:15px; letter-spacing:.04em; text-transform:uppercase; }
 
   #gunSprite{ pointer-events:none; position:fixed; right:0; bottom:-16px; width:min(42vw, 430px); aspect-ratio:1/1; z-index:5; background:url("assets/zomvox-gun-spritesheet.png") 0 0 / 300% 100% no-repeat; image-rendering:auto; filter:drop-shadow(0 18px 22px rgba(0,0,0,.55)); transform-origin:72% 78%; transition:transform .08s ease-out; }
@@ -77,7 +77,7 @@
   .scorePop.small{ font-size:clamp(16px,2.4vw,26px); }
   @keyframes scoreRise{ 0%{ opacity:0; transform:translateY(18px) scale(.88); } 14%{ opacity:1; transform:translateY(0) scale(1.05); } 72%{ opacity:1; } 100%{ opacity:0; transform:translateY(-58px) scale(.98); } }
 
-  #healthStatus{ pointer-events:none; position:fixed; left:50%; top:12px; width:230px; transform:translateX(-50%); padding:10px 12px; border-radius:8px; background:rgba(4,10,14,.82); border:1px solid rgba(255,255,255,.18); box-shadow:0 15px 42px rgba(0,0,0,.36); backdrop-filter:blur(10px); z-index:9; }
+  #healthStatus{ pointer-events:none; position:fixed; left:14px; top:12px; width:230px; padding:10px 12px; border-radius:8px; background:rgba(4,10,14,.82); border:1px solid rgba(255,255,255,.18); box-shadow:0 15px 42px rgba(0,0,0,.36); backdrop-filter:blur(10px); z-index:9; }
   #healthStatus .healthTop{ display:flex; justify-content:space-between; align-items:baseline; gap:10px; margin-bottom:7px; }
   #healthStatus .healthLabel{ font-size:10px; letter-spacing:.09em; text-transform:uppercase; color:#bad0db; font-weight:900; }
   #healthBigText{ font-size:24px; font-weight:1000; line-height:.9; color:#f8fff5; text-shadow:0 2px 0 rgba(0,0,0,.6); }
@@ -88,10 +88,9 @@
   #healthStatus.danger #healthBigFill{ background:linear-gradient(90deg,#ff3b3b,#ff9b6b); box-shadow:0 0 24px rgba(255,63,63,.55); }
   @keyframes healthPulse{ from{ box-shadow:0 15px 42px rgba(0,0,0,.36),0 0 0 rgba(255,40,40,0); } to{ box-shadow:0 15px 42px rgba(0,0,0,.36),0 0 32px rgba(255,40,40,.35); } }
 
-  #missionPanel{ pointer-events:none; position:fixed; left:14px; top:12px; width:min(310px, calc(100vw - 28px)); padding:10px 12px; border-radius:8px; background:rgba(4,10,14,.78); border:1px solid rgba(145,243,110,.24); box-shadow:0 15px 42px rgba(0,0,0,.34); backdrop-filter:blur(10px); z-index:9; }
-  .missionLabel{ color:#99ed85; font-size:10px; letter-spacing:.12em; text-transform:uppercase; font-weight:1000; margin-bottom:4px; }
-  #objectiveText{ color:#f3fff1; font-size:15px; line-height:1.1; font-weight:1000; text-shadow:0 2px 0 rgba(0,0,0,.6); }
-  #objectiveMeta{ color:#bdd4c7; font-size:11px; line-height:1.2; font-weight:800; margin-top:4px; text-transform:uppercase; letter-spacing:.06em; }
+  #missionPanel{ pointer-events:none; position:fixed; left:50%; top:12px; width:min(210px, calc(100vw - 310px)); transform:translateX(-50%); padding:9px 10px; border-radius:8px; background:rgba(4,10,14,.78); border:1px solid rgba(145,243,110,.24); box-shadow:0 15px 42px rgba(0,0,0,.34); backdrop-filter:blur(10px); z-index:9; text-align:center; }
+  .missionLabel,#objectiveMeta{ display:none; }
+  #objectiveText{ color:#f3fff1; font-size:17px; line-height:1; font-weight:1000; text-shadow:0 2px 0 rgba(0,0,0,.6); white-space:nowrap; }
   #disableOverlay{ pointer-events:none; position:fixed; left:50%; bottom:20%; transform:translateX(-50%) translateY(8px); width:min(390px, calc(100vw - 42px)); padding:11px 12px; border-radius:8px; background:rgba(4,10,12,.84); border:1px solid rgba(145,243,110,.38); box-shadow:0 16px 48px rgba(0,0,0,.4),0 0 28px rgba(78,255,74,.12); opacity:0; visibility:hidden; transition:.14s; z-index:10; }
   #disableOverlay.show{ opacity:1; visibility:visible; transform:translateX(-50%) translateY(0); }
   .disableTitle{ color:#d7ffc7; font-size:13px; font-weight:1000; letter-spacing:.16em; text-transform:uppercase; text-align:center; margin-bottom:8px; text-shadow:0 0 18px rgba(145,243,110,.32); }
@@ -158,13 +157,14 @@
   .worldMeter{ height:13px; border:1px solid rgba(255,255,255,.2); border-radius:999px; overflow:hidden; background:rgba(0,0,0,.48); box-shadow:inset 0 2px 8px rgba(0,0,0,.48); }
   #worldFill{ width:0%; height:100%; background:linear-gradient(90deg,#74ff55,#ffdc55); box-shadow:0 0 20px rgba(145,243,110,.46); transition:width .08s linear; }
   #toast{ display:none; }
-  #mobileControls{ position:fixed; inset:0; pointer-events:none; display:none; z-index:11; touch-action:none; }
+  #mobileControls{ position:fixed; inset:0; pointer-events:none; display:none; z-index:11; touch-action:none; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none; }
   #stickBase{ pointer-events:auto; position:absolute; left:calc(22px + env(safe-area-inset-left)); bottom:calc(22px + env(safe-area-inset-bottom)); width:118px; height:118px; border-radius:50%; border:1px solid rgba(255,255,255,.24); background:rgba(5,10,14,.35); box-shadow:inset 0 0 28px rgba(0,0,0,.25), 0 8px 28px rgba(0,0,0,.26); touch-action:none; }
   #stickKnob{ position:absolute; left:50%; top:50%; width:54px; height:54px; margin:-27px 0 0 -27px; border-radius:50%; border:1px solid rgba(255,255,255,.35); background:rgba(220,245,255,.28); box-shadow:0 8px 22px rgba(0,0,0,.32); }
-  .touchBtn{ pointer-events:auto; position:absolute; z-index:2; width:68px; height:68px; border-radius:50%; border:1px solid rgba(255,255,255,.28); background:rgba(5,10,14,.48); color:#f2fbff; font-weight:1000; font-size:12px; letter-spacing:.05em; text-transform:uppercase; box-shadow:0 8px 26px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.16); touch-action:none; }
+  .touchBtn{ pointer-events:auto; position:absolute; z-index:2; width:68px; height:68px; border-radius:50%; border:1px solid rgba(255,255,255,.28); background:rgba(5,10,14,.48); color:#f2fbff; font-weight:1000; font-size:12px; letter-spacing:.05em; text-transform:uppercase; box-shadow:0 8px 26px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.16); touch-action:none; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none; }
   .touchBtn:active,.touchBtn.active{ transform:translateY(2px); filter:brightness(1.2); }
   #touchShoot{ right:calc(24px + env(safe-area-inset-right)); top:48%; bottom:auto; width:78px; height:78px; border:0; background:rgba(220,28,28,.34); box-shadow:0 0 0 7px rgba(0,0,0,.18), 0 0 0 12px rgba(120,0,0,.58), 0 8px 26px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.18); }
   #touchJump{ right:calc(24px + env(safe-area-inset-right)); top:calc(48% - 82px); bottom:auto; width:64px; height:64px; }
+  #touchJump::before{ content:"\2191"; font-size:30px; line-height:1; }
   #touchSprint{ left:calc(154px + env(safe-area-inset-left)); bottom:calc(32px + env(safe-area-inset-bottom)); width:58px; height:58px; }
   #portraitBlock{ position:fixed; inset:0; display:none; overflow:hidden; align-items:stretch; justify-content:center; text-align:center; padding:0; background:#02070b; color:#eaf7ff; z-index:40; font-weight:1000; letter-spacing:0; }
   #portraitBlock::before{ content:""; position:absolute; inset:0; background:url("assets/zomvox-splash.png") center/cover no-repeat; filter:saturate(1.1) contrast(1.05) brightness(.58); transform:scale(1.08); }
@@ -211,7 +211,6 @@
     .splashStatus{ font-size:11px; margin-bottom:6px; }
     .splashMeter{ height:10px; }
     #weaponPanel{ right:8px; top:8px; width:90px; min-width:0; padding:7px 8px; text-align:center; }
-    #weaponPanel .label,#bulletRack{ display:none; }
     #reserveText{ font-size:20px; line-height:1; }
     #reloadText{ font-size:9px; min-height:11px; margin-top:3px; }
     #healthStatus{ left:8px; top:8px; width:128px; padding:7px 8px; transform:none; }
@@ -219,10 +218,8 @@
     #healthStatus .healthLabel{ display:none; }
     #healthBigText{ font-size:18px; }
     .bigHealthBar{ height:8px; }
-    #missionPanel{ left:8px; right:8px; top:52px; width:auto; padding:7px 8px; }
-    .missionLabel{ display:none; }
-    #objectiveText{ font-size:12px; }
-    #objectiveMeta{ font-size:9px; margin-top:2px; }
+    #missionPanel{ left:50%; right:auto; top:8px; width:min(170px, calc(100vw - 242px)); transform:translateX(-50%); padding:8px 7px; }
+    #objectiveText{ font-size:13px; }
     #disableOverlay{ bottom:16%; width:min(330px, calc(100vw - 32px)); padding:8px 10px; }
     .disableTitle{ font-size:11px; margin-bottom:6px; }
     .disableBar{ height:10px; }

@@ -133,11 +133,14 @@
   const TOXIN_DAMAGE_PER_SECOND = Math.max(0, configNumber(MISSION_CONFIG, 'toxinDamagePerSecond', 1.15));
   const MACHINE_DISABLE_SECONDS = Math.max(0.5, configNumber(MISSION_CONFIG, 'disableSeconds', 3));
   const MACHINE_ACTION_RADIUS = Math.max(1.5, configNumber(MISSION_CONFIG, 'machineActionRadius', 3.6));
-  const MISSION_INFECTED_GOAL = Math.max(1, Math.floor(configNumber(MISSION_CONFIG, 'infectedGoal', 50)));
   const FIRST_WAVE_SIZE = Math.max(0, Math.floor(configNumber(MISSION_CONFIG, 'firstWaveSize', 3)));
   const INITIAL_SEED = Math.floor(configNumber(CONFIG, 'initialSeed', 729641));
   const CONFIGURED_MISSION_SEEDS = configNumberArray(MISSION_CONFIG, 'islandSeeds', [INITIAL_SEED, 482177, 735331, 918244, 126509]).slice(0, 5);
   const MISSION_SEEDS = CONFIGURED_MISSION_SEEDS.length ? CONFIGURED_MISSION_SEEDS : [INITIAL_SEED];
+  const DEFAULT_INFECTED_GOALS = [25, 50, 100, 250, 500];
+  const FALLBACK_INFECTED_GOAL = Math.max(1, Math.floor(configNumber(MISSION_CONFIG, 'infectedGoal', 50)));
+  const CONFIGURED_INFECTED_GOALS = configNumberArray(MISSION_CONFIG, 'infectedGoals', DEFAULT_INFECTED_GOALS).slice(0, MISSION_SEEDS.length);
+  const MISSION_INFECTED_GOALS = MISSION_SEEDS.map((_, i) => Math.max(1, CONFIGURED_INFECTED_GOALS[i] || DEFAULT_INFECTED_GOALS[i] || FALLBACK_INFECTED_GOAL));
   const AMMO_PICKUP_ROUNDS = Math.max(1, Math.floor(configNumber(PICKUP_CONFIG, 'ammoRounds', 6)));
   const HEALTH_PICKUP_AMOUNT = Math.max(1, configNumber(PICKUP_CONFIG, 'healthAmount', 25));
   const MAP_AMMO_PICKUP_CHANCE = Math.max(0, Math.min(1, configNumber(PICKUP_CONFIG, 'mapAmmoChance', 0.28)));
@@ -450,6 +453,10 @@
 
   function currentIslandLabel() {
     return 'Island ' + (mission.islandIndex + 1) + ' / ' + MISSION_SEEDS.length;
+  }
+
+  function currentInfectedGoal() {
+    return MISSION_INFECTED_GOALS[mission.islandIndex] || MISSION_INFECTED_GOALS[MISSION_INFECTED_GOALS.length - 1] || FALLBACK_INFECTED_GOAL;
   }
 
   function missionSeedIndex(seed) {
@@ -1570,7 +1577,7 @@
     document.body.classList.toggle('no-gun', !unlocked);
     document.body.classList.toggle('action-mode', !unlocked);
     if (touchShoot) {
-      touchShoot.textContent = unlocked ? 'SHOOT' : 'ACTION';
+      touchShoot.textContent = '';
       touchShoot.setAttribute('aria-label', unlocked ? 'Shoot' : 'Action');
     }
     if (unlocked) {
@@ -1637,7 +1644,7 @@
   }
 
   function checkMissionCompletion() {
-    if (mission.phase === PHASE_ZOMBIE_THREAT && player.kills >= MISSION_INFECTED_GOAL) completeMissionIsland();
+    if (mission.phase === PHASE_ZOMBIE_THREAT && player.kills >= currentInfectedGoal()) completeMissionIsland();
   }
 
   function spawnSupplyCrate() {
@@ -1709,6 +1716,7 @@
 
   function disableMachine() {
     if (!mission.machine || !mission.machine.active) return;
+    const infectedGoal = currentInfectedGoal();
     mission.machine.active = false;
     mission.disableProgress = 0;
     mission.actionHeld = false;
@@ -1723,13 +1731,13 @@
     setWeaponUnlocked(true);
     scorePop('CONTAMINATION SOURCE DISABLED', 'wave');
     openObjectiveBriefing({
-      title: 'Eliminate infected: 0 / ' + MISSION_INFECTED_GOAL,
+      title: 'Eliminate infected: 0 / ' + infectedGoal,
       meta: currentIslandLabel() + ' // Mission Updated',
-      body: 'Mission Command: source disabled. Supply crate deployed at the spire footprint. Open it, arm up, and eliminate ' + MISSION_INFECTED_GOAL + ' infected before redeploy.',
+      body: 'Mission Command: source disabled. Supply crate deployed at the spire footprint. Open it, arm up, and eliminate ' + infectedGoal + ' infected before redeploy.',
       hudTitle: 'Eliminate infected',
       hudMeta: 'Gun online',
       afterOk: () => {
-        scorePop('MISSION UPDATED: ELIMINATE ' + MISSION_INFECTED_GOAL + ' INFECTED', 'wave small');
+        scorePop('MISSION UPDATED: ELIMINATE ' + infectedGoal + ' INFECTED', 'wave small');
         spawnInitialWave();
       }
     });
@@ -1812,16 +1820,17 @@
   function updateMissionHud() {
     if (!objectiveText || !objectiveMeta) return;
     if (!mission.objectiveAcknowledged) {
-      objectiveText.textContent = 'Awaiting mission brief';
+      objectiveText.textContent = '[ orders ]';
       objectiveMeta.textContent = currentIslandLabel();
       return;
     }
     if (mission.phase === PHASE_ZOMBIE_THREAT) {
-      objectiveText.textContent = 'Eliminate infected: ' + Math.min(player.kills, MISSION_INFECTED_GOAL) + ' / ' + MISSION_INFECTED_GOAL;
+      const infectedGoal = currentInfectedGoal();
+      objectiveText.textContent = '[ ' + Math.min(player.kills, infectedGoal) + '/' + infectedGoal + ' cleared ]';
       objectiveMeta.textContent = mission.completed ? 'Island breach contained' : (mission.hudMeta || 'Gun online');
       return;
     }
-    objectiveText.textContent = mission.hudTitle || 'Locate the contamination source';
+    objectiveText.textContent = playerNearMachine() ? '[ hold action ]' : '[ locate source ]';
     objectiveMeta.textContent = playerNearMachine()
       ? (touchMode ? 'Hold ACTION to disable' : 'Hold E to disable')
       : (mission.hudMeta || 'Toxin exposure active');

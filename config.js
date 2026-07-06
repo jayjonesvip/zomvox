@@ -17,7 +17,7 @@ window.ZOMVOX_CONFIG = {
     Bump this when you make visible changes so you can tell the browser
     loaded the newest version.
   */
-  buildVersion: '2026.07.05.3',
+  buildVersion: '2026.07.05.4',
 
   /*
     Seed used for deterministic world generation.
@@ -215,7 +215,14 @@ window.ZOMVOX_CONFIG = {
     machineActionRadius: 3.6,
 
     /*
-      Opening combat objective after the gun unlocks.
+      Combat objective for each island after the gun unlocks.
+
+      These line up with islandSeeds by position.
+    */
+    infectedGoals: [25, 50, 100, 250, 500],
+
+    /*
+      Fallback combat objective if infectedGoals is removed.
     */
     infectedGoal: 50,
 
