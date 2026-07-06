@@ -60,7 +60,6 @@ Mobile is intended for landscape play.
 - Swipe open play area: aim
 - Action/Shoot button: hold to disable the source before unlock, then fire after the gun is awarded
 - Jump button: jump
-- Run button: sprint
 
 The mobile HUD is intentionally minimal. Health sits at the top left, ammo sits at the top right, and the old debug/status panel is removed so it does not block gameplay buttons.
 
@@ -82,7 +81,7 @@ Common tuning options live in `config.js` under `window.ZOMVOX_CONFIG`. Edit tha
 
 ```js
 window.ZOMVOX_CONFIG = {
-  buildVersion: '2026.07.06.1',
+  buildVersion: '2026.07.06.2',
   initialSeed: 729641,
 
   environment: {
@@ -155,7 +154,10 @@ audio: {
     reloadStart: null,
     pickupAmmo: 'pickup.mp3',
     pickupHealth: null,
-    bite: null
+    bite: null,
+    toxin: null,
+    land: null,
+    objectiveClear: null
   }
 }
 ```

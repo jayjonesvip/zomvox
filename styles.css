@@ -173,7 +173,6 @@
   #touchShoot{ right:calc(24px + env(safe-area-inset-right)); top:48%; bottom:auto; width:78px; height:78px; border:0; background:rgba(220,28,28,.34); box-shadow:0 0 0 7px rgba(0,0,0,.18), 0 0 0 12px rgba(120,0,0,.58), 0 8px 26px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.18); }
   #touchJump{ right:calc(24px + env(safe-area-inset-right)); top:calc(48% - 82px); bottom:auto; width:64px; height:64px; }
   #touchJump::before{ content:"\2191"; font-size:30px; line-height:1; }
-  #touchSprint{ left:calc(154px + env(safe-area-inset-left)); bottom:calc(32px + env(safe-area-inset-bottom)); width:58px; height:58px; }
   #portraitBlock{ position:fixed; inset:0; display:none; overflow:hidden; align-items:stretch; justify-content:center; text-align:center; padding:0; background:#02070b; color:#eaf7ff; z-index:40; font-weight:1000; letter-spacing:0; }
   #portraitBlock::before{ content:""; position:absolute; inset:0; background:url("assets/zomvox-splash.png") center/cover no-repeat; filter:saturate(1.1) contrast(1.05) brightness(.58); transform:scale(1.08); }
   #portraitBlock::after{ content:""; position:absolute; inset:0; background:radial-gradient(circle at 50% 30%, rgba(145,243,110,.16), rgba(0,0,0,.2) 34%, rgba(0,0,0,.88) 80%), linear-gradient(180deg, rgba(0,0,0,.18), rgba(0,0,0,.86)); }

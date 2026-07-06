@@ -17,7 +17,7 @@ window.ZOMVOX_CONFIG = {
     Bump this when you make visible changes so you can tell the browser
     loaded the newest version.
   */
-  buildVersion: '2026.07.06.1',
+  buildVersion: '2026.07.06.2',
 
   /*
     Seed used for deterministic world generation.
@@ -341,6 +341,9 @@ window.ZOMVOX_CONFIG = {
       pickupHealth: 'pickup.mp3',
       bite: 'freesound_community-zombie-bite-96528.mp3',
       hurt: 'hurt.mp3',
+      toxin: null,
+      land: null,
+      objectiveClear: null,
       wave: null,
       heartbeat: null
     }

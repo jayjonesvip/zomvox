@@ -48,7 +48,6 @@
   const stickKnob = $('stickKnob');
   const touchShoot = $('touchShoot');
   const touchJump = $('touchJump');
-  const touchSprint = $('touchSprint');
   const splash = $('splash');
   const splashStatus = $('splashStatus');
   const splashFill = $('splashFill');
@@ -198,8 +197,8 @@
   let locked = false;
   let touchMode = matchMedia('(pointer: coarse)').matches;
   let keys = Object.create(null);
-  const touchInput = { moveX: 0, moveY: 0, jump: false, sprint: false, lookId: null, lookX: 0, lookY: 0, stickId: null };
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.06.1');
+  const touchInput = { moveX: 0, moveY: 0, jump: false, lookId: null, lookX: 0, lookY: 0, stickId: null };
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.06.2');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -1187,7 +1186,6 @@
     touchInput.moveX = 0;
     touchInput.moveY = 0;
     touchInput.jump = false;
-    touchInput.sprint = false;
     player.grounded = false;
     player.vel = [0, -INSERTION_FALL_SPEED * .55, 0];
     player.pos[1] = Math.min(MAX_Y + INSERTION_DROP_HEIGHT, groundY + INSERTION_DROP_HEIGHT);
@@ -1201,6 +1199,7 @@
     player.pos[1] = Math.max(player.pos[1], mission.insertionTargetY);
     player.vel = [0, 0, 0];
     player.grounded = true;
+    sound('land');
     scorePop('TOUCHDOWN', 'pickup small');
     showToast('Boots down. Locate the contamination source.');
   }
@@ -1221,12 +1220,14 @@
     const movingInput = Math.hypot(mx, mz) > 0.05;
     gunSprite.classList.toggle('moving', movingInput);
     const len = Math.hypot(mx, mz) || 1; mx /= len; mz /= len;
-    const sprint = keys.ShiftLeft || keys.ShiftRight || touchInput.sprint;
+    const sprint = keys.ShiftLeft || keys.ShiftRight;
     const speed = 5.35 * (sprint ? 1.55 : 1.0);
     player.vel[0] = insertion ? 0 : mx * speed;
     player.vel[2] = insertion ? 0 : mz * speed;
     player.vel[1] -= (insertion ? 9 : 22) * dt;
+    const landingSpeed = Math.max(0, -player.vel[1]);
     if (insertion) player.vel[1] = Math.max(player.vel[1], -INSERTION_FALL_SPEED);
+    const wasGrounded = player.grounded;
     if (!insertion && (keys.Space || touchInput.jump) && player.grounded) { player.vel[1] = 8.2; player.grounded = false; }
     moveAxis(0, player.vel[0] * dt);
     moveAxis(2, player.vel[2] * dt);
@@ -1234,6 +1235,7 @@
     player.grounded = false;
     moveAxis(1, player.vel[1] * dt);
     if (insertion && player.grounded) finishInsertionDrop();
+    else if (!wasGrounded && player.grounded && landingSpeed > 3.2) sound('land');
     clampToWorld(player.pos);
     ensureChunks();
     if (player.pos[1] < -20) damagePlayer(999);
@@ -1657,7 +1659,7 @@
       afterOk: () => beginWorldRebuild(nextMissionSeed())
     });
     scorePop('MISSION COMPLETE', 'wave');
-    sound('wave');
+    sound('objectiveClear');
   }
 
   function checkMissionCompletion() {
@@ -1775,6 +1777,7 @@
     mission.toxinRemainder -= amount;
     player.health -= amount;
     if (amount > 0) pulseDamage();
+    if (amount > 0) sound('toxin');
     if (player.health <= 0) beginDeathSequence();
   }
 
@@ -2250,6 +2253,7 @@
   stickBase.addEventListener('pointercancel', resetStick);
 
   function bindTouchButton(btn, down, up) {
+    if (!btn) return;
     btn.addEventListener('pointerdown', (e) => { touchMode = true; btn.classList.add('active'); down(); btn.setPointerCapture(e.pointerId); e.preventDefault(); });
     const clear = () => { btn.classList.remove('active'); if (up) up(); };
     btn.addEventListener('pointerup', clear);
@@ -2259,7 +2263,6 @@
     beginMissionAction();
   }, () => { mission.actionHeld = false; });
   bindTouchButton(touchJump, () => { touchInput.jump = true; }, () => { touchInput.jump = false; });
-  bindTouchButton(touchSprint, () => { touchInput.sprint = true; }, () => { touchInput.sprint = false; });
 
   canvas.addEventListener('pointerdown', (e) => {
     if (!touchMode || e.pointerType === 'mouse' || e.target !== canvas) return;
