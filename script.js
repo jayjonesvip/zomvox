@@ -1064,7 +1064,8 @@
         } else if (biome === 'dunes' && propRoll > 0.972) {
           growSaguaro(x, h, z);
         } else if (biome === 'rocky' && propRoll > 0.992) {
-          growTree(x, h, z, BLOCK.WOOD, true);
+          //growTree(x, h, z, BLOCK.WOOD, true);
+          //no trees..
         } else if (biome === 'swamp' && propRoll > 0.976) {
           growTree(x, h, z, BLOCK.DEAD_WOOD, seededHash(x - 4, z + 8) > .35);
         } else if (biome === 'ashlands' && propRoll > 0.982) {
