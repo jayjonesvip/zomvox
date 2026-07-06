@@ -23,6 +23,9 @@
   const healthBigFill = $('healthBigFill');
   const objectiveText = $('objectiveText');
   const objectiveMeta = $('objectiveMeta');
+  const commandBanner = $('commandBanner');
+  const commandBannerTitle = $('commandBannerTitle');
+  const commandBannerBody = $('commandBannerBody');
   const disableOverlay = $('disableOverlay');
   const disableTitle = disableOverlay ? disableOverlay.querySelector('.disableTitle') : null;
   const disableFill = $('disableFill');
@@ -228,7 +231,7 @@
   let touchMode = matchMedia('(pointer: coarse)').matches;
   let keys = Object.create(null);
   const touchInput = { moveX: 0, moveY: 0, jump: false, lookId: null, lookX: 0, lookY: 0, stickId: null };
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.06.11');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.06.12');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -268,7 +271,10 @@
     completed: false,
     extractionProgress: 0,
     extractionCalled: false,
-    beaconMessageCooldown: 0
+    beaconMessageCooldown: 0,
+    beaconReminderTimer: 0,
+    commandBannerTimer: 0,
+    toastLockTimer: 0
   };
 
   const weaponUpgrades = {
@@ -324,8 +330,24 @@
 
   setPlayerMagSize(MAG_SIZE, true);
 
-  function showToast(message) {
+  function showToast(message, priority = false) {
+    if (!priority && mission.toastLockTimer > 0) return;
     toast.textContent = message;
+  }
+
+  function showCommandBanner(title, body, duration = 4.2) {
+    if (!commandBanner || !commandBannerTitle || !commandBannerBody) return;
+    commandBannerTitle.textContent = title;
+    commandBannerBody.textContent = body;
+    commandBanner.classList.add('show');
+    mission.commandBannerTimer = duration;
+  }
+
+  function updateCommandBanner(dt) {
+    mission.toastLockTimer = Math.max(0, mission.toastLockTimer - dt);
+    if (!commandBanner || mission.commandBannerTimer <= 0) return;
+    mission.commandBannerTimer = Math.max(0, mission.commandBannerTimer - dt);
+    if (mission.commandBannerTimer <= 0) commandBanner.classList.remove('show');
   }
 
   function showProgressOverlay(title, progress) {
@@ -2014,7 +2036,10 @@ function playerOnMachinePad() {
     nextSpawnTimer = 999;
     clearRemainingMissionEnemies();
     mission.hudMeta = 'Return to drop beacon';
-    showToast('Stage cleared. Return to drop beacon for extraction.');
+    mission.toastLockTimer = 2.4;
+    mission.beaconReminderTimer = 6.5;
+    showToast('Mission Command: stage cleared. Return to drop beacon for extraction.', true);
+    showCommandBanner('STAGE CLEARED', 'Return to drop beacon for extraction', 4.6);
     scorePop('STAGE CLEARED', 'wave');
     sound('objectiveClear');
   }
@@ -2023,7 +2048,11 @@ function playerOnMachinePad() {
     if (mission.extractionCalled) return;
     mission.extractionCalled = true;
     mission.extractionProgress = 1;
+    mission.commandBannerTimer = 0;
+    mission.beaconReminderTimer = 0;
     hideProgressOverlay();
+    if (commandBanner) commandBanner.classList.remove('show');
+    document.body.classList.remove('stage-cleared');
     document.body.classList.add('stage-transition');
     openObjectiveBriefing({
       title: 'Island contained',
@@ -2225,9 +2254,18 @@ function playerOnMachinePad() {
     const nearBeacon = playerNearDropBeacon();
     if (!nearBeacon) {
       mission.extractionProgress = 0;
-      if (mission.phase === PHASE_ZOMBIE_THREAT && mission.completed && !mission.extractionCalled) hideProgressOverlay();
+      if (mission.phase === PHASE_ZOMBIE_THREAT && mission.completed && !mission.extractionCalled) {
+        hideProgressOverlay();
+        mission.beaconReminderTimer = Math.max(0, mission.beaconReminderTimer - dt);
+        if (mission.beaconReminderTimer <= 0) {
+          mission.beaconReminderTimer = 7.5;
+          showToast('Mission Command: return to drop beacon for extraction.', true);
+          scorePop('RETURN TO BEACON', 'pickup small');
+        }
+      }
       return;
     }
+    mission.beaconReminderTimer = 7.5;
     if (mission.phase !== PHASE_ZOMBIE_THREAT || !mission.completed) {
       mission.extractionProgress = 0;
       if (mission.beaconMessageCooldown <= 0 && !mission.insertionActive) {
@@ -2245,6 +2283,7 @@ function playerOnMachinePad() {
 
   function updateMissionHud() {
     if (!objectiveText || !objectiveMeta) return;
+    document.body.classList.toggle('stage-cleared', mission.completed && !mission.extractionCalled);
     if (!mission.objectiveAcknowledged) {
       objectiveText.textContent = '[ orders ]';
       objectiveMeta.textContent = currentIslandLabel();
@@ -2273,6 +2312,7 @@ function playerOnMachinePad() {
   }
 
   function update(dt) {
+    updateCommandBanner(dt);
     if (worldRebuildState.active) {
       updateWorldRebuild(dt);
       updateHud();
@@ -2600,6 +2640,9 @@ function currentWaterIsDangerous() {
     mission.extractionProgress = 0;
     mission.extractionCalled = false;
     mission.beaconMessageCooldown = 0;
+    mission.beaconReminderTimer = 0;
+    mission.commandBannerTimer = 0;
+    mission.toastLockTimer = 0;
     resetLifeStats();
     nextSpawnTimer = 3.5;
     hordeLevel = 0;
@@ -2609,7 +2652,7 @@ function currentWaterIsDangerous() {
     deathState.active = false;
     deathState.ready = false;
     deathState.timer = 0;
-    document.body.classList.remove('dead', 'low-health');
+    document.body.classList.remove('dead', 'low-health', 'stage-cleared');
     deathOverlay.classList.remove('show', 'ready');
     upgradeOverlay.classList.remove('show');
     document.body.classList.remove('upgrade-open');
@@ -2621,6 +2664,7 @@ function currentWaterIsDangerous() {
     disableOverlay.classList.remove('show');
     disableFill.style.width = '0%';
     disablePercent.textContent = '0%';
+    if (commandBanner) commandBanner.classList.remove('show');
     setWeaponUnlocked(false);
     currentChunkX = 999999;
     currentChunkZ = 999999;

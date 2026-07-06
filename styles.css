@@ -91,6 +91,16 @@
   #missionPanel{ pointer-events:none; position:fixed; left:50%; top:12px; width:min(210px, calc(100vw - 310px)); transform:translateX(-50%); padding:9px 10px; border-radius:8px; background:rgba(4,10,14,.78); border:1px solid rgba(145,243,110,.24); box-shadow:0 15px 42px rgba(0,0,0,.34); backdrop-filter:blur(10px); z-index:9; text-align:center; }
   .missionLabel,#objectiveMeta{ display:none; }
   #objectiveText{ color:#f3fff1; font-size:17px; line-height:1; font-weight:1000; text-shadow:0 2px 0 rgba(0,0,0,.6); white-space:nowrap; }
+  body.stage-cleared #missionPanel{ border-color:rgba(255,225,87,.7); background:rgba(20,18,5,.86); box-shadow:0 15px 42px rgba(0,0,0,.34),0 0 24px rgba(255,217,74,.2); }
+  body.stage-cleared #objectiveText{ color:#ffe66d; text-shadow:0 0 15px rgba(255,216,75,.42),0 2px 0 rgba(0,0,0,.65); }
+  #commandBanner{ pointer-events:none; position:fixed; left:50%; top:50%; width:min(520px, calc(100vw - 38px)); transform:translate(-50%,-50%) scale(.96); z-index:22; padding:18px 20px 16px; border:2px solid rgba(255,224,88,.82); border-radius:8px; background:linear-gradient(180deg, rgba(19,24,17,.95), rgba(3,8,8,.94)); box-shadow:0 28px 80px rgba(0,0,0,.58), inset 0 0 0 1px rgba(255,255,255,.08),0 0 38px rgba(255,219,76,.2); text-align:center; opacity:0; visibility:hidden; transition:opacity .14s, visibility .14s, transform .14s; }
+  #commandBanner.show{ opacity:1; visibility:visible; transform:translate(-50%,-50%) scale(1); }
+  #commandBanner::before,#commandBanner::after{ content:""; position:absolute; left:12px; right:12px; height:1px; background:linear-gradient(90deg, transparent, rgba(255,224,88,.72), transparent); }
+  #commandBanner::before{ top:8px; }
+  #commandBanner::after{ bottom:8px; }
+  .commandKicker{ color:#9df57c; font-size:12px; font-weight:1000; letter-spacing:.22em; text-transform:uppercase; margin-bottom:7px; text-shadow:0 0 14px rgba(145,243,110,.42); }
+  #commandBannerTitle{ color:#ffe66d; font-size:34px; font-weight:1000; line-height:.95; text-transform:uppercase; text-shadow:0 0 22px rgba(255,219,76,.38),0 3px 0 rgba(0,0,0,.7); }
+  #commandBannerBody{ color:#eef7df; font-size:14px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; margin-top:8px; text-shadow:0 2px 0 rgba(0,0,0,.62); }
   #disableOverlay{ pointer-events:none; position:fixed; left:50%; bottom:20%; transform:translateX(-50%) translateY(8px); width:min(390px, calc(100vw - 42px)); padding:11px 12px; border-radius:8px; background:rgba(4,10,12,.84); border:1px solid rgba(145,243,110,.38); box-shadow:0 16px 48px rgba(0,0,0,.4),0 0 28px rgba(78,255,74,.12); opacity:0; visibility:hidden; transition:.14s; z-index:10; }
   #disableOverlay.show{ opacity:1; visibility:visible; transform:translateX(-50%) translateY(0); }
   .disableTitle{ color:#d7ffc7; font-size:13px; font-weight:1000; letter-spacing:.16em; text-transform:uppercase; text-align:center; margin-bottom:8px; text-shadow:0 0 18px rgba(145,243,110,.32); }
@@ -237,6 +247,9 @@
     .bigHealthBar{ height:8px; }
     #missionPanel{ left:50%; right:auto; top:8px; width:min(170px, calc(100vw - 242px)); transform:translateX(-50%); padding:8px 7px; }
     #objectiveText{ font-size:13px; }
+    #commandBanner{ width:min(390px, calc(100vw - 28px)); padding:14px 16px 13px; }
+    #commandBannerTitle{ font-size:26px; }
+    #commandBannerBody{ font-size:11px; }
     #disableOverlay{ bottom:16%; width:min(330px, calc(100vw - 32px)); padding:8px 10px; }
     .disableTitle{ font-size:11px; margin-bottom:6px; }
     .disableBar{ height:10px; }
