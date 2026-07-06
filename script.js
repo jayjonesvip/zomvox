@@ -31,6 +31,9 @@
   const briefingObjective = $('briefingObjective');
   const briefingBody = $('briefingBody');
   const briefingOk = $('briefingOk');
+  const upgradeOverlay = $('upgradeOverlay');
+  const upgradeMeta = $('upgradeMeta');
+  const upgradeOptions = $('upgradeOptions');
   const scoreFeed = $('scoreFeed');
   const reticle = $('reticle');
   const reloadOverlay = $('reloadOverlay');
@@ -123,6 +126,12 @@
   const LOW_HEALTH_THRESHOLD = configNumber(PLAYER_CONFIG, 'lowHealthThreshold', 25);
   const MAG_SIZE = Math.max(1, Math.floor(configNumber(WEAPON_CONFIG, 'magSize', 6)));
   const RELOAD_TIME = Math.max(0.1, configNumber(WEAPON_CONFIG, 'reloadTime', 1.15));
+  const QUICK_RELOAD_MULTIPLIER = Math.max(0.1, configNumber(WEAPON_CONFIG, 'quickReloadMultiplier', 0.5));
+  const DOUBLE_MAG_MULTIPLIER = Math.max(1, Math.floor(configNumber(WEAPON_CONFIG, 'doubleMagMultiplier', 2)));
+  const FIRE_COOLDOWN = Math.max(0.05, configNumber(WEAPON_CONFIG, 'fireCooldown', 0.42));
+  const HAIR_TRIGGER_MULTIPLIER = Math.max(0.1, configNumber(WEAPON_CONFIG, 'hairTriggerMultiplier', 0.5));
+  const RECOIL_AMOUNT = Math.max(0, configNumber(WEAPON_CONFIG, 'recoilAmount', 0.026));
+  const PREMIUM_GRIP_MULTIPLIER = Math.max(0, configNumber(WEAPON_CONFIG, 'premiumGripMultiplier', 0.38));
   const ENEMY_CAP = Math.max(1, Math.floor(configNumber(ENEMY_CONFIG, 'baseCap', 18)));
   const HORDE_KILLS_PER_LEVEL = Math.max(1, Math.floor(configNumber(ENEMY_CONFIG, 'hordeKillsPerLevel', 5)));
   const HORDE_CAP_BONUS = Math.max(0, Math.floor(configNumber(ENEMY_CONFIG, 'hordeCapBonus', 2)));
@@ -179,6 +188,7 @@
     reserve: STARTING_RESERVE,
     reloading: false,
     reloadTimer: 0,
+    shotCooldown: 0,
     invuln: 0,
     kills: 0,
     headshots: 0,
@@ -198,7 +208,7 @@
   let touchMode = matchMedia('(pointer: coarse)').matches;
   let keys = Object.create(null);
   const touchInput = { moveX: 0, moveY: 0, jump: false, lookId: null, lookX: 0, lookY: 0, stickId: null };
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.06.3');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.06.4');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -234,8 +244,24 @@
     briefingActive: false,
     pendingBriefing: null,
     briefingAfterOk: null,
+    upgradeActive: false,
+    upgradeAfterChoice: null,
     completed: false
   };
+
+  const weaponUpgrades = {
+    quickReload: false,
+    doubleMag: false,
+    premiumGrip: false,
+    hairTrigger: false
+  };
+
+  const WEAPON_UPGRADE_CHOICES = [
+    { id: 'quickReload', name: 'Quick Reload', desc: 'Field-drilled swap. Reload time cut in half.' },
+    { id: 'doubleMag', name: 'Double Stack', desc: 'Doubles magazine capacity for longer pushes.' },
+    { id: 'premiumGrip', name: 'Premium Grip', desc: 'Stabilized handle. Shot recoil is heavily reduced.' },
+    { id: 'hairTrigger', name: 'Hair Trigger', desc: 'Tuned trigger group. Fire cooldown is cut in half.' }
+  ];
 
   function syncBulletRack(size) {
     while (bulletRack.children.length < size) {
@@ -244,6 +270,22 @@
       bulletRack.appendChild(b);
     }
     while (bulletRack.children.length > size) bulletRack.lastChild.remove();
+  }
+
+  function effectiveMagSize() {
+    return MAG_SIZE * (weaponUpgrades.doubleMag ? DOUBLE_MAG_MULTIPLIER : 1);
+  }
+
+  function currentReloadTime() {
+    return RELOAD_TIME * (weaponUpgrades.quickReload ? QUICK_RELOAD_MULTIPLIER : 1);
+  }
+
+  function currentFireCooldown() {
+    return FIRE_COOLDOWN * (weaponUpgrades.hairTrigger ? HAIR_TRIGGER_MULTIPLIER : 1);
+  }
+
+  function currentRecoilAmount() {
+    return RECOIL_AMOUNT * (weaponUpgrades.premiumGrip ? PREMIUM_GRIP_MULTIPLIER : 1);
   }
 
   function setPlayerMagSize(size, refill = false) {
@@ -362,7 +404,7 @@
   }
 
   function isMenuOpen() {
-    return menu.style.display !== 'none' || splash.style.display !== 'none' || isBriefingOpen();
+    return menu.style.display !== 'none' || splash.style.display !== 'none' || isBriefingOpen() || isUpgradeOpen();
   }
 
   function clamp01(value) {
@@ -448,6 +490,7 @@
     player.vel = [0, 0, 0];
     player.reloading = false;
     player.reloadTimer = 0;
+    player.shotCooldown = 0;
     reloadOverlay.classList.remove('show');
     reloadOverlayFill.style.width = '0%';
   }
@@ -476,6 +519,10 @@
 
   function isBriefingOpen() {
     return mission.briefingActive;
+  }
+
+  function isUpgradeOpen() {
+    return mission.upgradeActive;
   }
 
   function setHudObjective(title, meta) {
@@ -516,7 +563,50 @@
     const afterOk = mission.briefingAfterOk;
     mission.briefingAfterOk = null;
     if (afterOk) afterOk();
-    if (!touchMode && menu.style.display === 'none' && !deathState.active && !worldRebuildState.active) requestPointerLockSafe();
+    if (!touchMode && menu.style.display === 'none' && !deathState.active && !worldRebuildState.active && !isUpgradeOpen()) requestPointerLockSafe();
+  }
+
+  function openUpgradeChoice(afterChoice) {
+    const available = WEAPON_UPGRADE_CHOICES.filter(choice => !weaponUpgrades[choice.id]);
+    if (!upgradeOverlay || !upgradeOptions || !available.length) {
+      if (afterChoice) afterChoice();
+      return;
+    }
+    mission.upgradeActive = true;
+    mission.upgradeAfterChoice = afterChoice || null;
+    if (upgradeMeta) upgradeMeta.textContent = currentIslandLabel() + ' // Armory Selection';
+    upgradeOptions.innerHTML = '';
+    for (const choice of available) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'upgradeOption';
+      btn.dataset.upgrade = choice.id;
+      btn.innerHTML = '<span class="upgradeName"></span><span class="upgradeDesc"></span>';
+      btn.querySelector('.upgradeName').textContent = choice.name;
+      btn.querySelector('.upgradeDesc').textContent = choice.desc;
+      btn.addEventListener('click', () => chooseWeaponUpgrade(choice.id));
+      upgradeOptions.appendChild(btn);
+    }
+    upgradeOverlay.classList.add('show');
+    document.body.classList.add('upgrade-open');
+    player.vel = [0, 0, 0];
+    if (document.pointerLockElement === canvas && document.exitPointerLock) document.exitPointerLock();
+  }
+
+  function chooseWeaponUpgrade(id) {
+    const choice = WEAPON_UPGRADE_CHOICES.find(item => item.id === id);
+    if (!choice || weaponUpgrades[id]) return;
+    weaponUpgrades[id] = true;
+    if (id === 'doubleMag') setPlayerMagSize(effectiveMagSize(), true);
+    scorePop(choice.name.toUpperCase(), 'pickup small');
+    showToast('Armory upgrade installed: ' + choice.name);
+    sound('pickup');
+    mission.upgradeActive = false;
+    upgradeOverlay.classList.remove('show');
+    document.body.classList.remove('upgrade-open');
+    const afterChoice = mission.upgradeAfterChoice;
+    mission.upgradeAfterChoice = null;
+    if (afterChoice) afterChoice();
   }
 
   function updateWorldRebuild(dt) {
@@ -1357,6 +1447,7 @@
     player.reserve = Math.max(player.reserve, RESPAWN_RESERVE_FLOOR);
     player.reloading = false;
     player.reloadTimer = 0;
+    player.shotCooldown = 0;
     mission.actionHeld = false;
     mission.disableProgress = 0;
     mission.toxinRemainder = 0;
@@ -1387,7 +1478,7 @@
     if (deathState.active || worldRebuildState.active) return;
     if (player.reloading || player.mag >= player.magSize || player.reserve <= 0) return;
     player.reloading = true;
-    player.reloadTimer = RELOAD_TIME;
+    player.reloadTimer = currentReloadTime();
     reloadText.textContent = 'Reloading...';
     reloadOverlay.classList.add('show');
     reloadOverlayFill.style.width = '0%';
@@ -1404,6 +1495,17 @@
     reloadOverlay.classList.remove('show');
     reloadOverlayFill.style.width = '0%';
     sound('reloadDone');
+  }
+
+  function applyShotRecoil() {
+    const amount = currentRecoilAmount();
+    if (amount <= 0) return;
+    const angle = Math.random() * Math.PI * 2;
+    const distance = amount * (0.35 + Math.random() * 0.65);
+    player.yaw += Math.cos(angle) * distance;
+    player.pitch += Math.sin(angle) * distance * 0.72;
+    const cap = Math.PI / 2 - 0.03;
+    player.pitch = Math.max(-cap, Math.min(cap, player.pitch));
   }
 
   function entityHitAt(px, py, pz) {
@@ -1437,14 +1539,17 @@
       return;
     }
     if (player.reloading) return;
+    if (player.shotCooldown > 0) return;
     if (player.mag <= 0) { showToast('Empty. Reload.'); sound('empty'); startReload(); return; }
     player.mag--;
+    player.shotCooldown = currentFireCooldown();
     gunSprite.classList.remove('shooting');
     void gunSprite.offsetWidth;
     gunSprite.classList.add('shooting');
     setTimeout(() => gunSprite.classList.remove('shooting'), 120);
     sound('shoot');
     const hit = raycastProjectile(58);
+    applyShotRecoil();
     if (hit.kind === 'enemy') {
       const wasHeadshot = hit.head;
       const damage = wasHeadshot ? hit.enemy.hp : 28;
@@ -1590,10 +1695,12 @@
     if (unlocked) {
       player.mag = player.magSize;
       player.reserve = Math.max(player.reserve, STARTING_RESERVE);
+      player.shotCooldown = 0;
       updateAmmoDisplay();
     } else {
       player.reloading = false;
       player.reloadTimer = 0;
+      player.shotCooldown = 0;
       reloadOverlay.classList.remove('show');
       reloadOverlayFill.style.width = '0%';
     }
@@ -1658,7 +1765,7 @@
       body: 'Mission Command: infected count cleared. Extraction route is hot. Confirm redeploy and we will drop you onto the next contaminated island.',
       hudTitle: 'Island breach contained',
       hudMeta: 'Redeploying',
-      afterOk: () => beginWorldRebuild(nextMissionSeed())
+      afterOk: () => openUpgradeChoice(() => beginWorldRebuild(nextMissionSeed()))
     });
     scorePop('MISSION COMPLETE', 'wave');
     sound('objectiveClear');
@@ -1879,6 +1986,11 @@
       updateParticles(dt);
       return;
     }
+    if (isUpgradeOpen()) {
+      updateHud();
+      updateParticles(dt);
+      return;
+    }
     if (deathState.active) {
       updateDeath(dt);
       updateHud();
@@ -1889,11 +2001,12 @@
       return;
     }
     if (player.invuln > 0) player.invuln -= dt;
+    if (player.shotCooldown > 0) player.shotCooldown -= dt;
     if (mission.commandMessageCooldown > 0) mission.commandMessageCooldown -= dt;
     if (player.reloading) {
       player.reloadTimer -= dt;
       reloadText.textContent = 'Reloading ' + Math.max(0, player.reloadTimer).toFixed(1) + 's';
-      reloadOverlayFill.style.width = Math.max(0, Math.min(100, (1 - player.reloadTimer / RELOAD_TIME) * 100)) + '%';
+      reloadOverlayFill.style.width = Math.max(0, Math.min(100, (1 - player.reloadTimer / currentReloadTime()) * 100)) + '%';
       if (player.reloadTimer <= 0) finishReload();
     }
     updateMovement(dt);
@@ -2088,13 +2201,14 @@
     particles = [];
     player.health = STARTING_HEALTH;
     player.reserve = STARTING_RESERVE;
-    setPlayerMagSize(MAG_SIZE, true);
+    setPlayerMagSize(effectiveMagSize(), true);
     player.kills = 0;
     player.headshots = 0;
     player.score = 0;
     player.deaths = 0;
     player.reloading = false;
     player.reloadTimer = 0;
+    player.shotCooldown = 0;
     mission.phase = PHASE_DROP;
     mission.machine = null;
     mission.supplyCrate = null;
@@ -2114,6 +2228,8 @@
     mission.nextHudMeta = '';
     mission.briefingActive = false;
     mission.briefingAfterOk = null;
+    mission.upgradeActive = false;
+    mission.upgradeAfterChoice = null;
     mission.completed = false;
     resetLifeStats();
     nextSpawnTimer = 3.5;
@@ -2126,6 +2242,8 @@
     deathState.timer = 0;
     document.body.classList.remove('dead', 'low-health');
     deathOverlay.classList.remove('show', 'ready');
+    upgradeOverlay.classList.remove('show');
+    document.body.classList.remove('upgrade-open');
     deathStats.textContent = '';
     deathText.textContent = 'Respawning...';
     deathFill.style.width = '0%';
@@ -2198,7 +2316,7 @@
   document.addEventListener('pointerlockchange', () => {
     if (touchMode) return;
     locked = document.pointerLockElement === canvas;
-    menu.style.display = locked || deathState.active || isBriefingOpen() ? 'none' : 'flex';
+    menu.style.display = locked || deathState.active || isBriefingOpen() || isUpgradeOpen() ? 'none' : 'flex';
   });
   document.addEventListener('mousemove', (e) => {
     if (!locked) return;

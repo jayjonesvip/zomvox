@@ -17,7 +17,7 @@ window.ZOMVOX_CONFIG = {
     Bump this when you make visible changes so you can tell the browser
     loaded the newest version.
   */
-  buildVersion: '2026.07.06.3',
+  buildVersion: '2026.07.06.4',
 
   /*
     Seed used for deterministic world generation.
@@ -159,6 +159,26 @@ window.ZOMVOX_CONFIG = {
       Higher = slower reload.
     */
     reloadTime: 1.15,
+
+    /*
+      Fire cooldown in seconds between shots.
+    */
+    fireCooldown: 0.42,
+
+    /*
+      Random aim kick applied after every shot.
+
+      Premium Grip multiplies this by premiumGripMultiplier.
+    */
+    recoilAmount: 0.026,
+
+    /*
+      Upgrade tuning.
+    */
+    quickReloadMultiplier: 0.5,
+    doubleMagMultiplier: 2,
+    premiumGripMultiplier: 0.38,
+    hairTriggerMultiplier: 0.5,
 
     /*
       Distance needed for the long-range kill bonus.
