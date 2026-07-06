@@ -17,7 +17,7 @@ window.ZOMVOX_CONFIG = {
     Bump this when you make visible changes so you can tell the browser
     loaded the newest version.
   */
-  buildVersion: '2026.07.06.8',
+  buildVersion: '2026.07.06.9',
 
   /*
     Seed used for deterministic world generation.
@@ -370,6 +370,7 @@ window.ZOMVOX_CONFIG = {
 
       Put mp3/wav files in assets/ and set the file name here.
       Use null to keep the built-in synthesized sound.
+      Use an empty string '' to disable a specific sound.
     */
     files: {
       shoot: 'shoot.mp3',
@@ -386,7 +387,7 @@ window.ZOMVOX_CONFIG = {
       bite: 'freesound_community-zombie-bite-96528.mp3',
       hurt: 'hurt.mp3',
       toxin: 'freesound_community-male-gasp-3-82554.mp3',
-      land: 'freesound_community-human-impact-on-ground-6982.mp3',
+      land: '',
       objectiveClear: 'floraphonic-arcade-ui-6-229503.mp3',
       wave: null,
       heartbeat: null
