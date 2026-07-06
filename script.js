@@ -24,6 +24,7 @@
   const objectiveText = $('objectiveText');
   const objectiveMeta = $('objectiveMeta');
   const disableOverlay = $('disableOverlay');
+  const disableTitle = disableOverlay ? disableOverlay.querySelector('.disableTitle') : null;
   const disableFill = $('disableFill');
   const disablePercent = $('disablePercent');
   const objectiveBriefing = $('objectiveBriefing');
@@ -227,7 +228,7 @@
   let touchMode = matchMedia('(pointer: coarse)').matches;
   let keys = Object.create(null);
   const touchInput = { moveX: 0, moveY: 0, jump: false, lookId: null, lookX: 0, lookY: 0, stickId: null };
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.06.10');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.06.11');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -245,6 +246,7 @@
     phase: PHASE_DROP,
     machine: null,
     supplyCrate: null,
+    dropBeacon: null,
     disableProgress: 0,
     toxinRemainder: 0,
     toxinSoundTicks: 0,
@@ -263,7 +265,10 @@
     briefingAfterOk: null,
     upgradeActive: false,
     upgradeAfterChoice: null,
-    completed: false
+    completed: false,
+    extractionProgress: 0,
+    extractionCalled: false,
+    beaconMessageCooldown: 0
   };
 
   const weaponUpgrades = {
@@ -321,6 +326,19 @@
 
   function showToast(message) {
     toast.textContent = message;
+  }
+
+  function showProgressOverlay(title, progress) {
+    if (disableTitle) disableTitle.textContent = title;
+    disableFill.style.width = (progress * 100).toFixed(1) + '%';
+    disablePercent.textContent = Math.floor(progress * 100) + '%';
+    disableOverlay.classList.add('show');
+  }
+
+  function hideProgressOverlay() {
+    disableFill.style.width = '0%';
+    disablePercent.textContent = '0%';
+    disableOverlay.classList.remove('show');
   }
 
   function scorePop(message, cls = '') {
@@ -1991,19 +2009,31 @@ function playerOnMachinePad() {
   function completeMissionIsland() {
     if (mission.completed) return;
     mission.completed = true;
+    mission.extractionProgress = 0;
+    mission.extractionCalled = false;
     nextSpawnTimer = 999;
     clearRemainingMissionEnemies();
+    mission.hudMeta = 'Return to drop beacon';
+    showToast('Stage cleared. Return to drop beacon for extraction.');
+    scorePop('STAGE CLEARED', 'wave');
+    sound('objectiveClear');
+  }
+
+  function completeExtraction() {
+    if (mission.extractionCalled) return;
+    mission.extractionCalled = true;
+    mission.extractionProgress = 1;
+    hideProgressOverlay();
     document.body.classList.add('stage-transition');
     openObjectiveBriefing({
       title: 'Island contained',
       meta: currentIslandLabel() + ' // ' + currentBiomeLabel() + ' // Mission Complete',
-      body: 'Mission Command: infected count cleared. Extraction route is hot. Confirm redeploy and we will drop you onto the next contaminated island.',
+      body: 'Mission Command: extraction confirmed. Confirm redeploy and we will drop you onto the next contaminated island.',
       hudTitle: 'Island breach contained',
       hudMeta: 'Redeploying',
       afterOk: () => openUpgradeChoice(() => beginWorldRebuild(nextMissionSeed()))
     });
-    scorePop('MISSION COMPLETE', 'wave');
-    sound('objectiveClear');
+    scorePop('EXTRACTION CONFIRMED', 'wave');
   }
 
   function checkMissionCompletion() {
@@ -2182,16 +2212,35 @@ function playerOnMachinePad() {
     // meter resets, making the disable moment physical and readable.
     if (onPad) {
       mission.disableProgress = Math.min(1, mission.disableProgress + dt / MACHINE_DISABLE_SECONDS);
-      disableOverlay.classList.add('show');
-      disableFill.style.width = (mission.disableProgress * 100).toFixed(1) + '%';
-      disablePercent.textContent = Math.floor(mission.disableProgress * 100) + '%';
+      showProgressOverlay('DISABLING SOURCE', mission.disableProgress);
       if (mission.disableProgress >= 1) disableMachine();
       return;
     }
     mission.disableProgress = 0;
-    disableFill.style.width = '0%';
-    disablePercent.textContent = '0%';
-    disableOverlay.classList.remove('show');
+    hideProgressOverlay();
+  }
+
+  function updateExtractionBeacon(dt) {
+    mission.beaconMessageCooldown = Math.max(0, mission.beaconMessageCooldown - dt);
+    const nearBeacon = playerNearDropBeacon();
+    if (!nearBeacon) {
+      mission.extractionProgress = 0;
+      if (mission.phase === PHASE_ZOMBIE_THREAT && mission.completed && !mission.extractionCalled) hideProgressOverlay();
+      return;
+    }
+    if (mission.phase !== PHASE_ZOMBIE_THREAT || !mission.completed) {
+      mission.extractionProgress = 0;
+      if (mission.beaconMessageCooldown <= 0 && !mission.insertionActive) {
+        mission.beaconMessageCooldown = 2.6;
+        showToast('Mission Command: extraction denied. Clear the infected first.');
+        scorePop('MISSION NOT COMPLETE', 'small');
+      }
+      return;
+    }
+    if (mission.extractionCalled) return;
+    mission.extractionProgress = Math.min(1, mission.extractionProgress + dt / 3);
+    showProgressOverlay('CONTACTING COMMAND FOR EXTRACTION', mission.extractionProgress);
+    if (mission.extractionProgress >= 1) completeExtraction();
   }
 
   function updateMissionHud() {
@@ -2208,8 +2257,13 @@ function playerOnMachinePad() {
     }
     if (mission.phase === PHASE_ZOMBIE_THREAT) {
       const infectedGoal = currentInfectedGoal();
+      if (mission.completed) {
+        objectiveText.textContent = playerNearDropBeacon() ? '[ contacting command ]' : '[ return to beacon ]';
+        objectiveMeta.textContent = mission.extractionCalled ? 'Extraction confirmed' : 'Stage cleared';
+        return;
+      }
       objectiveText.textContent = '[ ' + Math.min(player.kills, infectedGoal) + '/' + infectedGoal + ' cleared ]';
-      objectiveMeta.textContent = mission.completed ? 'Island breach contained' : (mission.hudMeta || 'Gun online');
+      objectiveMeta.textContent = mission.hudMeta || 'Gun online';
       return;
     }
     objectiveText.textContent = playerOnMachinePad() ? '[ shutdown ]' : '[ find yellow block ]';
@@ -2253,6 +2307,7 @@ function playerOnMachinePad() {
     }
     updateMovement(dt);
     updateDisableInteraction(dt);
+    updateExtractionBeacon(dt);
     updateToxinDamage(dt);
     updateWaterHazard(dt);
     updateLowHealthFeedback(dt);
@@ -2492,7 +2547,15 @@ function currentWaterIsDangerous() {
   setBlock(cx - 1, baseY + 1, cz, BLOCK.METAL, true);
   setBlock(cx, baseY + 1, cz + 1, BLOCK.METAL, true);
   setBlock(cx, baseY + 1, cz - 1, BLOCK.METAL, true);
+  mission.dropBeacon = { x: cx + .5, y: baseY, z: cz + .5, radius: 2.35 };
 }
+
+  function playerNearDropBeacon() {
+    const b = mission.dropBeacon;
+    if (!b || mission.insertionActive || deathState.active || worldRebuildState.active) return false;
+    return Math.hypot(player.pos[0] - b.x, player.pos[2] - b.z) <= b.radius &&
+      Math.abs(player.pos[1] - (b.y + 1)) < 6.5;
+  }
 
   function generateWorld(seed) {
     currentSeed = seed;
@@ -2516,6 +2579,7 @@ function currentWaterIsDangerous() {
     mission.phase = PHASE_DROP;
     mission.machine = null;
     mission.supplyCrate = null;
+    mission.dropBeacon = null;
     mission.disableProgress = 0;
     mission.toxinRemainder = 0;
     mission.toxinSoundTicks = 0;
@@ -2533,6 +2597,9 @@ function currentWaterIsDangerous() {
     mission.upgradeActive = false;
     mission.upgradeAfterChoice = null;
     mission.completed = false;
+    mission.extractionProgress = 0;
+    mission.extractionCalled = false;
+    mission.beaconMessageCooldown = 0;
     resetLifeStats();
     nextSpawnTimer = 3.5;
     hordeLevel = 0;
