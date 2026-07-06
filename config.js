@@ -17,7 +17,7 @@ window.ZOMVOX_CONFIG = {
     Bump this when you make visible changes so you can tell the browser
     loaded the newest version.
   */
-  buildVersion: '2026.07.06.7',
+  buildVersion: '2026.07.06.8',
 
   /*
     Seed used for deterministic world generation.
@@ -254,14 +254,9 @@ window.ZOMVOX_CONFIG = {
     toxinDamagePerSecond: 1.15,
 
     /*
-      Seconds the player must hold the disable control near the source.
+      Seconds the player must stand on the blinking red shutdown block.
     */
     disableSeconds: 3,
-
-    /*
-      Distance from the machine where the action prompt works.
-    */
-    machineActionRadius: 3.6,
 
     /*
       Cinematic insertion after accepting each island briefing.
