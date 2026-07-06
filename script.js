@@ -1038,7 +1038,7 @@
         const h = terrainHeight(x, z);
         const beach = h <= WATER_LEVEL + 2;
         const desert = noise2(x * 0.035 + 90, z * 0.035 - 30) > 0.66 && h < WATER_LEVEL + 9;
-        const lavaShore = GAME_OPTIONS.dangerousWater && beach && biome !== 'dunes' && biome !== 'swamp';
+        const lavaShore = biomeUsesRedWater(biome) && beach;
         const surface = biomeSurfaceTypes(biome, x, z, h, beach, desert, lavaShore);
         for (let y = 0; y <= h; y++) {
           let type = BLOCK.STONE;
@@ -1077,7 +1077,7 @@
       for (let lz = 3; lz < CHUNK_SIZE - 3; lz += 2) {
         const x = x0 + lx, z = z0 + lz;
         const h = terrainHeight(x, z);
-        const rockyShore = GAME_OPTIONS.dangerousWater && biome !== 'dunes' && biome !== 'swamp' && h <= WATER_LEVEL + 3;
+        const rockyShore = biomeUsesRedWater(biome) && h <= WATER_LEVEL + 3;
         const biomeRocks = (biome === 'rocky' || biome === 'ashlands') && h > WATER_LEVEL + 1;
         const rockNoise = seededHash(x * 4.13 + 15, z * 6.71 - 8);
         if ((rockyShore && h > WATER_LEVEL + 1 && rockNoise > 0.935) || (biomeRocks && rockNoise > (biome === 'rocky' ? 0.885 : 0.91))) {
@@ -1869,29 +1869,43 @@
     pickups = pickups.filter(p => !p.collected && Math.hypot(p.x - player.pos[0], p.z - player.pos[2]) < 120);
   }
 
-  function playerInWater() {
-    const x = Math.floor(player.pos[0]);
-    const z = Math.floor(player.pos[2]);
-    const feet = Math.floor(player.pos[1] + 0.08);
-    const waist = Math.floor(player.pos[1] + 0.82);
-    return getBlock(x, feet, z) === BLOCK.WATER || getBlock(x, waist, z) === BLOCK.WATER;
-  }
+
+  function playerIsTouchingWater() {
+  const x = Math.floor(player.pos[0]);
+  const z = Math.floor(player.pos[2]);
+
+  // Check feet/legs area. Player position is near the bottom of the player body.
+  const footY = Math.floor(player.pos[1] - 0.05);
+  const legY = Math.floor(player.pos[1] + 0.45);
+
+  return getBlock(x, footY, z) === BLOCK.WATER ||
+         getBlock(x, legY, z) === BLOCK.WATER;
+}
 
   function updateWaterHazard(dt) {
-    if (!GAME_OPTIONS.dangerousWater || deathState.active || worldRebuildState.active || isMenuOpen()) {
+    if (
+      !currentWaterIsDangerous() ||
+      mission.insertionActive ||
+      deathState.active ||
+      worldRebuildState.active ||
+      isMenuOpen()
+    ) {
       waterDamageTimer = 0;
       return;
     }
-    if (!playerInWater()) {
+  
+    if (!playerIsTouchingWater()) {
       waterDamageTimer = 0;
       return;
     }
+  
     waterDamageTimer -= dt;
-    if (waterDamageTimer <= 0) {
-      damagePlayer(6);
-      waterDamageTimer = .75;
-    }
+    if (waterDamageTimer > 0) return;
+  
+    waterDamageTimer = 0.65;
+    damagePlayer(8);
   }
+    
 
   function gunUnlocked() {
     return mission.phase === PHASE_ZOMBIE_THREAT;
@@ -2332,17 +2346,27 @@
     meshes.dynamic = { buffer: dynamicBuffer, count: arr.length / 9 };
   }
 
-  function getWaterStyleForBiome() {
-    const biome = currentBiome();
-  
-    // 0 = blue water
-    // 1 = red water
-    // 2 = green swamp water
-  
-    if (biome === 'swamp') return 2;
-    if (biome === 'rocky' || biome === 'ashlands') return 1;
-    return 0; // forest and anything else
-  }
+ function biomeUsesRedWater(biome = currentBiome()) {
+  return biome === 'rocky' || biome === 'ashlands';
+}
+
+function biomeUsesSwampWater(biome = currentBiome()) {
+  return biome === 'swamp';
+}
+
+function getWaterStyleForBiome(biome = currentBiome()) {
+  // 0 = blue water
+  // 1 = red lava water
+  // 2 = green swamp water
+
+  if (biomeUsesSwampWater(biome)) return 2;
+  if (biomeUsesRedWater(biome)) return 1;
+  return 0;
+}
+
+function currentWaterIsDangerous() {
+  return GAME_OPTIONS.dangerousWater && getWaterStyleForBiome() === 1;
+}
 
   function render(time) {
     resize();
