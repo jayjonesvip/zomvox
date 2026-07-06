@@ -126,6 +126,13 @@
   const WORLD_MAX = (WORLD_CHUNK_RADIUS + 1) * CHUNK_SIZE - 1;
   const MAX_Y = Math.max(16, Math.floor(configNumber(WORLD_CONFIG, 'maxY', 46)));
   const WATER_LEVEL = Math.max(1, Math.floor(configNumber(WORLD_CONFIG, 'waterLevel', 8)));
+  const TERRAIN_BASE_HEIGHT = configNumber(WORLD_CONFIG, 'terrainBaseHeight', 4);
+  const TERRAIN_DETAIL_AMOUNT = configNumber(WORLD_CONFIG, 'terrainDetailAmount', 12);
+  const TERRAIN_BROAD_AMOUNT = configNumber(WORLD_CONFIG, 'terrainBroadAmount', 10);
+  const TERRAIN_RIDGE_AMOUNT = configNumber(WORLD_CONFIG, 'terrainRidgeAmount', 2);
+  const TERRAIN_LAKE_A_DEPTH = configNumber(WORLD_CONFIG, 'terrainLakeADepth', 16);
+  const TERRAIN_LAKE_B_DEPTH = configNumber(WORLD_CONFIG, 'terrainLakeBDepth', 13);
+  const TERRAIN_MARSH_DEPTH = configNumber(WORLD_CONFIG, 'terrainMarshDepth', 16);
   const PLAYER_HEIGHT = configNumber(PLAYER_CONFIG, 'height', 1.76);
   const PLAYER_RADIUS = configNumber(PLAYER_CONFIG, 'radius', 0.31);
   const STARTING_HEALTH = configNumber(PLAYER_CONFIG, 'startingHealth', 100);
@@ -725,7 +732,7 @@
     uniform vec3 uSky;
     uniform float uDay;
     uniform float uFog;
-    uniform float uLava;
+    uniform float uWaterStyle;
     float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123); }
     float gridLine(vec2 uv){
       float b = min(min(uv.x, 1.0 - uv.x), min(uv.y, 1.0 - uv.y));
@@ -738,7 +745,10 @@
       if(t < 4.5) return vec3(0.52, 0.30, 0.12);
       if(t < 5.5) return vec3(0.12, 0.46, 0.19);
       if(t < 6.5) return vec3(0.78, 0.67, 0.36);
-      if(t < 7.5) return mix(vec3(0.10, 0.37, 0.70), vec3(0.90, 0.13, 0.04), uLava);
+      if(t < 7.5){
+        if(uWaterStyle > 1.5) return vec3(0.20, 0.29, 0.13); /* swamp water */
+        return mix(vec3(0.10, 0.37, 0.70), vec3(0.90, 0.13, 0.04), uWaterStyle);
+      }
       if(t < 8.5) return vec3(0.62, 0.20, 0.16);
       if(t < 9.5) return vec3(1.00, 0.74, 0.25);
       if(t < 10.5) return vec3(0.14, 0.65, 0.19); /* enemy green */
@@ -769,7 +779,8 @@
       color *= 0.88 + grain * 0.18;
       if(vType > 6.5 && vType < 7.5){
         float ripple = sin((vWorld.x * 2.4 + vWorld.z * 2.1 + uTime * 2.6)) * 0.04;
-        color += mix(vec3(0.03, 0.12, 0.18), vec3(0.22, 0.03, 0.0), uLava) + ripple;
+        vec3 waterShade = uWaterStyle > 1.5 ? vec3(0.05, 0.08, 0.01) : mix(vec3(0.03, 0.12, 0.18), vec3(0.22, 0.03, 0.0), uWaterStyle);
+        color += waterShade + ripple;
       }
       if(vType > 8.5 && vType < 9.5) color += vec3(0.55, 0.38, 0.05);
       if(vType > 11.5 && vType < 12.5) color += vec3(0.70, 0.02, 0.0);
@@ -797,7 +808,7 @@
         color = mix(color, uSky, fog);
       }
       color += vec3(0.03, 0.05, 0.10) * (1.0 - uDay);
-      float alpha = (vType > 6.5 && vType < 7.5) ? mix(0.63, 0.72, uLava) : 1.0;
+      float alpha = (vType > 6.5 && vType < 7.5) ? (uWaterStyle > 1.5 ? 0.68 : mix(0.63, 0.72, uWaterStyle)) : 1.0;
       gl_FragColor = vec4(color, alpha);
     }
   `;
@@ -814,7 +825,7 @@
     sky: gl.getUniformLocation(voxelProgram, 'uSky'),
     day: gl.getUniformLocation(voxelProgram, 'uDay'),
     fog: gl.getUniformLocation(voxelProgram, 'uFog'),
-    lava: gl.getUniformLocation(voxelProgram, 'uLava')
+    waterStyle: gl.getUniformLocation(voxelProgram, 'uWaterStyle')
   };
   const dynamicBuffer = gl.createBuffer();
 
@@ -909,13 +920,13 @@
   function terrainHeight(x, z) {
     const broad = fbm(x * 0.45 + 500, z * 0.45 - 200);
     const detail = fbm(x, z);
-    let h = Math.floor(4 + detail * 18 + broad * 12);
+    let h = Math.floor(TERRAIN_BASE_HEIGHT + detail * TERRAIN_DETAIL_AMOUNT + broad * TERRAIN_BROAD_AMOUNT);
     const ridge = Math.abs(noise2(x * 0.012 - 300, z * 0.012 + 800) - 0.5) * 2;
-    h += Math.floor(ridge * 5);
+    h += Math.floor(ridge * TERRAIN_RIDGE_AMOUNT);
     const lakeA = Math.max(0, 1 - Math.hypot(x + 28, z - 18) / 28);
     const lakeB = Math.max(0, 1 - Math.hypot(x - 34, z + 30) / 24);
     const marsh = Math.max(0, noise2(x * 0.045 - 120, z * 0.045 + 310) - 0.70);
-    h -= Math.floor(lakeA * 22 + lakeB * 18 + marsh * 28);
+    h -= Math.floor(lakeA * TERRAIN_LAKE_A_DEPTH + lakeB * TERRAIN_LAKE_B_DEPTH + marsh * TERRAIN_MARSH_DEPTH);
     return Math.max(3, Math.min(MAX_Y - 8, h));
   }
 
@@ -1023,7 +1034,7 @@
         const h = terrainHeight(x, z);
         const beach = h <= WATER_LEVEL + 2;
         const desert = noise2(x * 0.035 + 90, z * 0.035 - 30) > 0.66 && h < WATER_LEVEL + 9;
-        const lavaShore = GAME_OPTIONS.dangerousWater && beach;
+        const lavaShore = GAME_OPTIONS.dangerousWater && beach && biome !== 'dunes' && biome !== 'swamp';
         const surface = biomeSurfaceTypes(biome, x, z, h, beach, desert, lavaShore);
         for (let y = 0; y <= h; y++) {
           let type = BLOCK.STONE;
@@ -1031,7 +1042,8 @@
           else if (y > h - 4) type = surface.near;
           genSetBlock(x, y, z, type);
         }
-        if (h < WATER_LEVEL) {
+        // Dunes keep the low basins dry so desert islands do not generate lakes.
+        if (biome !== 'dunes' && h < WATER_LEVEL) {
           for (let y = h + 1; y <= WATER_LEVEL; y++) genSetBlock(x, y, z, BLOCK.WATER);
         }
       }
@@ -1060,7 +1072,7 @@
       for (let lz = 3; lz < CHUNK_SIZE - 3; lz += 2) {
         const x = x0 + lx, z = z0 + lz;
         const h = terrainHeight(x, z);
-        const rockyShore = GAME_OPTIONS.dangerousWater && h <= WATER_LEVEL + 3;
+        const rockyShore = GAME_OPTIONS.dangerousWater && biome !== 'dunes' && biome !== 'swamp' && h <= WATER_LEVEL + 3;
         const biomeRocks = (biome === 'rocky' || biome === 'ashlands') && h > WATER_LEVEL + 1;
         const rockNoise = seededHash(x * 4.13 + 15, z * 6.71 - 8);
         if ((rockyShore && h > WATER_LEVEL + 1 && rockNoise > 0.935) || (biomeRocks && rockNoise > (biome === 'rocky' ? 0.885 : 0.91))) {
@@ -2246,7 +2258,7 @@
     gl.uniform3f(loc.sky, sky[0], sky[1], sky[2]);
     gl.uniform1f(loc.day, dayAmount);
     gl.uniform1f(loc.fog, GAME_OPTIONS.fog ? 1 : 0);
-    gl.uniform1f(loc.lava, GAME_OPTIONS.dangerousWater ? 1 : 0);
+    gl.uniform1f(loc.waterStyle, currentBiome() === 'swamp' ? 2 : (GAME_OPTIONS.dangerousWater ? 1 : 0));
     gl.disable(gl.BLEND);
     gl.depthMask(true);
     drawWorldMeshes('opaque');
