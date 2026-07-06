@@ -107,6 +107,15 @@
   .briefingBody{ color:#cfe2d5; font-size:15px; line-height:1.35; font-weight:800; border-left:3px solid rgba(145,243,110,.5); padding:2px 0 2px 12px; margin-bottom:16px; }
   #briefingOk{ appearance:none; border:0; border-radius:8px; padding:11px 22px; color:#071508; font-size:15px; font-weight:1000; letter-spacing:.08em; text-transform:uppercase; background:linear-gradient(180deg,#d8ff75,#74ef59); box-shadow:0 12px 34px rgba(92,255,85,.22), inset 0 2px 0 rgba(255,255,255,.42); cursor:pointer; }
   #briefingOk:hover{ filter:brightness(1.05); }
+  #upgradeOverlay{ pointer-events:none; position:fixed; inset:0; display:flex; align-items:center; justify-content:center; padding:22px; z-index:33; opacity:0; visibility:hidden; background:radial-gradient(circle at 50% 45%, rgba(255,220,92,.12), rgba(2,8,9,.78) 58%, rgba(0,0,0,.94)), repeating-linear-gradient(0deg, rgba(255,255,255,.025) 0 1px, transparent 1px 5px); transition:opacity .16s, visibility .16s; }
+  #upgradeOverlay.show{ pointer-events:auto; opacity:1; visibility:visible; }
+  .upgradeCard{ position:relative; width:min(640px, calc(100vw - 34px)); padding:18px; border-radius:8px; border:1px solid rgba(255,220,92,.46); background:linear-gradient(180deg, rgba(26,22,13,.95), rgba(5,8,8,.95)); box-shadow:0 28px 80px rgba(0,0,0,.62), inset 0 0 0 1px rgba(255,255,255,.06), 0 0 34px rgba(255,204,83,.12); overflow:hidden; }
+  .upgradeCard::before{ content:""; position:absolute; left:0; right:0; top:0; height:4px; background:linear-gradient(90deg,#ffd45d,#91f36e,#ffd45d); box-shadow:0 0 20px rgba(255,212,93,.45); }
+  #upgradeOptions{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:10px; }
+  .upgradeOption{ appearance:none; text-align:left; border-radius:8px; border:1px solid rgba(255,220,92,.34); background:rgba(255,255,255,.06); color:#f6fff2; padding:12px; cursor:pointer; box-shadow:inset 0 1px 0 rgba(255,255,255,.08); }
+  .upgradeOption:hover{ border-color:rgba(145,243,110,.55); background:rgba(145,243,110,.10); }
+  .upgradeName{ display:block; font-size:16px; font-weight:1000; text-transform:uppercase; letter-spacing:.07em; color:#fff0a6; margin-bottom:4px; }
+  .upgradeDesc{ display:block; font-size:12px; line-height:1.25; font-weight:800; color:#cfe2d5; }
 
   #reloadOverlay{ pointer-events:none; position:fixed; left:50%; bottom:23%; transform:translateX(-50%) translateY(8px); min-width:min(360px, calc(100vw - 38px)); padding:10px 12px; border-radius:16px; background:rgba(4,9,13,.82); border:1px solid rgba(255,220,122,.42); box-shadow:0 12px 40px rgba(0,0,0,.36); opacity:0; transition:.14s; z-index:4; }
   #reloadOverlay.show{ opacity:1; transform:translateX(-50%) translateY(0); }
@@ -158,6 +167,7 @@
   body.stage-transition #gunSprite,
   body.stage-transition #mobileControls{ opacity:0; visibility:hidden; }
   body.stage-transition #objectiveBriefing,
+  body.stage-transition #upgradeOverlay,
   body.stage-transition #worldOverlay{ background:#000; }
   .worldCard{ width:min(460px, calc(100vw - 34px)); padding:18px; border:1px solid rgba(145,243,110,.32); border-radius:8px; background:rgba(4,10,12,.82); box-shadow:0 24px 70px rgba(0,0,0,.48); backdrop-filter:blur(10px); }
   .worldTitle{ color:#d7ffc7; font-size:22px; font-weight:1000; letter-spacing:.08em; text-transform:uppercase; text-align:center; margin-bottom:8px; text-shadow:0 0 18px rgba(145,243,110,.32); }
@@ -236,6 +246,12 @@
     .briefingObjective{ font-size:22px; }
     .briefingBody{ font-size:13px; margin-bottom:12px; }
     #briefingOk{ padding:9px 18px; font-size:13px; }
+    #upgradeOverlay{ padding:12px; }
+    .upgradeCard{ width:min(520px, calc(100vw - 24px)); padding:14px; }
+    #upgradeOptions{ grid-template-columns:1fr 1fr; gap:8px; }
+    .upgradeOption{ padding:9px; }
+    .upgradeName{ font-size:13px; }
+    .upgradeDesc{ font-size:11px; }
     .bullet{ height:19px; border-width:1px; }
     .bullet::before{ width:10px; height:8px; top:-6px; border-width:1px; }
     #gunSprite{ right:-28px; bottom:-42px; width:min(48vw, 280px); }

@@ -26,12 +26,12 @@ Desktop play uses mouse and keyboard. Mobile play is designed for landscape orie
 - Fixed-size chunk generation so the game area stays bounded and performance remains predictable.
 - Player movement is clamped inside the generated world.
 - Targeted mesh rebuilding for mission set pieces and world updates.
-- Mission-based opening loop with military-style objective briefings, cinematic insertion drops, a no-gun exploration phase, metal-spire shutdown objective, explosive supply crate reward, delayed zombie threat, and escalating redeployment objectives across five seeded islands.
-- Compact ammo HUD on desktop and mobile, plus a six-round blaster magazine with reserve ammo.
+- Mission-based opening loop with military-style objective briefings, cinematic insertion drops, a no-gun exploration phase, metal-spire shutdown objective, explosive supply crate reward, delayed zombie threat, upgrade choices, and escalating redeployment objectives across five seeded islands.
+- Compact ammo HUD on desktop and mobile, plus a six-round blaster magazine with reserve ammo, recoil, and fire-rate cooldown.
 - Ammo pickups that add six rounds at a time.
 - Zombie spawning, pursuit, attack cooldowns, retreat steps after attacks, deaths, score popups, and pickup drops.
 - Mobile-only landscape gate.
-- Mobile joystick movement plus separate jump, shoot, and run controls.
+- Mobile joystick movement plus separate jump and shoot controls.
 - Main menu settings for health HUD, ammo HUD, controls, sound, and fullscreen.
 - Day/night lighting with code-based mode options.
 - Optional custom sky color through code.
@@ -81,7 +81,7 @@ Common tuning options live in `config.js` under `window.ZOMVOX_CONFIG`. Edit tha
 
 ```js
 window.ZOMVOX_CONFIG = {
-  buildVersion: '2026.07.06.3',
+  buildVersion: '2026.07.06.4',
   initialSeed: 729641,
 
   environment: {
@@ -93,6 +93,18 @@ window.ZOMVOX_CONFIG = {
 
   timers: {
     cycleHalfDayMs: 360000
+  },
+
+  weapon: {
+    magSize: 6,
+    reloadTime: 1.15,
+    fireCooldown: 0.42,
+    recoilAmount: 0.026,
+    quickReloadMultiplier: 0.5,
+    doubleMagMultiplier: 2,
+    premiumGripMultiplier: 0.38,
+    hairTriggerMultiplier: 0.5,
+    longRangeKillDistance: 34
   },
 
   mission: {
@@ -137,7 +149,7 @@ Other sections in `config.js` expose safe defaults for:
 
 - `world`: chunk size, fixed map radius, max terrain height, and water level.
 - `player`: collision size, starting health, starting ammo reserve, respawn reserve floor, and low-health heartbeat threshold.
-- `weapon`: magazine size, reload time, and long-range kill distance.
+- `weapon`: magazine size, reload time, fire cooldown, recoil, upgrade multipliers, and long-range kill distance.
 - `enemies`: base enemy cap and horde escalation values.
 - `mission`: five island seeds, toxin drain, source disable timing/radius, insertion drop tuning, per-island infected objectives, fallback infected objective, and first wave size.
 - `pickups`: ammo/health pickup amounts and drop chances.
