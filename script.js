@@ -198,7 +198,7 @@
   let touchMode = matchMedia('(pointer: coarse)').matches;
   let keys = Object.create(null);
   const touchInput = { moveX: 0, moveY: 0, jump: false, lookId: null, lookX: 0, lookY: 0, stickId: null };
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.06.2');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.06.3');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -219,6 +219,7 @@
     actionHeld: false,
     disableProgress: 0,
     toxinRemainder: 0,
+    toxinSoundTicks: 0,
     smokeTimer: 0,
     commandMessageCooldown: 0,
     firstWaveSpawned: false,
@@ -1359,6 +1360,7 @@
     mission.actionHeld = false;
     mission.disableProgress = 0;
     mission.toxinRemainder = 0;
+    mission.toxinSoundTicks = 0;
     setWeaponUnlocked(gunUnlocked());
     lastKillTime = -999;
     killComboCount = 0;
@@ -1767,6 +1769,7 @@
   function updateToxinDamage(dt) {
     if (!mission.machine || !mission.machine.active || mission.insertionActive || deathState.active || worldRebuildState.active || isMenuOpen()) {
       mission.toxinRemainder = 0;
+      mission.toxinSoundTicks = 0;
       return;
     }
     // Toxin damage is a slow environmental drain during the opening drop,
@@ -1777,7 +1780,11 @@
     mission.toxinRemainder -= amount;
     player.health -= amount;
     if (amount > 0) pulseDamage();
-    if (amount > 0) sound('toxin');
+    mission.toxinSoundTicks += amount;
+    if (mission.toxinSoundTicks >= 5) {
+      mission.toxinSoundTicks %= 5;
+      sound('toxin');
+    }
     if (player.health <= 0) beginDeathSequence();
   }
 
@@ -2094,6 +2101,7 @@
     mission.actionHeld = false;
     mission.disableProgress = 0;
     mission.toxinRemainder = 0;
+    mission.toxinSoundTicks = 0;
     mission.smokeTimer = 0;
     mission.commandMessageCooldown = 0;
     mission.firstWaveSpawned = false;
