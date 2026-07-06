@@ -107,7 +107,6 @@
     BRICK: 8,
     LAMP: 9,
     METAL: 14,
-    CRACKED_STONE: 22,
     RED_LIGHT: 24
   };
 
@@ -133,6 +132,8 @@
   const TOXIN_DAMAGE_PER_SECOND = Math.max(0, configNumber(MISSION_CONFIG, 'toxinDamagePerSecond', 1.15));
   const MACHINE_DISABLE_SECONDS = Math.max(0.5, configNumber(MISSION_CONFIG, 'disableSeconds', 3));
   const MACHINE_ACTION_RADIUS = Math.max(1.5, configNumber(MISSION_CONFIG, 'machineActionRadius', 3.6));
+  const INSERTION_DROP_HEIGHT = Math.max(10, configNumber(MISSION_CONFIG, 'insertionDropHeight', 30));
+  const INSERTION_FALL_SPEED = Math.max(2, configNumber(MISSION_CONFIG, 'insertionFallSpeed', 5.8));
   const FIRST_WAVE_SIZE = Math.max(0, Math.floor(configNumber(MISSION_CONFIG, 'firstWaveSize', 3)));
   const INITIAL_SEED = Math.floor(configNumber(CONFIG, 'initialSeed', 729641));
   const CONFIGURED_MISSION_SEEDS = configNumberArray(MISSION_CONFIG, 'islandSeeds', [INITIAL_SEED, 482177, 735331, 918244, 126509]).slice(0, 5);
@@ -200,8 +201,7 @@
   let touchMode = matchMedia('(pointer: coarse)').matches;
   let keys = Object.create(null);
   const touchInput = { moveX: 0, moveY: 0, jump: false, sprint: false, lookId: null, lookX: 0, lookY: 0, stickId: null };
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.05.3');
-  let lastTarget = null;
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.05.6');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -225,6 +225,8 @@
     smokeTimer: 0,
     commandMessageCooldown: 0,
     firstWaveSpawned: false,
+    insertionActive: false,
+    insertionTargetY: 0,
     islandIndex: 0,
     objectiveAcknowledged: false,
     hudTitle: '',
@@ -679,19 +681,7 @@
       gl_FragColor = vec4(color, alpha);
     }
   `;
-  const lineVS = `
-    attribute vec3 aPosition;
-    uniform mat4 uMVP;
-    void main(){ gl_Position = uMVP * vec4(aPosition, 1.0); }
-  `;
-  const lineFS = `
-    precision mediump float;
-    uniform vec4 uColor;
-    void main(){ gl_FragColor = uColor; }
-  `;
-
   const voxelProgram = createProgram(voxelVS, voxelFS);
-  const lineProgram = createProgram(lineVS, lineFS);
   const loc = {
     pos: gl.getAttribLocation(voxelProgram, 'aPosition'),
     normal: gl.getAttribLocation(voxelProgram, 'aNormal'),
@@ -706,12 +696,6 @@
     fog: gl.getUniformLocation(voxelProgram, 'uFog'),
     lava: gl.getUniformLocation(voxelProgram, 'uLava')
   };
-  const lineLoc = {
-    pos: gl.getAttribLocation(lineProgram, 'aPosition'),
-    mvp: gl.getUniformLocation(lineProgram, 'uMVP'),
-    color: gl.getUniformLocation(lineProgram, 'uColor')
-  };
-  const lineBuffer = gl.createBuffer();
   const dynamicBuffer = gl.createBuffer();
 
   function mat4Perspective(fovy, aspect, near, far) {
@@ -1192,15 +1176,45 @@
     }
   }
 
+  function startInsertionDrop() {
+    const x = Math.floor(player.pos[0]);
+    const z = Math.floor(player.pos[2]);
+    const groundY = topSolidY(x, z) + 1.001;
+    mission.insertionActive = true;
+    mission.insertionTargetY = groundY;
+    mission.actionHeld = false;
+    mission.disableProgress = 0;
+    touchInput.moveX = 0;
+    touchInput.moveY = 0;
+    touchInput.jump = false;
+    touchInput.sprint = false;
+    player.grounded = false;
+    player.vel = [0, -INSERTION_FALL_SPEED * .55, 0];
+    player.pos[1] = Math.min(MAX_Y + INSERTION_DROP_HEIGHT, groundY + INSERTION_DROP_HEIGHT);
+    scorePop('DROP INBOUND', 'small');
+    showToast('Mission Command: insertion started. Look around. Movement unlocks on touchdown.');
+  }
+
+  function finishInsertionDrop() {
+    if (!mission.insertionActive) return;
+    mission.insertionActive = false;
+    player.pos[1] = Math.max(player.pos[1], mission.insertionTargetY);
+    player.vel = [0, 0, 0];
+    player.grounded = true;
+    scorePop('TOUCHDOWN', 'pickup small');
+    showToast('Boots down. Locate the contamination source.');
+  }
+
   function updateMovement(dt) {
     const forward = [Math.sin(player.yaw), 0, Math.cos(player.yaw)];
     const right = [Math.cos(player.yaw), 0, -Math.sin(player.yaw)];
     let mx = 0, mz = 0;
-    if (keys.KeyW || keys.ArrowUp) { mx += forward[0]; mz += forward[2]; }
-    if (keys.KeyS || keys.ArrowDown) { mx -= forward[0]; mz -= forward[2]; }
-    if (keys.KeyD || keys.ArrowRight) { mx += right[0]; mz += right[2]; }
-    if (keys.KeyA || keys.ArrowLeft) { mx -= right[0]; mz -= right[2]; }
-    if (touchInput.moveY || touchInput.moveX) {
+    const insertion = mission.insertionActive;
+    if (!insertion && (keys.KeyW || keys.ArrowUp)) { mx += forward[0]; mz += forward[2]; }
+    if (!insertion && (keys.KeyS || keys.ArrowDown)) { mx -= forward[0]; mz -= forward[2]; }
+    if (!insertion && (keys.KeyD || keys.ArrowRight)) { mx += right[0]; mz += right[2]; }
+    if (!insertion && (keys.KeyA || keys.ArrowLeft)) { mx -= right[0]; mz -= right[2]; }
+    if (!insertion && (touchInput.moveY || touchInput.moveX)) {
       mx += forward[0] * touchInput.moveY + right[0] * touchInput.moveX;
       mz += forward[2] * touchInput.moveY + right[2] * touchInput.moveX;
     }
@@ -1209,14 +1223,17 @@
     const len = Math.hypot(mx, mz) || 1; mx /= len; mz /= len;
     const sprint = keys.ShiftLeft || keys.ShiftRight || touchInput.sprint;
     const speed = 5.35 * (sprint ? 1.55 : 1.0);
-    player.vel[0] = mx * speed; player.vel[2] = mz * speed;
-    player.vel[1] -= 22 * dt;
-    if ((keys.Space || touchInput.jump) && player.grounded) { player.vel[1] = 8.2; player.grounded = false; }
+    player.vel[0] = insertion ? 0 : mx * speed;
+    player.vel[2] = insertion ? 0 : mz * speed;
+    player.vel[1] -= (insertion ? 9 : 22) * dt;
+    if (insertion) player.vel[1] = Math.max(player.vel[1], -INSERTION_FALL_SPEED);
+    if (!insertion && (keys.Space || touchInput.jump) && player.grounded) { player.vel[1] = 8.2; player.grounded = false; }
     moveAxis(0, player.vel[0] * dt);
     moveAxis(2, player.vel[2] * dt);
     clampToWorld(player.pos);
     player.grounded = false;
     moveAxis(1, player.vel[1] * dt);
+    if (insertion && player.grounded) finishInsertionDrop();
     clampToWorld(player.pos);
     ensureChunks();
     if (player.pos[1] < -20) damagePlayer(999);
@@ -1397,7 +1414,6 @@
   function raycastProjectile(maxDist) {
     const e = eyePos();
     const d = lookDir();
-    let prevBlock = null;
     for (let t = 0; t <= maxDist; t += 0.065) {
       const px = e[0] + d[0] * t;
       const py = e[1] + d[1] * t;
@@ -1406,8 +1422,7 @@
       if (hitEnemy) return { kind: 'enemy', enemy: hitEnemy.enemy, head: hitEnemy.head, point: [px, py, pz], dist: t };
       const bx = Math.floor(px), by = Math.floor(py), bz = Math.floor(pz);
       const type = getBlock(bx, by, bz);
-      if (type && type !== BLOCK.WATER) return { kind: 'block', x: bx, y: by, z: bz, type, point: [px, py, pz], prev: prevBlock, dist: t };
-      prevBlock = { x: bx, y: by, z: bz };
+      if (type && type !== BLOCK.WATER) return { kind: 'surface', type, point: [px, py, pz], dist: t };
     }
     return { kind: 'miss', point: [e[0] + d[0] * maxDist, e[1] + d[1] * maxDist, e[2] + d[2] * maxDist] };
   }
@@ -1478,16 +1493,9 @@
       } else {
         pulseHitMarker('hit');
       }
-    } else if (hit.kind === 'block') {
-      player.score += 25;
+    } else if (hit.kind === 'surface') {
+      spawnParticles(hit.point[0], hit.point[1], hit.point[2], 5, hit.type);
       sound('block');
-      if (hit.y > 0 && hit.type !== BLOCK.LAMP) {
-        setBlock(hit.x, hit.y, hit.z, 0);
-        spawnParticles(hit.point[0], hit.point[1], hit.point[2], 6, 15);
-        queueRebuild(hit.x, hit.z);
-      } else {
-        spawnParticles(hit.point[0], hit.point[1], hit.point[2], 3, 15);
-      }
     }
     if (player.mag <= 0 && player.reserve > 0) startReload();
   }
@@ -1595,7 +1603,7 @@
   function updateActionButtonState() {
     if (!touchShoot) return;
     const unlocked = gunUnlocked();
-    const ready = unlocked || playerNearMachine();
+    const ready = !mission.insertionActive && (unlocked || playerNearMachine());
     touchShoot.classList.toggle('unavailable', !ready);
     touchShoot.setAttribute('aria-disabled', ready ? 'false' : 'true');
   }
@@ -1608,6 +1616,7 @@
   }
 
   function beginMissionAction() {
+    if (mission.insertionActive) return;
     if (gunUnlocked()) {
       shoot();
       return;
@@ -1746,7 +1755,7 @@
   }
 
   function updateToxinDamage(dt) {
-    if (!mission.machine || !mission.machine.active || deathState.active || worldRebuildState.active || isMenuOpen()) {
+    if (!mission.machine || !mission.machine.active || mission.insertionActive || deathState.active || worldRebuildState.active || isMenuOpen()) {
       mission.toxinRemainder = 0;
       return;
     }
@@ -1824,6 +1833,11 @@
       objectiveMeta.textContent = currentIslandLabel();
       return;
     }
+    if (mission.insertionActive) {
+      objectiveText.textContent = '[ dropping ]';
+      objectiveMeta.textContent = 'Insertion active';
+      return;
+    }
     if (mission.phase === PHASE_ZOMBIE_THREAT) {
       const infectedGoal = currentInfectedGoal();
       objectiveText.textContent = '[ ' + Math.min(player.kills, infectedGoal) + '/' + infectedGoal + ' cleared ]';
@@ -1834,20 +1848,6 @@
     objectiveMeta.textContent = playerNearMachine()
       ? (touchMode ? 'Hold ACTION to disable' : 'Hold E to disable')
       : (mission.hudMeta || 'Toxin exposure active');
-  }
-
-  function aimTarget(maxDist) {
-    const e = eyePos();
-    const d = lookDir();
-    for (let t = 0; t <= maxDist; t += 0.09) {
-      const px = e[0] + d[0] * t, py = e[1] + d[1] * t, pz = e[2] + d[2] * t;
-      const enemy = entityHitAt(px, py, pz);
-      if (enemy) return { kind: 'enemy', hp: enemy.enemy.hp, maxHp: enemy.enemy.maxHp, head: enemy.head };
-      const bx = Math.floor(px), by = Math.floor(py), bz = Math.floor(pz);
-      const type = getBlock(bx, by, bz);
-      if (type && type !== BLOCK.WATER) return { kind: 'block', x: bx, y: by, z: bz, type };
-    }
-    return null;
   }
 
   function update(dt) {
@@ -1888,25 +1888,9 @@
     updatePickups(dt);
     updateMachineSmoke(dt);
     updateParticles(dt);
-    lastTarget = aimTarget(42);
     updateHud();
   }
 
-  function blockName(type) {
-    if (type === BLOCK.WATER) return 'Water';
-    if (type === BLOCK.GRASS) return 'Grass';
-    if (type === BLOCK.DIRT) return 'Dirt';
-    if (type === BLOCK.STONE) return 'Stone';
-    if (type === BLOCK.WOOD) return 'Wood';
-    if (type === BLOCK.LEAF) return 'Leaves';
-    if (type === BLOCK.SAND) return 'Sand';
-    if (type === BLOCK.BRICK) return 'Brick';
-    if (type === BLOCK.LAMP) return 'Glow marker';
-    if (type === BLOCK.METAL) return 'Metal';
-    if (type === BLOCK.CRACKED_STONE) return 'Cracked stone';
-    if (type === BLOCK.RED_LIGHT) return 'Red beacon';
-    return 'Block';
-  }
   function updateAmmoDisplay() {
     const bullets = bulletRack.children;
     for (let i = 0; i < player.magSize; i++) {
@@ -2010,28 +1994,6 @@
     meshes.dynamic = { buffer: dynamicBuffer, count: arr.length / 9 };
   }
 
-  function cubeOutlineVertices(x, y, z) {
-    const e = 0.004;
-    const x0 = x - e, y0 = y - e, z0 = z - e, x1 = x + 1 + e, y1 = y + 1 + e, z1 = z + 1 + e;
-    return new Float32Array([
-      x0,y0,z0, x1,y0,z0,  x1,y0,z0, x1,y0,z1,  x1,y0,z1, x0,y0,z1,  x0,y0,z1, x0,y0,z0,
-      x0,y1,z0, x1,y1,z0,  x1,y1,z0, x1,y1,z1,  x1,y1,z1, x0,y1,z1,  x0,y1,z1, x0,y1,z0,
-      x0,y0,z0, x0,y1,z0,  x1,y0,z0, x1,y1,z0,  x1,y0,z1, x1,y1,z1,  x0,y0,z1, x0,y1,z1
-    ]);
-  }
-  function drawOutline(mvp) {
-    if (!lastTarget || lastTarget.kind !== 'block') return;
-    gl.useProgram(lineProgram);
-    gl.uniformMatrix4fv(lineLoc.mvp, false, mvp);
-    gl.uniform4f(lineLoc.color, 1, 1, 1, 0.75);
-    const verts = cubeOutlineVertices(lastTarget.x, lastTarget.y, lastTarget.z);
-    gl.bindBuffer(gl.ARRAY_BUFFER, lineBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, verts, gl.DYNAMIC_DRAW);
-    gl.enableVertexAttribArray(lineLoc.pos);
-    gl.vertexAttribPointer(lineLoc.pos, 3, gl.FLOAT, false, 0, 0);
-    gl.drawArrays(gl.LINES, 0, verts.length / 3);
-  }
-
   function render(time) {
     resize();
     const cycleLengthMs = CYCLE_HALF_DAY_MS * 2;
@@ -2085,8 +2047,6 @@
     drawWorldMeshes('water');
     gl.depthMask(true);
     gl.disable(gl.BLEND);
-
-    drawOutline(mvp);
   }
 
   function loop(now) {
@@ -2126,6 +2086,8 @@
     mission.smokeTimer = 0;
     mission.commandMessageCooldown = 0;
     mission.firstWaveSpawned = false;
+    mission.insertionActive = false;
+    mission.insertionTargetY = 0;
     mission.objectiveAcknowledged = false;
     mission.hudTitle = '';
     mission.hudMeta = '';
@@ -2171,7 +2133,8 @@
       meta: currentIslandLabel() + ' // Drop Phase',
       body: 'Mission Command: toxin readings are climbing. You are unarmed until the source is shut down. Find the blinking metal spire on the high ground and hold action to disable it.',
       hudTitle: 'Locate the contamination source',
-      hudMeta: 'Toxin exposure active'
+      hudMeta: 'Toxin exposure active',
+      afterOk: startInsertionDrop
     });
     showToast('New ZomVox world generated');
   }
