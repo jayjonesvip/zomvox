@@ -246,7 +246,7 @@ window.ZOMVOX_CONFIG = {
 
       These line up with islandSeeds by position.
     */
-    biomes: ['swamp', 'dunes', 'rocky', 'forest', 'ashlands'],
+    biomes: ['ashlands', 'dunes', 'rocky', 'forest', 'swamp'],
 
     /*
       Health drained per second while the contamination machine is active.
