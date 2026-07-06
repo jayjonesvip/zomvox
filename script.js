@@ -82,6 +82,10 @@
     const value = section[key];
     return (Array.isArray(value) ? value : fallback).filter(Number.isFinite).map(v => Math.floor(v));
   }
+  function configStringArray(section, key, fallback) {
+    const value = section[key];
+    return (Array.isArray(value) ? value : fallback).filter(v => typeof v === 'string');
+  }
   const ENV_CONFIG = configSection('environment');
   const WORLD_CONFIG = configSection('world');
   const PLAYER_CONFIG = configSection('player');
@@ -109,7 +113,11 @@
     BRICK: 8,
     LAMP: 9,
     METAL: 14,
-    RED_LIGHT: 24
+    RED_LIGHT: 24,
+    CACTUS: 25,
+    MUD: 26,
+    ASH: 27,
+    DEAD_WOOD: 28
   };
 
   const CHUNK_SIZE = Math.max(4, Math.floor(configNumber(WORLD_CONFIG, 'chunkSize', 16)));
@@ -130,7 +138,7 @@
   const DOUBLE_MAG_MULTIPLIER = Math.max(1, Math.floor(configNumber(WEAPON_CONFIG, 'doubleMagMultiplier', 2)));
   const FIRE_COOLDOWN = Math.max(0.05, configNumber(WEAPON_CONFIG, 'fireCooldown', 0.42));
   const HAIR_TRIGGER_MULTIPLIER = Math.max(0.1, configNumber(WEAPON_CONFIG, 'hairTriggerMultiplier', 0.5));
-  const RECOIL_AMOUNT = Math.max(0, configNumber(WEAPON_CONFIG, 'recoilAmount', 0.026));
+  const RECOIL_AMOUNT = Math.max(0, configNumber(WEAPON_CONFIG, 'recoilAmount', 0.08));
   const PREMIUM_GRIP_MULTIPLIER = Math.max(0, configNumber(WEAPON_CONFIG, 'premiumGripMultiplier', 0.38));
   const ENEMY_CAP = Math.max(1, Math.floor(configNumber(ENEMY_CONFIG, 'baseCap', 18)));
   const HORDE_KILLS_PER_LEVEL = Math.max(1, Math.floor(configNumber(ENEMY_CONFIG, 'hordeKillsPerLevel', 5)));
@@ -144,6 +152,9 @@
   const INITIAL_SEED = Math.floor(configNumber(CONFIG, 'initialSeed', 729641));
   const CONFIGURED_MISSION_SEEDS = configNumberArray(MISSION_CONFIG, 'islandSeeds', [INITIAL_SEED, 482177, 735331, 918244, 126509]).slice(0, 5);
   const MISSION_SEEDS = CONFIGURED_MISSION_SEEDS.length ? CONFIGURED_MISSION_SEEDS : [INITIAL_SEED];
+  const DEFAULT_MISSION_BIOMES = ['forest', 'dunes', 'rocky', 'swamp', 'ashlands'];
+  const CONFIGURED_MISSION_BIOMES = configStringArray(MISSION_CONFIG, 'biomes', DEFAULT_MISSION_BIOMES).slice(0, MISSION_SEEDS.length);
+  const MISSION_BIOMES = MISSION_SEEDS.map((_, i) => normalizeBiome(CONFIGURED_MISSION_BIOMES[i] || DEFAULT_MISSION_BIOMES[i] || 'forest'));
   const DEFAULT_INFECTED_GOALS = [25, 50, 100, 250, 500];
   const FALLBACK_INFECTED_GOAL = Math.max(1, Math.floor(configNumber(MISSION_CONFIG, 'infectedGoal', 50)));
   const CONFIGURED_INFECTED_GOALS = configNumberArray(MISSION_CONFIG, 'infectedGoals', DEFAULT_INFECTED_GOALS).slice(0, MISSION_SEEDS.length);
@@ -208,7 +219,7 @@
   let touchMode = matchMedia('(pointer: coarse)').matches;
   let keys = Object.create(null);
   const touchInput = { moveX: 0, moveY: 0, jump: false, lookId: null, lookX: 0, lookY: 0, stickId: null };
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.06.4');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.06.5');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -499,6 +510,20 @@
     return 'Island ' + (mission.islandIndex + 1) + ' / ' + MISSION_SEEDS.length;
   }
 
+  function normalizeBiome(value) {
+    const biome = String(value || 'forest').trim().toLowerCase();
+    return ['forest', 'dunes', 'rocky', 'swamp', 'ashlands'].includes(biome) ? biome : 'forest';
+  }
+
+  function currentBiome() {
+    return MISSION_BIOMES[mission.islandIndex] || 'forest';
+  }
+
+  function currentBiomeLabel() {
+    const biome = currentBiome();
+    return biome.charAt(0).toUpperCase() + biome.slice(1);
+  }
+
   function currentInfectedGoal() {
     return MISSION_INFECTED_GOALS[mission.islandIndex] || MISSION_INFECTED_GOALS[MISSION_INFECTED_GOALS.length - 1] || FALLBACK_INFECTED_GOAL;
   }
@@ -574,7 +599,7 @@
     }
     mission.upgradeActive = true;
     mission.upgradeAfterChoice = afterChoice || null;
-    if (upgradeMeta) upgradeMeta.textContent = currentIslandLabel() + ' // Armory Selection';
+    if (upgradeMeta) upgradeMeta.textContent = currentIslandLabel() + ' // ' + currentBiomeLabel() + ' // Armory Selection';
     upgradeOptions.innerHTML = '';
     for (const choice of available) {
       const btn = document.createElement('button');
@@ -731,6 +756,10 @@
       if(t < 22.5) return vec3(0.30, 0.32, 0.31); /* cracked stone */
       if(t < 23.5) return vec3(0.38, 0.95, 0.24); /* toxin smoke */
       if(t < 24.5) return vec3(0.90, 0.02, 0.015) * (0.35 + step(0.45, sin(uTime * 6.0)) * 0.75); /* red beacon */
+      if(t < 25.5) return vec3(0.15, 0.50, 0.18); /* cactus */
+      if(t < 26.5) return vec3(0.22, 0.18, 0.12); /* swamp mud */
+      if(t < 27.5) return vec3(0.12, 0.13, 0.13); /* ash */
+      if(t < 28.5) return vec3(0.18, 0.13, 0.09); /* dead wood */
       return vec3(1.0, 0.45, 0.18); /* particles */
     }
     void main(){
@@ -749,6 +778,8 @@
       if(vType > 19.5 && vType < 20.5) color += vec3(0.55, 0.35, 0.0);
       if(vType > 21.5 && vType < 22.5) color *= 0.70 + step(0.58, hash(floor(vWorld.xz * 3.0 + vWorld.yy))) * 0.42;
       if(vType > 23.5 && vType < 24.5) color += vec3(0.70, 0.0, 0.0) * step(0.45, sin(uTime * 6.0));
+      if(vType > 24.5 && vType < 25.5) color += vec3(0.02, 0.08, 0.02);
+      if(vType > 26.5 && vType < 27.5) color *= 0.78 + step(0.62, hash(floor(vWorld.xz * 2.6 + vWorld.yy))) * 0.35;
       float edge = gridLine(vUv);
       color *= mix(0.58, 1.0, edge);
       float sun = max(dot(n, normalize(uLightDir)), 0.0);
@@ -922,12 +953,70 @@
     });
   }
 
+  function biomeSurfaceTypes(biome, x, z, h, beach, desert, lavaShore) {
+    if (lavaShore) return { top: BLOCK.STONE, near: BLOCK.STONE };
+    const roll = seededHash(x * 2.71 + 19, z * 3.43 - 11);
+    if (biome === 'dunes') return { top: roll < .95 ? BLOCK.SAND : BLOCK.STONE, near: BLOCK.SAND };
+    if (biome === 'rocky') return { top: roll < .95 ? BLOCK.STONE : BLOCK.GRASS, near: roll < .95 ? BLOCK.STONE : BLOCK.DIRT };
+    if (biome === 'swamp') return { top: roll < .72 || beach ? BLOCK.MUD : BLOCK.GRASS, near: roll < .72 || beach ? BLOCK.MUD : BLOCK.DIRT };
+    if (biome === 'ashlands') return { top: roll < .82 ? BLOCK.ASH : BLOCK.STONE, near: roll < .82 ? BLOCK.ASH : BLOCK.STONE };
+    return { top: beach ? BLOCK.SAND : (roll < .95 ? BLOCK.GRASS : (desert ? BLOCK.SAND : BLOCK.STONE)), near: beach ? BLOCK.SAND : BLOCK.DIRT };
+  }
+
+  function growTree(x, h, z, trunkType = BLOCK.WOOD, withLeaves = true) {
+    const trunk = 4 + Math.floor(seededHash(x + 11.2, z - 4.1) * 3);
+    for (let y = 1; y <= trunk; y++) genSetBlock(x, h + y, z, trunkType);
+    if (!withLeaves) {
+      const armY = h + Math.max(2, trunk - 1);
+      genSetBlock(x + (seededHash(x, z) > .5 ? 1 : -1), armY, z, trunkType);
+      genSetBlock(x, armY + 1, z + (seededHash(x + 9, z - 7) > .5 ? 1 : -1), trunkType);
+      return;
+    }
+    const crownY = h + trunk;
+    for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++) for (let dy = -1; dy <= 2; dy++) {
+      const dist = Math.abs(dx) + Math.abs(dz) + Math.max(0, dy - 1);
+      if (dist <= 4 && seededHash(x + dx * 19 + dy, z + dz * 23) > 0.08) {
+        const bx = x + dx, by = crownY + dy, bz = z + dz;
+        if (!getBlock(bx, by, bz)) genSetBlock(bx, by, bz, BLOCK.LEAF);
+      }
+    }
+  }
+
+  function growSaguaro(x, h, z) {
+    const height = 4 + Math.floor(seededHash(x - 17, z + 21) * 3);
+    for (let y = 1; y <= height; y++) genSetBlock(x, h + y, z, BLOCK.CACTUS);
+    const armA = seededHash(x + 3, z - 8) > .5 ? 1 : -1;
+    const armB = seededHash(x - 13, z + 5) > .5 ? 1 : -1;
+    const yA = h + 2 + Math.floor(seededHash(x + 14, z + 14) * Math.max(1, height - 3));
+    const yB = h + 2 + Math.floor(seededHash(x - 22, z - 19) * Math.max(1, height - 3));
+    genSetBlock(x + armA, yA, z, BLOCK.CACTUS);
+    genSetBlock(x + armA, yA + 1, z, BLOCK.CACTUS);
+    if (height > 5) {
+      genSetBlock(x, yB, z + armB, BLOCK.CACTUS);
+      genSetBlock(x, yB + 1, z + armB, BLOCK.CACTUS);
+    }
+  }
+
+  function growRockCluster(x, h, z, chanceRoll) {
+    const radius = 1 + Math.floor(seededHash(x - 21, z + 32) * 2.2);
+    const height = 1 + Math.floor(seededHash(x + 5, z - 17) * 3.3);
+    for (let dx = -radius; dx <= radius; dx++) for (let dz = -radius; dz <= radius; dz++) {
+      const falloff = Math.abs(dx) + Math.abs(dz);
+      const stack = Math.max(1, height - Math.floor(falloff * .7));
+      if (falloff <= radius + 1 && seededHash(x + dx * 9.1 + chanceRoll, z + dz * 7.7) > 0.12) {
+        const bx = x + dx, bz = z + dz, by = terrainHeight(bx, bz) + 1;
+        for (let y = 0; y < stack; y++) genSetBlock(bx, by + y, bz, BLOCK.STONE);
+      }
+    }
+  }
+
   function generateChunk(cx, cz) {
     if (!chunkInWorld(cx, cz)) return;
     const ck = chunkKey(cx, cz);
     if (loadedChunks.has(ck)) return;
     loadedChunks.add(ck);
     const x0 = cx * CHUNK_SIZE, z0 = cz * CHUNK_SIZE;
+    const biome = currentBiome();
     for (let lx = 0; lx < CHUNK_SIZE; lx++) {
       for (let lz = 0; lz < CHUNK_SIZE; lz++) {
         const x = x0 + lx, z = z0 + lz;
@@ -935,11 +1024,11 @@
         const beach = h <= WATER_LEVEL + 2;
         const desert = noise2(x * 0.035 + 90, z * 0.035 - 30) > 0.66 && h < WATER_LEVEL + 9;
         const lavaShore = GAME_OPTIONS.dangerousWater && beach;
-        const topType = lavaShore ? BLOCK.STONE : ((beach || desert) ? BLOCK.SAND : BLOCK.GRASS);
+        const surface = biomeSurfaceTypes(biome, x, z, h, beach, desert, lavaShore);
         for (let y = 0; y <= h; y++) {
           let type = BLOCK.STONE;
-          if (y === h) type = topType;
-          else if (y > h - 4) type = lavaShore ? BLOCK.STONE : ((beach || desert) ? BLOCK.SAND : BLOCK.DIRT);
+          if (y === h) type = surface.top;
+          else if (y > h - 4) type = surface.near;
           genSetBlock(x, y, z, type);
         }
         if (h < WATER_LEVEL) {
@@ -947,22 +1036,23 @@
         }
       }
     }
-    // Trees are limited away from chunk borders so chunks can be generated/unloaded cleanly.
+    // Props are limited away from chunk borders so chunks can be generated/unloaded cleanly.
     for (let lx = 2; lx < CHUNK_SIZE - 2; lx++) {
       for (let lz = 2; lz < CHUNK_SIZE - 2; lz++) {
         const x = x0 + lx, z = z0 + lz;
         const h = terrainHeight(x, z);
-        if (h > WATER_LEVEL + 1 && seededHash(x * 8.31, z * 3.77) > 0.985) {
-          const trunk = 4 + Math.floor(seededHash(x + 11.2, z - 4.1) * 3);
-          for (let y = 1; y <= trunk; y++) genSetBlock(x, h + y, z, BLOCK.WOOD);
-          const crownY = h + trunk;
-          for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++) for (let dy = -1; dy <= 2; dy++) {
-            const dist = Math.abs(dx) + Math.abs(dz) + Math.max(0, dy - 1);
-            if (dist <= 4 && seededHash(x + dx * 19 + dy, z + dz * 23) > 0.08) {
-              const bx = x + dx, by = crownY + dy, bz = z + dz;
-              if (!getBlock(bx, by, bz)) genSetBlock(bx, by, bz, BLOCK.LEAF);
-            }
-          }
+        if (h <= WATER_LEVEL + 1) continue;
+        const propRoll = seededHash(x * 8.31, z * 3.77);
+        if (biome === 'forest' && propRoll > 0.965) {
+          growTree(x, h, z);
+        } else if (biome === 'dunes' && propRoll > 0.972) {
+          growSaguaro(x, h, z);
+        } else if (biome === 'rocky' && propRoll > 0.992) {
+          growTree(x, h, z, BLOCK.WOOD, true);
+        } else if (biome === 'swamp' && propRoll > 0.976) {
+          growTree(x, h, z, BLOCK.DEAD_WOOD, seededHash(x - 4, z + 8) > .35);
+        } else if (biome === 'ashlands' && propRoll > 0.982) {
+          growTree(x, h, z, BLOCK.DEAD_WOOD, false);
         }
       }
     }
@@ -971,18 +1061,10 @@
         const x = x0 + lx, z = z0 + lz;
         const h = terrainHeight(x, z);
         const rockyShore = GAME_OPTIONS.dangerousWater && h <= WATER_LEVEL + 3;
+        const biomeRocks = (biome === 'rocky' || biome === 'ashlands') && h > WATER_LEVEL + 1;
         const rockNoise = seededHash(x * 4.13 + 15, z * 6.71 - 8);
-        if (rockyShore && h > WATER_LEVEL + 1 && rockNoise > 0.935) {
-          const radius = 1 + Math.floor(seededHash(x - 21, z + 32) * 2.2);
-          const height = 1 + Math.floor(seededHash(x + 5, z - 17) * 3.3);
-          for (let dx = -radius; dx <= radius; dx++) for (let dz = -radius; dz <= radius; dz++) {
-            const falloff = Math.abs(dx) + Math.abs(dz);
-            const stack = Math.max(1, height - Math.floor(falloff * .7));
-            if (falloff <= radius + 1 && seededHash(x + dx * 9.1, z + dz * 7.7) > 0.12) {
-              const bx = x + dx, bz = z + dz, by = terrainHeight(bx, bz) + 1;
-              for (let y = 0; y < stack; y++) genSetBlock(bx, by + y, bz, BLOCK.STONE);
-            }
-          }
+        if ((rockyShore && h > WATER_LEVEL + 1 && rockNoise > 0.935) || (biomeRocks && rockNoise > (biome === 'rocky' ? 0.885 : 0.91))) {
+          growRockCluster(x, h, z, rockNoise);
         }
       }
     }
@@ -1051,7 +1133,7 @@
         const x = cx + dx, z = cz + dz;
         for (let y = baseY; y <= baseY + 8; y++) {
           const type = getBlock(x, y, z);
-          if (type === BLOCK.WOOD || type === BLOCK.LEAF) setBlock(x, y, z, 0, true);
+          if (type === BLOCK.WOOD || type === BLOCK.LEAF || type === BLOCK.CACTUS || type === BLOCK.DEAD_WOOD) setBlock(x, y, z, 0, true);
         }
       }
     }
@@ -1761,7 +1843,7 @@
     document.body.classList.add('stage-transition');
     openObjectiveBriefing({
       title: 'Island contained',
-      meta: currentIslandLabel() + ' // Mission Complete',
+      meta: currentIslandLabel() + ' // ' + currentBiomeLabel() + ' // Mission Complete',
       body: 'Mission Command: infected count cleared. Extraction route is hot. Confirm redeploy and we will drop you onto the next contaminated island.',
       hudTitle: 'Island breach contained',
       hudMeta: 'Redeploying',
@@ -1860,7 +1942,7 @@
     scorePop('CONTAMINATION SOURCE DISABLED', 'wave');
     openObjectiveBriefing({
       title: 'Eliminate infected: 0 / ' + infectedGoal,
-      meta: currentIslandLabel() + ' // Mission Updated',
+      meta: currentIslandLabel() + ' // ' + currentBiomeLabel() + ' // Mission Updated',
       body: 'Mission Command: source disabled. Supply crate deployed at the spire footprint. Open it, arm up, and eliminate ' + infectedGoal + ' infected before redeploy.',
       hudTitle: 'Eliminate infected',
       hudMeta: 'Gun online',
@@ -2267,7 +2349,7 @@
     rebuildMeshes();
     queueObjectiveBriefing({
       title: 'Locate the contamination source',
-      meta: currentIslandLabel() + ' // Drop Phase',
+      meta: currentIslandLabel() + ' // ' + currentBiomeLabel() + ' // Drop Phase',
       body: 'Mission Command: toxin readings are climbing. You are unarmed until the source is shut down. Find the blinking metal spire on the high ground and hold action to disable it.',
       hudTitle: 'Locate the contamination source',
       hudMeta: 'Toxin exposure active',
