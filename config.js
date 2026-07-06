@@ -25,7 +25,7 @@ window.ZOMVOX_CONFIG = {
     Same seed = same world layout.
     Change this to any whole number to generate a different map.
   */
-  initialSeed: 29190007,
+  initialSeed: 721456,
 
   environment: {
     /*
@@ -232,7 +232,7 @@ window.ZOMVOX_CONFIG = {
 
       Clearing the infected objective redeploys to the next seed.
     */
-    islandSeeds: [29190, 482177, 735331, 918244, 126509],
+    islandSeeds: [721456, 482177, 535331, 918244, 126509],
 
     /*
       Biome for each mission island.
