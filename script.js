@@ -26,6 +26,11 @@
   const disableOverlay = $('disableOverlay');
   const disableFill = $('disableFill');
   const disablePercent = $('disablePercent');
+  const objectiveBriefing = $('objectiveBriefing');
+  const briefingMeta = $('briefingMeta');
+  const briefingObjective = $('briefingObjective');
+  const briefingBody = $('briefingBody');
+  const briefingOk = $('briefingOk');
   const scoreFeed = $('scoreFeed');
   const reticle = $('reticle');
   const reloadOverlay = $('reloadOverlay');
@@ -70,6 +75,10 @@
   function configBoolean(section, key, fallback) {
     const value = section[key];
     return typeof value === 'boolean' ? value : fallback;
+  }
+  function configNumberArray(section, key, fallback) {
+    const value = section[key];
+    return (Array.isArray(value) ? value : fallback).filter(Number.isFinite).map(v => Math.floor(v));
   }
   const ENV_CONFIG = configSection('environment');
   const WORLD_CONFIG = configSection('world');
@@ -126,6 +135,9 @@
   const MACHINE_ACTION_RADIUS = Math.max(1.5, configNumber(MISSION_CONFIG, 'machineActionRadius', 3.6));
   const MISSION_INFECTED_GOAL = Math.max(1, Math.floor(configNumber(MISSION_CONFIG, 'infectedGoal', 50)));
   const FIRST_WAVE_SIZE = Math.max(0, Math.floor(configNumber(MISSION_CONFIG, 'firstWaveSize', 3)));
+  const INITIAL_SEED = Math.floor(configNumber(CONFIG, 'initialSeed', 729641));
+  const CONFIGURED_MISSION_SEEDS = configNumberArray(MISSION_CONFIG, 'islandSeeds', [INITIAL_SEED, 482177, 735331, 918244, 126509]).slice(0, 5);
+  const MISSION_SEEDS = CONFIGURED_MISSION_SEEDS.length ? CONFIGURED_MISSION_SEEDS : [INITIAL_SEED];
   const AMMO_PICKUP_ROUNDS = Math.max(1, Math.floor(configNumber(PICKUP_CONFIG, 'ammoRounds', 6)));
   const HEALTH_PICKUP_AMOUNT = Math.max(1, configNumber(PICKUP_CONFIG, 'healthAmount', 25));
   const MAP_AMMO_PICKUP_CHANCE = Math.max(0, Math.min(1, configNumber(PICKUP_CONFIG, 'mapAmmoChance', 0.28)));
@@ -141,7 +153,7 @@
   const PHASE_DISABLE_MACHINE = 'disableMachine';
   const PHASE_ZOMBIE_THREAT = 'zombieThreat';
 
-  let currentSeed = Math.floor(configNumber(CONFIG, 'initialSeed', 729641));
+  let currentSeed = MISSION_SEEDS[0] || INITIAL_SEED;
   let world = new Map();
   let edits = new Map();
   let loadedChunks = new Set();
@@ -185,7 +197,7 @@
   let touchMode = matchMedia('(pointer: coarse)').matches;
   let keys = Object.create(null);
   const touchInput = { moveX: 0, moveY: 0, jump: false, sprint: false, lookId: null, lookX: 0, lookY: 0, stickId: null };
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.05.2');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.05.3');
   let lastTarget = null;
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
@@ -209,7 +221,17 @@
     toxinRemainder: 0,
     smokeTimer: 0,
     commandMessageCooldown: 0,
-    firstWaveSpawned: false
+    firstWaveSpawned: false,
+    islandIndex: 0,
+    objectiveAcknowledged: false,
+    hudTitle: '',
+    hudMeta: '',
+    nextHudTitle: '',
+    nextHudMeta: '',
+    briefingActive: false,
+    pendingBriefing: null,
+    briefingAfterOk: null,
+    completed: false
   };
 
   function syncBulletRack(size) {
@@ -337,7 +359,7 @@
   }
 
   function isMenuOpen() {
-    return menu.style.display !== 'none' || splash.style.display !== 'none';
+    return menu.style.display !== 'none' || splash.style.display !== 'none' || isBriefingOpen();
   }
 
   function clamp01(value) {
@@ -426,6 +448,69 @@
     reloadOverlayFill.style.width = '0%';
   }
 
+  function currentIslandLabel() {
+    return 'Island ' + (mission.islandIndex + 1) + ' / ' + MISSION_SEEDS.length;
+  }
+
+  function missionSeedIndex(seed) {
+    const idx = MISSION_SEEDS.indexOf(seed);
+    return idx >= 0 ? idx : 0;
+  }
+
+  function nextMissionSeed() {
+    mission.islandIndex = (mission.islandIndex + 1) % MISSION_SEEDS.length;
+    return MISSION_SEEDS[mission.islandIndex];
+  }
+
+  function isGameLive() {
+    return menu.style.display === 'none' && splash.style.display === 'none' && !worldRebuildState.active && !deathState.active;
+  }
+
+  function isBriefingOpen() {
+    return mission.briefingActive;
+  }
+
+  function setHudObjective(title, meta) {
+    mission.hudTitle = title;
+    mission.hudMeta = meta;
+    mission.objectiveAcknowledged = true;
+  }
+
+  function queueObjectiveBriefing(briefing) {
+    mission.pendingBriefing = briefing;
+    mission.objectiveAcknowledged = false;
+  }
+
+  function openObjectiveBriefing(briefing = mission.pendingBriefing) {
+    if (!briefing || !objectiveBriefing) return;
+    mission.pendingBriefing = null;
+    mission.briefingActive = true;
+    mission.objectiveAcknowledged = false;
+    mission.briefingAfterOk = briefing.afterOk || null;
+    mission.nextHudTitle = briefing.hudTitle || briefing.title;
+    mission.nextHudMeta = briefing.hudMeta || briefing.meta || '';
+    briefingMeta.textContent = briefing.meta || currentIslandLabel();
+    briefingObjective.textContent = briefing.title;
+    briefingBody.textContent = briefing.body;
+    objectiveBriefing.classList.add('show');
+    document.body.classList.add('briefing-open');
+    player.vel = [0, 0, 0];
+    mission.actionHeld = false;
+    if (document.pointerLockElement === canvas && document.exitPointerLock) document.exitPointerLock();
+  }
+
+  function acknowledgeObjectiveBriefing() {
+    if (!mission.briefingActive) return;
+    mission.briefingActive = false;
+    objectiveBriefing.classList.remove('show');
+    document.body.classList.remove('briefing-open');
+    setHudObjective(mission.nextHudTitle || '', mission.nextHudMeta || '');
+    const afterOk = mission.briefingAfterOk;
+    mission.briefingAfterOk = null;
+    if (afterOk) afterOk();
+    if (!touchMode && menu.style.display === 'none' && !deathState.active && !worldRebuildState.active) requestPointerLockSafe();
+  }
+
   function updateWorldRebuild(dt) {
     worldRebuildState.timer = (performance.now() - worldRebuildState.startedAt) / 1000;
     const progress = Math.min(1, worldRebuildState.timer / worldRebuildState.duration);
@@ -438,6 +523,7 @@
       worldRebuildState.active = false;
       worldOverlay.classList.remove('show');
       generateWorld(nextSeed);
+      if (isGameLive()) openObjectiveBriefing();
     }
   }
 
@@ -1381,6 +1467,7 @@
         if (dropRoll < ENEMY_HEALTH_DROP_CHANCE) spawnPickupAt(Math.floor(hit.enemy.x), Math.floor(hit.enemy.y), Math.floor(hit.enemy.z), 'health');
         else if (dropRoll < ENEMY_ANY_DROP_CHANCE) spawnPickupAt(Math.floor(hit.enemy.x), Math.floor(hit.enemy.y), Math.floor(hit.enemy.z));
         showToast('Enemy down. Kills: ' + player.kills);
+        checkMissionCompletion();
       } else {
         pulseHitMarker('hit');
       }
@@ -1532,6 +1619,27 @@
     nextSpawnTimer = 4.5;
   }
 
+  function completeMissionIsland() {
+    if (mission.completed) return;
+    mission.completed = true;
+    mission.actionHeld = false;
+    nextSpawnTimer = 999;
+    openObjectiveBriefing({
+      title: 'Island contained',
+      meta: currentIslandLabel() + ' // Mission Complete',
+      body: 'Mission Command: infected count cleared. Extraction route is hot. Confirm redeploy and we will drop you onto the next contaminated island.',
+      hudTitle: 'Island breach contained',
+      hudMeta: 'Redeploying',
+      afterOk: () => beginWorldRebuild(nextMissionSeed())
+    });
+    scorePop('MISSION COMPLETE', 'wave');
+    sound('wave');
+  }
+
+  function checkMissionCompletion() {
+    if (mission.phase === PHASE_ZOMBIE_THREAT && player.kills >= MISSION_INFECTED_GOAL) completeMissionIsland();
+  }
+
   function spawnSupplyCrate() {
     if (!mission.machine) return;
     const x = Math.floor(mission.machine.x), z = Math.floor(mission.machine.z);
@@ -1614,10 +1722,19 @@
     mission.phase = PHASE_ZOMBIE_THREAT;
     setWeaponUnlocked(true);
     scorePop('CONTAMINATION SOURCE DISABLED', 'wave');
-    setTimeout(() => scorePop('MISSION UPDATED: ELIMINATE ' + MISSION_INFECTED_GOAL + ' INFECTED', 'wave small'), 850);
-    showToast('Mission Command: source disabled. Open the supply crate, then eliminate ' + MISSION_INFECTED_GOAL + ' infected.');
+    openObjectiveBriefing({
+      title: 'Eliminate infected: 0 / ' + MISSION_INFECTED_GOAL,
+      meta: currentIslandLabel() + ' // Mission Updated',
+      body: 'Mission Command: source disabled. Supply crate deployed at the spire footprint. Open it, arm up, and eliminate ' + MISSION_INFECTED_GOAL + ' infected before redeploy.',
+      hudTitle: 'Eliminate infected',
+      hudMeta: 'Gun online',
+      afterOk: () => {
+        scorePop('MISSION UPDATED: ELIMINATE ' + MISSION_INFECTED_GOAL + ' INFECTED', 'wave small');
+        spawnInitialWave();
+      }
+    });
+    showToast('Mission Command: source disabled. New orders incoming.');
     sound('wave');
-    spawnInitialWave();
   }
 
   function updateToxinDamage(dt) {
@@ -1694,15 +1811,20 @@
 
   function updateMissionHud() {
     if (!objectiveText || !objectiveMeta) return;
-    if (mission.phase === PHASE_ZOMBIE_THREAT) {
-      objectiveText.textContent = 'Eliminate infected: ' + Math.min(player.kills, MISSION_INFECTED_GOAL) + ' / ' + MISSION_INFECTED_GOAL;
-      objectiveMeta.textContent = player.kills >= MISSION_INFECTED_GOAL ? 'Island breach contained' : 'Gun online';
+    if (!mission.objectiveAcknowledged) {
+      objectiveText.textContent = 'Awaiting mission brief';
+      objectiveMeta.textContent = currentIslandLabel();
       return;
     }
-    objectiveText.textContent = 'Locate the contamination source';
+    if (mission.phase === PHASE_ZOMBIE_THREAT) {
+      objectiveText.textContent = 'Eliminate infected: ' + Math.min(player.kills, MISSION_INFECTED_GOAL) + ' / ' + MISSION_INFECTED_GOAL;
+      objectiveMeta.textContent = mission.completed ? 'Island breach contained' : (mission.hudMeta || 'Gun online');
+      return;
+    }
+    objectiveText.textContent = mission.hudTitle || 'Locate the contamination source';
     objectiveMeta.textContent = playerNearMachine()
       ? (touchMode ? 'Hold ACTION to disable' : 'Hold E to disable')
-      : 'Toxin exposure active';
+      : (mission.hudMeta || 'Toxin exposure active');
   }
 
   function aimTarget(maxDist) {
@@ -1723,6 +1845,11 @@
     if (worldRebuildState.active) {
       updateWorldRebuild(dt);
       updateHud();
+      return;
+    }
+    if (isBriefingOpen()) {
+      updateHud();
+      updateParticles(dt);
       return;
     }
     if (deathState.active) {
@@ -1965,6 +2092,7 @@
 
   function generateWorld(seed) {
     currentSeed = seed;
+    mission.islandIndex = missionSeedIndex(seed);
     world = new Map();
     edits = new Map();
     loadedChunks = new Set();
@@ -1989,6 +2117,14 @@
     mission.smokeTimer = 0;
     mission.commandMessageCooldown = 0;
     mission.firstWaveSpawned = false;
+    mission.objectiveAcknowledged = false;
+    mission.hudTitle = '';
+    mission.hudMeta = '';
+    mission.nextHudTitle = '';
+    mission.nextHudMeta = '';
+    mission.briefingActive = false;
+    mission.briefingAfterOk = null;
+    mission.completed = false;
     resetLifeStats();
     nextSpawnTimer = 3.5;
     hordeLevel = 0;
@@ -2021,16 +2157,28 @@
     player.vel = [0, 0, 0];
     ensureChunks(true);
     rebuildMeshes();
+    queueObjectiveBriefing({
+      title: 'Locate the contamination source',
+      meta: currentIslandLabel() + ' // Drop Phase',
+      body: 'Mission Command: toxin readings are climbing. You are unarmed until the source is shut down. Find the blinking metal spire on the high ground and hold action to disable it.',
+      hudTitle: 'Locate the contamination source',
+      hudMeta: 'Toxin exposure active'
+    });
     showToast('New ZomVox world generated');
   }
 
   function startGame() {
     applySettings();
     if (soundEnabled) window.ZomVoxSound?.prime();
-    locked = true;
     menu.style.display = 'none';
+    if (touchMode) requestMobileFullscreen();
+    if (mission.pendingBriefing) {
+      locked = touchMode;
+      openObjectiveBriefing();
+      return;
+    }
+    locked = true;
     if (touchMode) {
-      requestMobileFullscreen();
       return;
     }
     requestPointerLockSafe();
@@ -2047,6 +2195,7 @@
     respawn();
   }
   play.addEventListener('click', startGame);
+  briefingOk.addEventListener('click', acknowledgeObjectiveBriefing);
   deathContinue.addEventListener('click', continueFromDeath);
   canvas.addEventListener('click', () => {
     if (deathState.active) {
@@ -2058,7 +2207,7 @@
   document.addEventListener('pointerlockchange', () => {
     if (touchMode) return;
     locked = document.pointerLockElement === canvas;
-    menu.style.display = locked || deathState.active ? 'none' : 'flex';
+    menu.style.display = locked || deathState.active || isBriefingOpen() ? 'none' : 'flex';
   });
   document.addEventListener('mousemove', (e) => {
     if (!locked) return;
@@ -2068,10 +2217,15 @@
     player.pitch = Math.max(-cap, Math.min(cap, player.pitch));
   });
   document.addEventListener('keydown', (e) => {
+    if (isBriefingOpen() && (e.code === 'Enter' || e.code === 'Space')) {
+      e.preventDefault();
+      acknowledgeObjectiveBriefing();
+      return;
+    }
     keys[e.code] = true;
     if (e.code === 'KeyE' && !e.repeat && !gunUnlocked() && !playerNearMachine()) missionCommandNothingHere();
     if (e.code === 'KeyR' && !e.repeat) startReload();
-    if (e.code === 'KeyN' && !e.repeat) beginWorldRebuild(Math.floor(Math.random() * 999999));
+    if (e.code === 'KeyN' && !e.repeat) beginWorldRebuild(nextMissionSeed());
   });
   document.addEventListener('keyup', (e) => { keys[e.code] = false; });
   canvas.addEventListener('mousedown', (e) => {
