@@ -77,6 +77,7 @@
   }
 
   function playFile(name, fileName) {
+    if (fileName === '') return true;
     if (!fileName) return false;
     const src = 'assets/' + fileName;
     let audio = fileCache.get(name);
@@ -110,6 +111,7 @@
       const fileName = hasOverride
         ? soundFiles[name]
         : ((name === 'pickupAmmo' || name === 'pickupHealth') ? soundFiles.pickup : null);
+      if (fileName === '') return;
       if (playFile(name, fileName)) return;
       synth(name);
     }

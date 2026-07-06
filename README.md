@@ -83,7 +83,7 @@ Common tuning options live in `config.js` under `window.ZOMVOX_CONFIG`. Edit tha
 
 ```js
 window.ZOMVOX_CONFIG = {
-  buildVersion: '2026.07.06.8',
+  buildVersion: '2026.07.06.9',
   initialSeed: 729641,
 
   environment: {
@@ -177,7 +177,7 @@ Other sections in `config.js` expose safe defaults for:
 - `timers`: death overlay delay, world rebuild meter duration, heartbeat interval, and day/night cycle length.
 - `audio`: optional mp3/wav overrides for each sound effect.
 
-Audio files live in `assets/`. Set a sound value to a file name to use that asset, or `null` to keep the built-in synthesized effect:
+Audio files live in `assets/`. Set a sound value to a file name to use that asset, `null` to keep the built-in synthesized effect, or `''` to disable that sound:
 
 ```js
 audio: {
@@ -189,7 +189,7 @@ audio: {
     pickupHealth: null,
     bite: null,
     toxin: null,
-    land: null,
+    land: '',
     objectiveClear: null
   }
 }

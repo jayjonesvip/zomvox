@@ -225,7 +225,7 @@
   let touchMode = matchMedia('(pointer: coarse)').matches;
   let keys = Object.create(null);
   const touchInput = { moveX: 0, moveY: 0, jump: false, lookId: null, lookX: 0, lookY: 0, stickId: null };
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.06.8');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.06.9');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -1125,8 +1125,8 @@
 
   function highestMissionPoint() {
     let best = { x: 0, z: 0, h: terrainHeight(0, 0), score: -Infinity };
-    for (let x = WORLD_MIN + 4; x <= WORLD_MAX - 4; x++) {
-      for (let z = WORLD_MIN + 4; z <= WORLD_MAX - 4; z++) {
+    for (let x = WORLD_MIN + 7; x <= WORLD_MAX - 7; x++) {
+      for (let z = WORLD_MIN + 8; z <= WORLD_MAX - 7; z++) {
         const h = terrainHeight(x, z);
         if (h <= WATER_LEVEL + 3) continue;
         const distanceFromDrop = Math.hypot(x, z);
@@ -1136,22 +1136,37 @@
           Math.abs(h - terrainHeight(x - 1, z)) +
           Math.abs(h - terrainHeight(x, z + 1)) +
           Math.abs(h - terrainHeight(x, z - 1));
-        if (slope > 10) continue;
-        const score = h * 10 + distanceFromDrop * .06 - slope * 1.4 + seededHash(x * 1.7, z * 2.1);
+        const broadSlope =
+          Math.abs(h - terrainHeight(x + 3, z)) +
+          Math.abs(h - terrainHeight(x - 3, z)) +
+          Math.abs(h - terrainHeight(x, z + 4)) +
+          Math.abs(h - terrainHeight(x, z - 4));
+        if (slope > 8 || broadSlope > 18) continue;
+        const score = h * 10 + distanceFromDrop * .06 - slope * 1.8 - broadSlope * .6 + seededHash(x * 1.7, z * 2.1);
         if (score > best.score) best = { x, z, h, score };
       }
     }
     return best;
   }
 
-  function clearMissionBuildSpace(cx, baseY, cz) {
-    for (let dx = -2; dx <= 2; dx++) {
-      for (let dz = -2; dz <= 2; dz++) {
+  function clearingSurfaceBlock() {
+    const biome = currentBiome();
+    if (biome === 'dunes') return BLOCK.SAND;
+    if (biome === 'swamp') return BLOCK.MUD;
+    if (biome === 'ashlands') return BLOCK.ASH;
+    if (biome === 'rocky') return BLOCK.STONE;
+    return BLOCK.GRASS;
+  }
+
+  function prepareMissionClearing(cx, baseY, cz) {
+    const floorY = baseY - 1;
+    const surfaceType = clearingSurfaceBlock();
+    for (let dx = -5; dx <= 5; dx++) {
+      for (let dz = -6; dz <= 5; dz++) {
         const x = cx + dx, z = cz + dz;
-        for (let y = baseY; y <= baseY + 8; y++) {
-          const type = getBlock(x, y, z);
-          if (type === BLOCK.WOOD || type === BLOCK.LEAF || type === BLOCK.CACTUS || type === BLOCK.DEAD_WOOD) setBlock(x, y, z, 0, true);
-        }
+        for (let y = floorY + 1; y <= floorY + 22; y++) setBlock(x, y, z, 0, true);
+        for (let y = Math.max(0, floorY - 2); y < floorY; y++) setBlock(x, y, z, BLOCK.STONE, true);
+        setBlock(x, floorY, z, surfaceType, true);
       }
     }
   }
@@ -1164,34 +1179,23 @@
   function placeContaminationMachine() {
     const spot = highestMissionPoint();
     const x = spot.x, z = spot.z, baseY = terrainHeight(x, z) + 1;
-    const padX = x, padZ = z - 2, padY = terrainHeight(padX, padZ) + 1;
+    const padX = x, padZ = z - 4, padY = baseY;
     const machineBlocks = [];
-    clearMissionBuildSpace(x, baseY, z);
-    clearMissionBuildSpace(padX, padY, padZ);
-    // Machine placement is intentionally voxel/simple: a low stone footing,
-    // stacked metal column, side braces, and one blinking red beacon on top.
-    for (let dx = -1; dx <= 1; dx++) {
-      for (let dz = -1; dz <= 1; dz++) {
-        setMachineBlock(x + dx, baseY, z + dz, Math.abs(dx) + Math.abs(dz) > 1 ? BLOCK.STONE : BLOCK.METAL, machineBlocks);
+    prepareMissionClearing(x, baseY, z);
+    // Compact silo/smoke-stack: a four-block-square grey tower with a red
+    // beacon cap and a separate blinking shutdown block in front.
+    for (let y = 0; y < 15; y++) {
+      for (let dx = -1; dx <= 2; dx++) {
+        for (let dz = -1; dz <= 2; dz++) {
+          setMachineBlock(x + dx, baseY + y, z + dz, y < 14 ? BLOCK.METAL : BLOCK.RED_LIGHT, machineBlocks);
+        }
       }
     }
-    for (let y = 1; y <= 5; y++) setMachineBlock(x, baseY + y, z, BLOCK.METAL, machineBlocks);
-    setMachineBlock(x - 1, baseY + 1, z, BLOCK.METAL, machineBlocks);
-    setMachineBlock(x + 1, baseY + 1, z, BLOCK.METAL, machineBlocks);
-    setMachineBlock(x, baseY + 1, z - 1, BLOCK.METAL, machineBlocks);
-    setMachineBlock(x, baseY + 1, z + 1, BLOCK.METAL, machineBlocks);
-    setMachineBlock(x - 1, baseY + 2, z, BLOCK.STONE, machineBlocks);
-    setMachineBlock(x + 1, baseY + 2, z, BLOCK.STONE, machineBlocks);
-    setMachineBlock(x, baseY + 2, z - 1, BLOCK.STONE, machineBlocks);
-    setMachineBlock(x, baseY + 2, z + 1, BLOCK.STONE, machineBlocks);
-    setMachineBlock(x, baseY + 6, z, BLOCK.RED_LIGHT, machineBlocks);
-    // Shutdown is triggered by standing on the blinking red pressure block,
-    // removing the old keyboard/touch action requirement.
+    // Shutdown is triggered by standing on the blinking red pressure block.
     setMachineBlock(padX, padY, padZ, BLOCK.RED_LIGHT, machineBlocks);
-    mission.machine = { x: x + .5, y: baseY, z: z + .5, active: true, blocks: machineBlocks, pad: { x: padX, y: padY, z: padZ } };
+    mission.machine = { x: x + .5, y: baseY, z: z + .5, smokeY: baseY + 15.8, active: true, blocks: machineBlocks, pad: { x: padX, y: padY, z: padZ } };
     mission.supplyCrate = null;
-    queueRebuild(x, z);
-    queueRebuild(padX, padZ);
+    queueRebuild();
   }
 
   function playerOnMachinePad() {
@@ -1993,7 +1997,7 @@
       const speed = 2.2 + Math.random() * 7.4;
       particles.push({
         x: m.x,
-        y: m.y + 2.4 + Math.random() * 2.4,
+        y: m.y + 5.5 + Math.random() * 8.5,
         z: m.z,
         vx: Math.cos(angle) * speed,
         vy: 2.2 + Math.random() * 6.8,
@@ -2023,7 +2027,7 @@
     // are cleared, a supply crate takes its footprint, and zombie spawning begins.
     explodeMachine();
     for (const b of mission.machine.blocks) setBlock(b[0], b[1], b[2], 0, true);
-    queueRebuild(Math.floor(mission.machine.x), Math.floor(mission.machine.z));
+    queueRebuild();
     spawnSupplyCrate();
     mission.phase = PHASE_ZOMBIE_THREAT;
     setWeaponUnlocked(true);
@@ -2074,7 +2078,7 @@
     const jitterZ = (Math.random() - .5) * .9;
     particles.push({
       x: mission.machine.x + jitterX,
-      y: mission.machine.y + 6.7,
+      y: mission.machine.smokeY || mission.machine.y + 6.7,
       z: mission.machine.z + jitterZ,
       vx: (Math.random() - .5) * .7,
       vy: 1.6 + Math.random() * .9,
