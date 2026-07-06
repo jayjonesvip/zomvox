@@ -343,9 +343,10 @@ window.ZOMVOX_CONFIG = {
       hurt: 'hurt.mp3',
       toxin: null,
       land: null,
-      objectiveClear: null,
+      objectiveClear: 'floraphonic-arcade-ui-6-229503.mp3',
       wave: null,
       heartbeat: null
     }
   }
 };
+ 
