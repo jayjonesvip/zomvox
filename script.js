@@ -152,7 +152,6 @@
   const HORDE_CAP_BONUS = Math.max(0, Math.floor(configNumber(ENEMY_CONFIG, 'hordeCapBonus', 2)));
   const TOXIN_DAMAGE_PER_SECOND = Math.max(0, configNumber(MISSION_CONFIG, 'toxinDamagePerSecond', 1.15));
   const MACHINE_DISABLE_SECONDS = Math.max(0.5, configNumber(MISSION_CONFIG, 'disableSeconds', 3));
-  const MACHINE_ACTION_RADIUS = Math.max(1.5, configNumber(MISSION_CONFIG, 'machineActionRadius', 3.6));
   const INSERTION_DROP_HEIGHT = Math.max(10, configNumber(MISSION_CONFIG, 'insertionDropHeight', 30));
   const INSERTION_FALL_SPEED = Math.max(2, configNumber(MISSION_CONFIG, 'insertionFallSpeed', 5.8));
   const FIRST_WAVE_SIZE = Math.max(0, Math.floor(configNumber(MISSION_CONFIG, 'firstWaveSize', 3)));
@@ -226,7 +225,7 @@
   let touchMode = matchMedia('(pointer: coarse)').matches;
   let keys = Object.create(null);
   const touchInput = { moveX: 0, moveY: 0, jump: false, lookId: null, lookX: 0, lookY: 0, stickId: null };
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.06.7');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.06.8');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -244,12 +243,10 @@
     phase: PHASE_DROP,
     machine: null,
     supplyCrate: null,
-    actionHeld: false,
     disableProgress: 0,
     toxinRemainder: 0,
     toxinSoundTicks: 0,
     smokeTimer: 0,
-    commandMessageCooldown: 0,
     firstWaveSpawned: false,
     insertionActive: false,
     insertionTargetY: 0,
@@ -532,9 +529,6 @@
     const biome = currentBiome();
     return biome.charAt(0).toUpperCase() + biome.slice(1);
   }
-  function disableControlLabel() {
-    return touchMode ? 'the ACTION button' : 'the E key';
-  }
 
   function currentInfectedGoal() {
     return MISSION_INFECTED_GOALS[mission.islandIndex] || MISSION_INFECTED_GOALS[MISSION_INFECTED_GOALS.length - 1] || FALLBACK_INFECTED_GOAL;
@@ -587,7 +581,6 @@
     objectiveBriefing.classList.add('show');
     document.body.classList.add('briefing-open');
     player.vel = [0, 0, 0];
-    mission.actionHeld = false;
     if (document.pointerLockElement === canvas && document.exitPointerLock) document.exitPointerLock();
   }
 
@@ -1123,6 +1116,13 @@
     return terrainHeight(x, z);
   }
 
+  function surfaceMoveMultiplier(x, z) {
+    const gx = Math.floor(x), gz = Math.floor(z);
+    const y = topSolidY(gx, gz);
+    const type = getBlock(gx, y, gz);
+    return (type === BLOCK.SAND || type === BLOCK.MUD) ? 0.85 : 1;
+  }
+
   function highestMissionPoint() {
     let best = { x: 0, z: 0, h: terrainHeight(0, 0), score: -Infinity };
     for (let x = WORLD_MIN + 4; x <= WORLD_MAX - 4; x++) {
@@ -1164,8 +1164,10 @@
   function placeContaminationMachine() {
     const spot = highestMissionPoint();
     const x = spot.x, z = spot.z, baseY = terrainHeight(x, z) + 1;
+    const padX = x, padZ = z - 2, padY = terrainHeight(padX, padZ) + 1;
     const machineBlocks = [];
     clearMissionBuildSpace(x, baseY, z);
+    clearMissionBuildSpace(padX, padY, padZ);
     // Machine placement is intentionally voxel/simple: a low stone footing,
     // stacked metal column, side braces, and one blinking red beacon on top.
     for (let dx = -1; dx <= 1; dx++) {
@@ -1183,21 +1185,21 @@
     setMachineBlock(x, baseY + 2, z - 1, BLOCK.STONE, machineBlocks);
     setMachineBlock(x, baseY + 2, z + 1, BLOCK.STONE, machineBlocks);
     setMachineBlock(x, baseY + 6, z, BLOCK.RED_LIGHT, machineBlocks);
-    mission.machine = { x: x + .5, y: baseY, z: z + .5, active: true, blocks: machineBlocks };
+    // Shutdown is triggered by standing on the blinking red pressure block,
+    // removing the old keyboard/touch action requirement.
+    setMachineBlock(padX, padY, padZ, BLOCK.RED_LIGHT, machineBlocks);
+    mission.machine = { x: x + .5, y: baseY, z: z + .5, active: true, blocks: machineBlocks, pad: { x: padX, y: padY, z: padZ } };
     mission.supplyCrate = null;
     queueRebuild(x, z);
+    queueRebuild(padX, padZ);
   }
 
-  function machineDistance() {
-    if (!mission.machine) return Infinity;
-    const dx = player.pos[0] - mission.machine.x;
-    const dz = player.pos[2] - mission.machine.z;
-    const dy = Math.abs(player.pos[1] - mission.machine.y);
-    return Math.hypot(dx, dz) + Math.max(0, dy - 2) * .35;
-  }
-
-  function playerNearMachine() {
-    return !!mission.machine && mission.machine.active && machineDistance() <= MACHINE_ACTION_RADIUS;
+  function playerOnMachinePad() {
+    const pad = mission.machine && mission.machine.pad;
+    if (!pad || !mission.machine.active || !player.grounded) return false;
+    return Math.abs(player.pos[0] - (pad.x + .5)) < .72 &&
+      Math.abs(player.pos[2] - (pad.z + .5)) < .72 &&
+      Math.abs(player.pos[1] - (pad.y + 1)) < .75;
   }
 
   const faces = [
@@ -1371,7 +1373,6 @@
     const groundY = topSolidY(x, z) + 1.001;
     mission.insertionActive = true;
     mission.insertionTargetY = groundY;
-    mission.actionHeld = false;
     mission.disableProgress = 0;
     touchInput.moveX = 0;
     touchInput.moveY = 0;
@@ -1411,7 +1412,7 @@
     gunSprite.classList.toggle('moving', movingInput);
     const len = Math.hypot(mx, mz) || 1; mx /= len; mz /= len;
     const sprint = keys.ShiftLeft || keys.ShiftRight;
-    const speed = 5.35 * (sprint ? 1.55 : 1.0);
+    const speed = 5.35 * (sprint ? 1.55 : 1.0) * surfaceMoveMultiplier(player.pos[0], player.pos[2]);
     player.vel[0] = insertion ? 0 : mx * speed;
     player.vel[2] = insertion ? 0 : mz * speed;
     player.vel[1] -= (insertion ? 9 : 22) * dt;
@@ -1440,22 +1441,103 @@
       if (!inWorldXZ(x, z)) continue;
       generateChunk(chunkCoord(x), chunkCoord(z));
       const y = topSolidY(x, z) + 1;
-      if (y > WATER_LEVEL + 1 && !blocksMovement(getBlock(x, y, z))) return { x: x + .5, y, z: z + .5 };
+      const surface = getBlock(x, y - 1, z);
+      const propSurface = surface === BLOCK.WOOD || surface === BLOCK.CACTUS || surface === BLOCK.DEAD_WOOD ||
+        surface === BLOCK.METAL || surface === BLOCK.RED_LIGHT || surface === BLOCK.BRICK || surface === BLOCK.LAMP;
+      if (!propSurface && surface !== BLOCK.WATER && getBlock(x, y, z) !== BLOCK.WATER &&
+        !blocksMovement(getBlock(x, y, z)) && !blocksMovement(getBlock(x, y + 1, z))) {
+        return { x: x + .5, y, z: z + .5 };
+      }
     }
     return null;
   }
+
+  function enemyVariantStats(x, z) {
+    const roll = seededHash(x * 12.7 - 4, z * 8.4 + 6);
+    if (roll < 0.70) {
+      return { kind: 'normal', hp: 48, speed: 2.55, scale: 1, damage: 14, attackCooldown: .9, retreat: .34, bodyType: 10, limbType: 11, eyeType: 12 };
+    }
+    if (roll < 0.90) {
+      return { kind: 'speedy', hp: 28, speed: 3.35, scale: .78, damage: 8, attackCooldown: .68, retreat: .28, bodyType: 18, limbType: 10, eyeType: 12 };
+    }
+    return { kind: 'brute', hp: 96, speed: 1.72, scale: 1.24, damage: 24, attackCooldown: 1.25, retreat: .46, bodyType: 19, limbType: 11, eyeType: 20 };
+  }
+
   function spawnEnemy() {
     const p = enemySpawnPoint();
     if (!p) return;
-    const big = seededHash(p.x * 9.1, p.z * 3.2) > 0.82;
-    const variant = Math.floor(seededHash(p.x * 12.7 - 4, p.z * 8.4 + 6) * 4);
+    const variant = enemyVariantStats(p.x, p.z);
     const dx = player.pos[0] - p.x, dz = player.pos[2] - p.z;
-    enemies.push({ x: p.x, y: p.y, z: p.z, hp: big ? 80 : 48, maxHp: big ? 80 : 48, speed: big ? 2.0 : 2.55, attack: 0, retreat: 0, phase: seededHash(p.x, p.z) * 10, blinkSeed: seededHash(p.x * 3.7 + 18, p.z * 5.9 - 22), big, variant, face: Math.atan2(dx, -dz) });
+    const spawnDepth = 1.95 * variant.scale;
+    enemies.push({
+      x: p.x,
+      y: p.y - spawnDepth,
+      z: p.z,
+      spawnY: p.y - spawnDepth,
+      targetY: p.y,
+      emerge: 0,
+      hp: variant.hp,
+      maxHp: variant.hp,
+      speed: variant.speed,
+      attack: 0,
+      retreat: 0,
+      phase: seededHash(p.x, p.z) * 10,
+      blinkSeed: seededHash(p.x * 3.7 + 18, p.z * 5.9 - 22),
+      big: variant.kind === 'brute',
+      variant,
+      face: Math.atan2(dx, -dz),
+      steerSide: seededHash(p.x * 2.3 + 41, p.z * 4.9 - 12) > .5 ? 1 : -1
+    });
   }
 
   function lerpAngle(a, b, t) {
     let d = ((b - a + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
     return a + d * t;
+  }
+
+  function enemyStepTarget(e, nx, nz) {
+    const gx = Math.floor(nx), gz = Math.floor(nz);
+    if (!inWorldXZ(gx, gz)) return null;
+    generateChunk(chunkCoord(gx), chunkCoord(gz));
+    const ground = topSolidY(gx, gz);
+    const standY = ground + 1;
+    if (getBlock(gx, standY, gz) === BLOCK.WATER || getBlock(gx, standY + 1, gz) === BLOCK.WATER) return null;
+    if (blocksMovement(getBlock(gx, standY, gz)) || blocksMovement(getBlock(gx, standY + 1, gz))) return null;
+    if (standY - e.y > 1.35 || e.y - standY > 3.25) return null;
+    return { x: nx, y: standY, z: nz };
+  }
+
+  function moveEnemyToward(e, dx, dz, dist, dt, backingOff) {
+    const dir = backingOff ? -1 : 1;
+    const ux = (dx / dist) * dir;
+    const uz = (dz / dist) * dir;
+    const side = e.steerSide || 1;
+    const baseStep = e.speed * surfaceMoveMultiplier(e.x, e.z) * dt * (backingOff ? 1.45 : 1);
+    const diagA = Math.hypot(ux - uz * side, uz + ux * side) || 1;
+    const diagB = Math.hypot(ux + uz * side, uz - ux * side) || 1;
+    const candidates = [
+      [ux, uz, 1.00],
+      [-uz * side, ux * side, .86],
+      [uz * side, -ux * side, .86],
+      [(ux - uz * side) / diagA, (uz + ux * side) / diagA, .92],
+      [(ux + uz * side) / diagB, (uz - ux * side) / diagB, .92]
+    ];
+    let best = null, bestScore = Infinity;
+    for (const c of candidates) {
+      const target = enemyStepTarget(e, e.x + c[0] * baseStep * c[2], e.z + c[1] * baseStep * c[2]);
+      if (!target) continue;
+      const score = backingOff
+        ? -Math.hypot(player.pos[0] - target.x, player.pos[2] - target.z)
+        : Math.hypot(player.pos[0] - target.x, player.pos[2] - target.z);
+      if (score < bestScore) { bestScore = score; best = target; }
+    }
+    if (!best) {
+      e.steerSide = -(e.steerSide || 1);
+      return;
+    }
+    e.x = best.x;
+    e.z = best.z;
+    e.y += (best.y - e.y) * Math.min(1, dt * 8);
   }
 
   function updateEnemies(dt) {
@@ -1469,28 +1551,30 @@
     }
     for (const e of enemies) {
       e.phase += dt;
+      if ((e.emerge || 0) < 1) {
+        e.emerge = Math.min(1, (e.emerge || 0) + dt * 1.75);
+        const eased = 1 - Math.pow(1 - e.emerge, 2);
+        e.y = e.spawnY + (e.targetY - e.spawnY) * eased;
+        if (frameCounter % 8 === 0) spawnParticles(e.x, e.targetY - .08, e.z, 1, 22);
+        continue;
+      }
       const dx = player.pos[0] - e.x, dz = player.pos[2] - e.z;
       const dist = Math.hypot(dx, dz) || 1;
       const targetFace = Math.atan2(dx, -dz);
       e.face = lerpAngle(e.face ?? targetFace, targetFace, Math.min(1, dt * 9));
       if (dist < 70) {
         const backingOff = e.retreat > 0;
-        const step = e.speed * dt * (backingOff ? 1.45 : 1);
-        const dir = backingOff ? -1 : 1;
-        const nx = e.x + (dx / dist) * step * dir;
-        const nz = e.z + (dz / dist) * step * dir;
-        const gx = Math.floor(nx), gz = Math.floor(nz);
-        const ground = topSolidY(gx, gz);
-        if (ground > WATER_LEVEL - 1 && ground < e.y + 2.5) {
-          e.x = nx; e.z = nz; e.y += ((ground + 1) - e.y) * Math.min(1, dt * 8);
-        }
+        moveEnemyToward(e, dx, dz, dist, dt, backingOff);
       }
       e.retreat = Math.max(0, (e.retreat || 0) - dt);
       e.attack -= dt;
-      if (dist < (e.big ? 1.75 : 1.58) && Math.abs(player.pos[1] - e.y) < 2.25 && e.attack <= 0) {
-        damagePlayer(e.big ? 22 : 14, 'bite');
-        e.attack = e.big ? 1.25 : .9;
-        e.retreat = e.big ? .42 : .34;
+      const stats = e.variant || enemyVariantStats(e.x, e.z);
+      const attackRange = e.big ? 1.82 : (stats.kind === 'speedy' ? 1.42 : 1.58);
+      const attackDist = Math.hypot(player.pos[0] - e.x, player.pos[2] - e.z) || 1;
+      if (attackDist < attackRange && Math.abs(player.pos[1] - e.y) < 2.25 && e.attack <= 0) {
+        damagePlayer(stats.damage, 'bite');
+        e.attack = stats.attackCooldown;
+        e.retreat = stats.retreat;
       }
     }
     enemies = enemies.filter(e => e.hp > 0 && Math.hypot(e.x - player.pos[0], e.z - player.pos[2]) < 130);
@@ -1547,7 +1631,6 @@
     player.reloading = false;
     player.reloadTimer = 0;
     player.shotCooldown = 0;
-    mission.actionHeld = false;
     mission.disableProgress = 0;
     mission.toxinRemainder = 0;
     mission.toxinSoundTicks = 0;
@@ -1609,9 +1692,10 @@
 
   function entityHitAt(px, py, pz) {
     for (const e of enemies) {
-      const sx = e.big ? .76 : .58;
-      const top = e.y + (e.big ? 2.38 : 2.02);
-      const headLine = e.y + (e.big ? 1.42 : 1.26);
+      const scale = (e.variant && e.variant.scale) || (e.big ? 1.18 : 1);
+      const sx = .58 * scale;
+      const top = e.y + 2.02 * scale;
+      const headLine = e.y + 1.26 * scale;
       if (Math.abs(px - e.x) < sx && Math.abs(pz - e.z) < sx && py >= e.y && py <= top) return { enemy: e, head: py >= headLine };
     }
     return null;
@@ -1786,10 +1870,10 @@
 
   function setWeaponUnlocked(unlocked) {
     document.body.classList.toggle('no-gun', !unlocked);
-    document.body.classList.toggle('action-mode', !unlocked);
+    document.body.classList.toggle('action-mode', false);
     if (touchShoot) {
       touchShoot.textContent = '';
-      touchShoot.setAttribute('aria-label', unlocked ? 'Shoot' : 'Action');
+      touchShoot.setAttribute('aria-label', unlocked ? 'Shoot' : 'Blaster locked');
     }
     if (unlocked) {
       player.mag = player.magSize;
@@ -1805,32 +1889,21 @@
     }
   }
 
-  function updateActionButtonState() {
+  function updateShootButtonState() {
     if (!touchShoot) return;
     const unlocked = gunUnlocked();
-    const ready = !mission.insertionActive && (unlocked || playerNearMachine());
+    const ready = !mission.insertionActive && unlocked;
     touchShoot.classList.toggle('unavailable', !ready);
     touchShoot.setAttribute('aria-disabled', ready ? 'false' : 'true');
   }
 
-  function missionCommandNothingHere() {
-    if (mission.commandMessageCooldown > 0) return;
-    mission.commandMessageCooldown = 2.1;
-    scorePop('MISSION COMMAND', 'small');
-    showToast('Mission Command: nothing to do here. Find the source of the toxin.');
-  }
-
-  function beginMissionAction() {
+  function beginTouchShoot() {
     if (mission.insertionActive) return;
     if (gunUnlocked()) {
       shoot();
       return;
     }
-    if (playerNearMachine()) {
-      mission.actionHeld = true;
-      return;
-    }
-    missionCommandNothingHere();
+    showToast('Find the blinking red shutdown block at the source.');
   }
 
   function spawnInitialWave() {
@@ -1854,7 +1927,6 @@
   function completeMissionIsland() {
     if (mission.completed) return;
     mission.completed = true;
-    mission.actionHeld = false;
     nextSpawnTimer = 999;
     clearRemainingMissionEnemies();
     document.body.classList.add('stage-transition');
@@ -1946,7 +2018,6 @@
     const infectedGoal = currentInfectedGoal();
     mission.machine.active = false;
     mission.disableProgress = 0;
-    mission.actionHeld = false;
     disableOverlay.classList.remove('show');
     // Gun unlock happens only after shutdown: the spire detonates, its blocks
     // are cleared, a supply crate takes its footprint, and zombie spawning begins.
@@ -2032,11 +2103,11 @@
       disableOverlay.classList.remove('show');
       return;
     }
-    const near = playerNearMachine();
-    mission.phase = near ? PHASE_DISABLE_MACHINE : PHASE_DROP;
-    // Disable interaction requires a held action. Releasing or stepping away
-    // resets the meter so the player has a clear committed shutdown moment.
-    if (near && (keys.KeyE || mission.actionHeld)) {
+    const onPad = playerOnMachinePad();
+    mission.phase = onPad ? PHASE_DISABLE_MACHINE : PHASE_DROP;
+    // Shutdown is pressure-pad based. Step off the blinking red block and the
+    // meter resets, making the disable moment physical and readable.
+    if (onPad) {
       mission.disableProgress = Math.min(1, mission.disableProgress + dt / MACHINE_DISABLE_SECONDS);
       disableOverlay.classList.add('show');
       disableFill.style.width = (mission.disableProgress * 100).toFixed(1) + '%';
@@ -2068,9 +2139,9 @@
       objectiveMeta.textContent = mission.completed ? 'Island breach contained' : (mission.hudMeta || 'Gun online');
       return;
     }
-    objectiveText.textContent = playerNearMachine() ? (touchMode ? '[ hold action ]' : '[ hold E ]') : '[ locate source ]';
-    objectiveMeta.textContent = playerNearMachine()
-      ? (touchMode ? 'Hold ACTION to disable' : 'Hold E to disable')
+    objectiveText.textContent = playerOnMachinePad() ? '[ shutdown ]' : '[ find red block ]';
+    objectiveMeta.textContent = playerOnMachinePad()
+      ? 'Shutdown meter active'
       : (mission.hudMeta || 'Toxin exposure active');
   }
 
@@ -2101,7 +2172,6 @@
     }
     if (player.invuln > 0) player.invuln -= dt;
     if (player.shotCooldown > 0) player.shotCooldown -= dt;
-    if (mission.commandMessageCooldown > 0) mission.commandMessageCooldown -= dt;
     if (player.reloading) {
       player.reloadTimer -= dt;
       reloadText.textContent = 'Reloading ' + Math.max(0, player.reloadTimer).toFixed(1) + 's';
@@ -2137,7 +2207,7 @@
     healthBigFill.style.width = Math.max(0, player.health) + '%';
     updateAmmoDisplay();
     updateMissionHud();
-    updateActionButtonState();
+    updateShootButtonState();
   }
 
   function bindVoxelMesh(mesh) {
@@ -2173,19 +2243,19 @@
   function buildDynamicMesh(time) {
     const arr = [];
     for (const e of enemies) {
-      const scale = e.big ? 1.18 : 1;
+      const stats = e.variant || enemyVariantStats(e.x, e.z);
+      const scale = stats.scale || 1;
       const bob = Math.sin(e.phase * 5) * .05;
       const x = e.x, y = e.y + bob, z = e.z;
       // Rotated block-monster silhouette: it turns as it moves, so the eye face points at you.
       const yaw = e.face ?? Math.atan2(player.pos[0] - e.x, -(player.pos[2] - e.z));
-      const variant = e.variant || 0;
-      const bodyType = variant === 1 ? 18 : (variant === 2 ? 19 : 10);
-      const limbType = variant === 2 ? 19 : (variant === 3 ? 18 : 11);
+      const bodyType = stats.bodyType || 10;
+      const limbType = stats.limbType || 11;
       const blinkCycle = 2.7 + (e.blinkSeed || 0) * 2.2;
       const blinkPhase = (time + (e.blinkSeed || 0) * 9.0) % blinkCycle;
       const doubleBlink = (e.blinkSeed || 0) > .68 && blinkPhase > .20 && blinkPhase < .30;
       const blinking = blinkPhase < .10 || doubleBlink;
-      const eyeType = blinking ? 21 : (variant === 3 ? 20 : 12);
+      const eyeType = blinking ? 21 : (stats.eyeType || 12);
       pushBoxY(arr, x, y, z, -.18*scale, 0, -.18*scale, .22*scale, .45*scale, .22*scale, yaw, limbType);
       pushBoxY(arr, x, y, z,  .02*scale, 0, -.18*scale, .22*scale, .45*scale, .22*scale, yaw, limbType);
       pushBoxY(arr, x, y, z, -.18*scale, 0,  .02*scale, .22*scale, .45*scale, .22*scale, yaw, limbType);
@@ -2311,12 +2381,10 @@
     mission.phase = PHASE_DROP;
     mission.machine = null;
     mission.supplyCrate = null;
-    mission.actionHeld = false;
     mission.disableProgress = 0;
     mission.toxinRemainder = 0;
     mission.toxinSoundTicks = 0;
     mission.smokeTimer = 0;
-    mission.commandMessageCooldown = 0;
     mission.firstWaveSpawned = false;
     mission.insertionActive = false;
     mission.insertionTargetY = 0;
@@ -2367,7 +2435,7 @@
     queueObjectiveBriefing({
       title: 'Locate the contamination source',
       meta: currentIslandLabel() + ' // ' + currentBiomeLabel() + ' // Drop Phase',
-      body: 'Mission Command: toxin readings are climbing. You are unarmed until the source is shut down. Find the blinking metal spire on the high ground and hold ' + disableControlLabel() + ' to disable it.',
+      body: 'Mission Command: toxin readings are climbing. You are unarmed until the source is shut down. Find the blinking metal spire on the high ground, then jump onto the blinking red block to disable it.',
       hudTitle: 'Locate the contamination source',
       hudMeta: 'Toxin exposure active',
       afterOk: startInsertionDrop
@@ -2431,7 +2499,6 @@
       return;
     }
     keys[e.code] = true;
-    if (e.code === 'KeyE' && !e.repeat && !gunUnlocked() && !playerNearMachine()) missionCommandNothingHere();
     if (e.code === 'KeyR' && !e.repeat) startReload();
     if (e.code === 'KeyN' && !e.repeat) beginWorldRebuild(nextMissionSeed());
   });
@@ -2485,8 +2552,8 @@
     btn.addEventListener('pointercancel', clear);
   }
   bindTouchButton(touchShoot, () => {
-    beginMissionAction();
-  }, () => { mission.actionHeld = false; });
+    beginTouchShoot();
+  }, () => {});
   bindTouchButton(touchJump, () => { touchInput.jump = true; }, () => { touchInput.jump = false; });
 
   canvas.addEventListener('pointerdown', (e) => {
