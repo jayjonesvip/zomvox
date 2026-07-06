@@ -185,7 +185,7 @@ window.ZOMVOX_CONFIG = {
       Premium Grip reduces this by premiumGripMultiplier.
       Values above 1 are clamped so the upgrade cannot add recoil.
     */
-    recoilAmount: 0.15,
+    recoilAmount: 0.25,
 
     /*
       Upgrade tuning.
@@ -215,7 +215,7 @@ window.ZOMVOX_CONFIG = {
       Example:
       5 means the horde level increases every 5 kills.
     */
-    hordeKillsPerLevel: 5,
+    hordeKillsPerLevel: 4,
 
     /*
       Extra enemy capacity added each horde level.
@@ -246,7 +246,7 @@ window.ZOMVOX_CONFIG = {
 
       These line up with islandSeeds by position.
     */
-    biomes: ['ashlands', 'dunes', 'rocky', 'forest', 'swamp'],
+    biomes: ['forest', 'rocky', 'dunes', 'swamp', 'ashlands'],
 
     /*
       Health drained per second while the contamination machine is active.
