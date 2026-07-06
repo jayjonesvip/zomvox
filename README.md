@@ -25,7 +25,7 @@ Desktop play uses mouse and keyboard. Mobile play is designed for landscape orie
 - Procedural voxel terrain with grass, dirt, stone, sand, water, wood, leaves, bricks, glow markers, trees, and shorelines that switch between safe sand and dangerous rock.
 - Fixed-size chunk generation so the game area stays bounded and performance remains predictable.
 - Player movement is clamped inside the generated world.
-- Chunk-level mesh rebuilding for destructible blocks.
+- Targeted mesh rebuilding for mission set pieces and world updates.
 - Mission-based opening loop with military-style objective briefings, cinematic insertion drops, a no-gun exploration phase, metal-spire shutdown objective, explosive supply crate reward, delayed zombie threat, and escalating redeployment objectives across five seeded islands.
 - Compact ammo HUD on desktop and mobile, plus a six-round blaster magazine with reserve ammo and a 12-round extended-mag unlock after 25 kills.
 - Ammo pickups that add six rounds at a time.
@@ -82,7 +82,7 @@ Common tuning options live in `config.js` under `window.ZOMVOX_CONFIG`. Edit tha
 
 ```js
 window.ZOMVOX_CONFIG = {
-  buildVersion: '2026.07.05.5',
+  buildVersion: '2026.07.05.6',
   initialSeed: 729641,
 
   environment: {

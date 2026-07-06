@@ -17,7 +17,7 @@ window.ZOMVOX_CONFIG = {
     Bump this when you make visible changes so you can tell the browser
     loaded the newest version.
   */
-  buildVersion: '2026.07.05.5',
+  buildVersion: '2026.07.05.6',
 
   /*
     Seed used for deterministic world generation.

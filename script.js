@@ -107,7 +107,6 @@
     BRICK: 8,
     LAMP: 9,
     METAL: 14,
-    CRACKED_STONE: 22,
     RED_LIGHT: 24
   };
 
@@ -202,8 +201,7 @@
   let touchMode = matchMedia('(pointer: coarse)').matches;
   let keys = Object.create(null);
   const touchInput = { moveX: 0, moveY: 0, jump: false, sprint: false, lookId: null, lookX: 0, lookY: 0, stickId: null };
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.05.5');
-  let lastTarget = null;
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.05.6');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -683,19 +681,7 @@
       gl_FragColor = vec4(color, alpha);
     }
   `;
-  const lineVS = `
-    attribute vec3 aPosition;
-    uniform mat4 uMVP;
-    void main(){ gl_Position = uMVP * vec4(aPosition, 1.0); }
-  `;
-  const lineFS = `
-    precision mediump float;
-    uniform vec4 uColor;
-    void main(){ gl_FragColor = uColor; }
-  `;
-
   const voxelProgram = createProgram(voxelVS, voxelFS);
-  const lineProgram = createProgram(lineVS, lineFS);
   const loc = {
     pos: gl.getAttribLocation(voxelProgram, 'aPosition'),
     normal: gl.getAttribLocation(voxelProgram, 'aNormal'),
@@ -710,12 +696,6 @@
     fog: gl.getUniformLocation(voxelProgram, 'uFog'),
     lava: gl.getUniformLocation(voxelProgram, 'uLava')
   };
-  const lineLoc = {
-    pos: gl.getAttribLocation(lineProgram, 'aPosition'),
-    mvp: gl.getUniformLocation(lineProgram, 'uMVP'),
-    color: gl.getUniformLocation(lineProgram, 'uColor')
-  };
-  const lineBuffer = gl.createBuffer();
   const dynamicBuffer = gl.createBuffer();
 
   function mat4Perspective(fovy, aspect, near, far) {
@@ -1434,7 +1414,6 @@
   function raycastProjectile(maxDist) {
     const e = eyePos();
     const d = lookDir();
-    let prevBlock = null;
     for (let t = 0; t <= maxDist; t += 0.065) {
       const px = e[0] + d[0] * t;
       const py = e[1] + d[1] * t;
@@ -1443,8 +1422,7 @@
       if (hitEnemy) return { kind: 'enemy', enemy: hitEnemy.enemy, head: hitEnemy.head, point: [px, py, pz], dist: t };
       const bx = Math.floor(px), by = Math.floor(py), bz = Math.floor(pz);
       const type = getBlock(bx, by, bz);
-      if (type && type !== BLOCK.WATER) return { kind: 'block', x: bx, y: by, z: bz, type, point: [px, py, pz], prev: prevBlock, dist: t };
-      prevBlock = { x: bx, y: by, z: bz };
+      if (type && type !== BLOCK.WATER) return { kind: 'surface', type, point: [px, py, pz], dist: t };
     }
     return { kind: 'miss', point: [e[0] + d[0] * maxDist, e[1] + d[1] * maxDist, e[2] + d[2] * maxDist] };
   }
@@ -1515,16 +1493,9 @@
       } else {
         pulseHitMarker('hit');
       }
-    } else if (hit.kind === 'block') {
-      player.score += 25;
+    } else if (hit.kind === 'surface') {
+      spawnParticles(hit.point[0], hit.point[1], hit.point[2], 5, hit.type);
       sound('block');
-      if (hit.y > 0 && hit.type !== BLOCK.LAMP) {
-        setBlock(hit.x, hit.y, hit.z, 0);
-        spawnParticles(hit.point[0], hit.point[1], hit.point[2], 6, 15);
-        queueRebuild(hit.x, hit.z);
-      } else {
-        spawnParticles(hit.point[0], hit.point[1], hit.point[2], 3, 15);
-      }
     }
     if (player.mag <= 0 && player.reserve > 0) startReload();
   }
@@ -1879,20 +1850,6 @@
       : (mission.hudMeta || 'Toxin exposure active');
   }
 
-  function aimTarget(maxDist) {
-    const e = eyePos();
-    const d = lookDir();
-    for (let t = 0; t <= maxDist; t += 0.09) {
-      const px = e[0] + d[0] * t, py = e[1] + d[1] * t, pz = e[2] + d[2] * t;
-      const enemy = entityHitAt(px, py, pz);
-      if (enemy) return { kind: 'enemy', hp: enemy.enemy.hp, maxHp: enemy.enemy.maxHp, head: enemy.head };
-      const bx = Math.floor(px), by = Math.floor(py), bz = Math.floor(pz);
-      const type = getBlock(bx, by, bz);
-      if (type && type !== BLOCK.WATER) return { kind: 'block', x: bx, y: by, z: bz, type };
-    }
-    return null;
-  }
-
   function update(dt) {
     if (worldRebuildState.active) {
       updateWorldRebuild(dt);
@@ -1931,25 +1888,9 @@
     updatePickups(dt);
     updateMachineSmoke(dt);
     updateParticles(dt);
-    lastTarget = aimTarget(42);
     updateHud();
   }
 
-  function blockName(type) {
-    if (type === BLOCK.WATER) return 'Water';
-    if (type === BLOCK.GRASS) return 'Grass';
-    if (type === BLOCK.DIRT) return 'Dirt';
-    if (type === BLOCK.STONE) return 'Stone';
-    if (type === BLOCK.WOOD) return 'Wood';
-    if (type === BLOCK.LEAF) return 'Leaves';
-    if (type === BLOCK.SAND) return 'Sand';
-    if (type === BLOCK.BRICK) return 'Brick';
-    if (type === BLOCK.LAMP) return 'Glow marker';
-    if (type === BLOCK.METAL) return 'Metal';
-    if (type === BLOCK.CRACKED_STONE) return 'Cracked stone';
-    if (type === BLOCK.RED_LIGHT) return 'Red beacon';
-    return 'Block';
-  }
   function updateAmmoDisplay() {
     const bullets = bulletRack.children;
     for (let i = 0; i < player.magSize; i++) {
@@ -2053,28 +1994,6 @@
     meshes.dynamic = { buffer: dynamicBuffer, count: arr.length / 9 };
   }
 
-  function cubeOutlineVertices(x, y, z) {
-    const e = 0.004;
-    const x0 = x - e, y0 = y - e, z0 = z - e, x1 = x + 1 + e, y1 = y + 1 + e, z1 = z + 1 + e;
-    return new Float32Array([
-      x0,y0,z0, x1,y0,z0,  x1,y0,z0, x1,y0,z1,  x1,y0,z1, x0,y0,z1,  x0,y0,z1, x0,y0,z0,
-      x0,y1,z0, x1,y1,z0,  x1,y1,z0, x1,y1,z1,  x1,y1,z1, x0,y1,z1,  x0,y1,z1, x0,y1,z0,
-      x0,y0,z0, x0,y1,z0,  x1,y0,z0, x1,y1,z0,  x1,y0,z1, x1,y1,z1,  x0,y0,z1, x0,y1,z1
-    ]);
-  }
-  function drawOutline(mvp) {
-    if (!lastTarget || lastTarget.kind !== 'block') return;
-    gl.useProgram(lineProgram);
-    gl.uniformMatrix4fv(lineLoc.mvp, false, mvp);
-    gl.uniform4f(lineLoc.color, 1, 1, 1, 0.75);
-    const verts = cubeOutlineVertices(lastTarget.x, lastTarget.y, lastTarget.z);
-    gl.bindBuffer(gl.ARRAY_BUFFER, lineBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, verts, gl.DYNAMIC_DRAW);
-    gl.enableVertexAttribArray(lineLoc.pos);
-    gl.vertexAttribPointer(lineLoc.pos, 3, gl.FLOAT, false, 0, 0);
-    gl.drawArrays(gl.LINES, 0, verts.length / 3);
-  }
-
   function render(time) {
     resize();
     const cycleLengthMs = CYCLE_HALF_DAY_MS * 2;
@@ -2128,8 +2047,6 @@
     drawWorldMeshes('water');
     gl.depthMask(true);
     gl.disable(gl.BLEND);
-
-    drawOutline(mvp);
   }
 
   function loop(now) {
