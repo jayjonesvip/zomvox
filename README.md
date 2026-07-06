@@ -6,7 +6,7 @@
 ![WebGL](https://img.shields.io/badge/WebGL-voxel_engine-990000?style=for-the-badge&logo=webgl&logoColor=white)
 ![100% Vibe Coded](https://img.shields.io/badge/100%25-vibe_coded-ff3f7f?style=for-the-badge)
 
-**ZomVox: Zombies and Voxels** is a browser-based voxel zombie survival shooter built for quick static hosting. The player drops onto a fixed-size voxel island, hunts down a blinking metal contamination spire, jumps onto its red shutdown block under toxin pressure, then unlocks the blaster and fights roaming voxel zombies.
+**ZomVox: Zombies and Voxels** is a browser-based voxel zombie survival shooter built for quick static hosting. The player drops onto a fixed-size voxel island, hunts down a blinking metal contamination spire, jumps onto its yellow shutdown block under toxin pressure, then unlocks the blaster and fights roaming voxel zombies.
 
 The game runs directly in the browser with WebGL. There is no build step, package install, bundler, backend, or asset pipeline required.
 
@@ -47,7 +47,7 @@ Desktop play uses mouse and keyboard. Mobile play is designed for landscape orie
 
 - `WASD` or arrow keys: move
 - Mouse: aim
-- Jump onto the blinking red block: disable the contamination source
+- Jump onto the translucent yellow block: disable the contamination source
 - Left click: shoot
 - Right click or `R`: reload
 - `Space`: jump
@@ -83,7 +83,7 @@ Common tuning options live in `config.js` under `window.ZOMVOX_CONFIG`. Edit tha
 
 ```js
 window.ZOMVOX_CONFIG = {
-  buildVersion: '2026.07.06.9',
+  buildVersion: '2026.07.06.10',
   initialSeed: 729641,
 
   environment: {
