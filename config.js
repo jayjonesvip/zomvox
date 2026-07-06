@@ -197,7 +197,7 @@ window.ZOMVOX_CONFIG = {
 
       Clearing the infected objective redeploys to the next seed.
     */
-    islandSeeds: [29190007, 482177, 735331, 918244, 126509],
+    islandSeeds: [29190, 482177, 735331, 918244, 126509],
 
     /*
       Health drained per second while the contamination machine is active.
