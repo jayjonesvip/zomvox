@@ -2332,6 +2332,18 @@
     meshes.dynamic = { buffer: dynamicBuffer, count: arr.length / 9 };
   }
 
+  function getWaterStyleForBiome() {
+    const biome = currentBiome();
+  
+    // 0 = blue water
+    // 1 = red water
+    // 2 = green swamp water
+  
+    if (biome === 'swamp') return 2;
+    if (biome === 'rocky' || biome === 'ashlands') return 1;
+    return 0; // forest and anything else
+  }
+
   function render(time) {
     resize();
     const cycleLengthMs = CYCLE_HALF_DAY_MS * 2;
@@ -2371,7 +2383,7 @@
     gl.uniform3f(loc.sky, sky[0], sky[1], sky[2]);
     gl.uniform1f(loc.day, dayAmount);
     gl.uniform1f(loc.fog, GAME_OPTIONS.fog ? 1 : 0);
-    gl.uniform1f(loc.waterStyle, currentBiome() === 'swamp' ? 2 : (GAME_OPTIONS.dangerousWater ? 1 : 0));
+    gl.uniform1f(loc.waterStyle, getWaterStyleForBiome());
     gl.disable(gl.BLEND);
     gl.depthMask(true);
     drawWorldMeshes('opaque');
