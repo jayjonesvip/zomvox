@@ -2454,6 +2454,46 @@ function currentWaterIsDangerous() {
     requestAnimationFrame(loop);
   }
 
+  function placeDropBeacon(cx = 2, cz = 2) {
+  const baseY = topSolidY(cx, cz) + 1;
+
+  // Clear a little space around the beacon
+  for (let dx = -1; dx <= 1; dx++) {
+    for (let dz = -1; dz <= 1; dz++) {
+      for (let y = baseY; y <= baseY + 7; y++) {
+        setBlock(cx + dx, y, cz + dz, 0, true);
+      }
+    }
+  }
+
+  // 3x3 metal landing base
+  for (let dx = -1; dx <= 1; dx++) {
+    for (let dz = -1; dz <= 1; dz++) {
+      setBlock(cx + dx, baseY, cz + dz, BLOCK.METAL, true);
+    }
+  }
+
+  // Thin beacon pole
+  for (let y = baseY + 1; y <= baseY + 4; y++) {
+    setBlock(cx, y, cz, BLOCK.METAL, true);
+  }
+
+  // Yellow beacon lamp cap
+  setBlock(cx, baseY + 5, cz, BLOCK.LAMP, true);
+
+  // Red guide lights around the top
+  setBlock(cx + 1, baseY + 4, cz, BLOCK.RED_LIGHT, true);
+  setBlock(cx - 1, baseY + 4, cz, BLOCK.RED_LIGHT, true);
+  setBlock(cx, baseY + 4, cz + 1, BLOCK.RED_LIGHT, true);
+  setBlock(cx, baseY + 4, cz - 1, BLOCK.RED_LIGHT, true);
+
+  // Small support feet / antenna-ish shape
+  setBlock(cx + 1, baseY + 1, cz, BLOCK.METAL, true);
+  setBlock(cx - 1, baseY + 1, cz, BLOCK.METAL, true);
+  setBlock(cx, baseY + 1, cz + 1, BLOCK.METAL, true);
+  setBlock(cx, baseY + 1, cz - 1, BLOCK.METAL, true);
+}
+
   function generateWorld(seed) {
     currentSeed = seed;
     mission.islandIndex = missionSeedIndex(seed);
@@ -2520,8 +2560,9 @@ function currentWaterIsDangerous() {
     // Center landmark and starting chunks.
     player.pos = [0.5, 18, 0.5];
     ensureChunks(true);
-    for (let y = WATER_LEVEL + 1; y <= WATER_LEVEL + 5; y++) setBlock(2, y, 2, BLOCK.BRICK, true);
-    setBlock(2, WATER_LEVEL + 6, 2, BLOCK.LAMP, true);
+    
+    placeDropBeacon(2, 2);
+    
     placeContaminationMachine();
     player.pos = [0.5, topSolidY(0, 0) + 2.2, 0.5];
     player.vel = [0, 0, 0];
