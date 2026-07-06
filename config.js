@@ -342,7 +342,7 @@ window.ZOMVOX_CONFIG = {
       bite: 'freesound_community-zombie-bite-96528.mp3',
       hurt: 'hurt.mp3',
       toxin: null,
-      land: null,
+      land: 'freesound_community-human-impact-on-ground-6982.mp3',
       objectiveClear: 'floraphonic-arcade-ui-6-229503.mp3',
       wave: null,
       heartbeat: null
