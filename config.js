@@ -17,7 +17,7 @@ window.ZOMVOX_CONFIG = {
     Bump this when you make visible changes so you can tell the browser
     loaded the newest version.
   */
-  buildVersion: '2026.07.06.9',
+  buildVersion: '2026.07.06.10',
 
   /*
     Seed used for deterministic world generation.
@@ -254,7 +254,7 @@ window.ZOMVOX_CONFIG = {
     toxinDamagePerSecond: 1.15,
 
     /*
-      Seconds the player must stand on the blinking red shutdown block.
+      Seconds the player must stand on the translucent yellow shutdown block.
     */
     disableSeconds: 3,
 

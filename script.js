@@ -117,7 +117,9 @@
     CACTUS: 25,
     MUD: 26,
     ASH: 27,
-    DEAD_WOOD: 28
+    DEAD_WOOD: 28,
+    DARK_RED: 29,
+    SHUTDOWN_PAD: 30
   };
 
   const CHUNK_SIZE = Math.max(4, Math.floor(configNumber(WORLD_CONFIG, 'chunkSize', 16)));
@@ -225,7 +227,7 @@
   let touchMode = matchMedia('(pointer: coarse)').matches;
   let keys = Object.create(null);
   const touchInput = { moveX: 0, moveY: 0, jump: false, lookId: null, lookX: 0, lookY: 0, stickId: null };
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.06.9');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.06.10');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -768,6 +770,8 @@
       if(t < 26.5) return vec3(0.22, 0.18, 0.12); /* swamp mud */
       if(t < 27.5) return vec3(0.12, 0.13, 0.13); /* ash */
       if(t < 28.5) return vec3(0.18, 0.13, 0.09); /* dead wood */
+      if(t < 29.5) return vec3(0.20, 0.015, 0.012); /* dead beacon */
+      if(t < 30.5) return vec3(1.0, 0.86, 0.16) * (0.58 + step(0.45, sin(uTime * 7.0)) * 0.38); /* shutdown pad */
       return vec3(1.0, 0.45, 0.18); /* particles */
     }
     void main(){
@@ -789,6 +793,7 @@
       if(vType > 23.5 && vType < 24.5) color += vec3(0.70, 0.0, 0.0) * step(0.45, sin(uTime * 6.0));
       if(vType > 24.5 && vType < 25.5) color += vec3(0.02, 0.08, 0.02);
       if(vType > 26.5 && vType < 27.5) color *= 0.78 + step(0.62, hash(floor(vWorld.xz * 2.6 + vWorld.yy))) * 0.35;
+      if(vType > 29.5 && vType < 30.5) color += vec3(0.45, 0.32, 0.02) * step(0.45, sin(uTime * 7.0));
       float edge = gridLine(vUv);
       color *= mix(0.58, 1.0, edge);
       float sun = max(dot(n, normalize(uLightDir)), 0.0);
@@ -798,6 +803,7 @@
       if(vType > 11.5 && vType < 12.5) light += 0.75;
       if(vType > 19.5 && vType < 20.5) light += 0.75;
       if(vType > 23.5 && vType < 24.5) light += 1.05;
+      if(vType > 29.5 && vType < 30.5) light += 0.55;
       if(vType > 12.5) light += 0.22;
       color *= light;
       if(uFog > 0.5){
@@ -806,7 +812,7 @@
         color = mix(color, uSky, fog);
       }
       color += vec3(0.03, 0.05, 0.10) * (1.0 - uDay);
-      float alpha = (vType > 6.5 && vType < 7.5) ? (uWaterStyle > 1.5 ? 0.68 : mix(0.63, 0.72, uWaterStyle)) : 1.0;
+      float alpha = (vType > 29.5 && vType < 30.5) ? 0.62 : ((vType > 6.5 && vType < 7.5) ? (uWaterStyle > 1.5 ? 0.68 : mix(0.63, 0.72, uWaterStyle)) : 1.0);
       gl_FragColor = vec4(color, alpha);
     }
   `;
@@ -1180,20 +1186,34 @@
     const spot = highestMissionPoint();
     const x = spot.x, z = spot.z, baseY = terrainHeight(x, z) + 1;
     const padX = x, padZ = z - 4, padY = baseY;
-    const machineBlocks = [];
+    const towerBlocks = [];
+    const beaconBlocks = [];
+    const padBlocks = [];
     prepareMissionClearing(x, baseY, z);
-    // Compact silo/smoke-stack: a four-block-square grey tower with a red
-    // beacon cap and a separate blinking shutdown block in front.
+    // Compact silo/smoke-stack: a 3x3 grey tower with a red beacon cap and
+    // a separate translucent yellow shutdown block in front.
     for (let y = 0; y < 15; y++) {
-      for (let dx = -1; dx <= 2; dx++) {
-        for (let dz = -1; dz <= 2; dz++) {
-          setMachineBlock(x + dx, baseY + y, z + dz, y < 14 ? BLOCK.METAL : BLOCK.RED_LIGHT, machineBlocks);
+      for (let dx = -1; dx <= 1; dx++) {
+        for (let dz = -1; dz <= 1; dz++) {
+          const blocks = y < 14 ? towerBlocks : beaconBlocks;
+          setMachineBlock(x + dx, baseY + y, z + dz, y < 14 ? BLOCK.METAL : BLOCK.RED_LIGHT, blocks);
         }
       }
     }
-    // Shutdown is triggered by standing on the blinking red pressure block.
-    setMachineBlock(padX, padY, padZ, BLOCK.RED_LIGHT, machineBlocks);
-    mission.machine = { x: x + .5, y: baseY, z: z + .5, smokeY: baseY + 15.8, active: true, blocks: machineBlocks, pad: { x: padX, y: padY, z: padZ } };
+    // Shutdown is triggered by standing on the translucent yellow pressure block.
+    setMachineBlock(padX, padY, padZ, BLOCK.SHUTDOWN_PAD, padBlocks);
+    mission.machine = {
+      x: x + .5,
+      y: baseY,
+      z: z + .5,
+      smokeY: baseY + 15.8,
+      active: true,
+      blocks: [...towerBlocks, ...beaconBlocks, ...padBlocks],
+      towerBlocks,
+      beaconBlocks,
+      padBlocks,
+      pad: { x: padX, y: padY, z: padZ }
+    };
     mission.supplyCrate = null;
     queueRebuild();
   }
@@ -1221,6 +1241,9 @@
     if (!neighborType) return false;
     if (type === BLOCK.WATER) return true;
     return neighborType !== BLOCK.WATER;
+  }
+  function usesTransparentMesh(type) {
+    return type === BLOCK.WATER || type === BLOCK.SHUTDOWN_PAD;
   }
   function pushFace(arr, x, y, z, face, type) {
     for (const idx of tri) {
@@ -1287,7 +1310,7 @@
         for (let y = 0; y <= MAX_Y + 26; y++) {
           const type = getBlock(x, y, z);
           if (!type) continue;
-          const arr = type === BLOCK.WATER ? water : opaque;
+          const arr = usesTransparentMesh(type) ? water : opaque;
           for (const f of faces) {
             const nt = getBlock(x + f.n[0], y + f.n[1], z + f.n[2]);
             if (!neighborHidesFace(type, nt)) pushFace(arr, x, y, z, f, type);
@@ -1447,7 +1470,8 @@
       const y = topSolidY(x, z) + 1;
       const surface = getBlock(x, y - 1, z);
       const propSurface = surface === BLOCK.WOOD || surface === BLOCK.CACTUS || surface === BLOCK.DEAD_WOOD ||
-        surface === BLOCK.METAL || surface === BLOCK.RED_LIGHT || surface === BLOCK.BRICK || surface === BLOCK.LAMP;
+        surface === BLOCK.METAL || surface === BLOCK.RED_LIGHT || surface === BLOCK.DARK_RED ||
+        surface === BLOCK.SHUTDOWN_PAD || surface === BLOCK.BRICK || surface === BLOCK.LAMP;
       if (!propSurface && surface !== BLOCK.WATER && getBlock(x, y, z) !== BLOCK.WATER &&
         !blocksMovement(getBlock(x, y, z)) && !blocksMovement(getBlock(x, y + 1, z))) {
         return { x: x + .5, y, z: z + .5 };
@@ -1907,7 +1931,7 @@
       shoot();
       return;
     }
-    showToast('Find the blinking red shutdown block at the source.');
+    showToast('Find the translucent yellow shutdown block at the source.');
   }
 
   function spawnInitialWave() {
@@ -1952,7 +1976,8 @@
 
   function spawnSupplyCrate() {
     if (!mission.machine) return;
-    const x = Math.floor(mission.machine.x), z = Math.floor(mission.machine.z);
+    const pad = mission.machine.pad || { x: Math.floor(mission.machine.x), z: Math.floor(mission.machine.z) };
+    const x = pad.x, z = pad.z;
     mission.supplyCrate = { x: x + .5, y: pickupAirY(x, z), z: z + .5, looted: false };
   }
 
@@ -1989,30 +2014,37 @@
     if (Math.hypot(c.x - player.pos[0], c.z - player.pos[2]) < 2.05 && Math.abs(c.y - player.pos[1]) < 2.4) burstSupplyCrate();
   }
 
-  function explodeMachine() {
+  function explodeShutdownPad() {
     if (!mission.machine) return;
     const m = mission.machine;
-    for (let i = 0; i < 42; i++) {
+    const pad = m.pad || { x: Math.floor(m.x), y: Math.floor(m.y), z: Math.floor(m.z) };
+    const cx = pad.x + .5, cy = pad.y + .45, cz = pad.z + .5;
+    for (let i = 0; i < 34; i++) {
       const angle = Math.random() * Math.PI * 2;
-      const speed = 2.2 + Math.random() * 7.4;
+      const speed = 2.0 + Math.random() * 6.6;
       particles.push({
-        x: m.x,
-        y: m.y + 5.5 + Math.random() * 8.5,
-        z: m.z,
+        x: cx,
+        y: cy + Math.random() * .55,
+        z: cz,
         vx: Math.cos(angle) * speed,
-        vy: 2.2 + Math.random() * 6.8,
+        vy: 1.8 + Math.random() * 5.4,
         vz: Math.sin(angle) * speed,
         life: .45 + Math.random() * .7,
-        type: i % 4 === 0 ? 17 : (i % 3 === 0 ? 14 : 15)
+        type: i % 4 === 0 ? 30 : (i % 3 === 0 ? 14 : 15)
       });
     }
-    const dx = player.pos[0] - m.x;
-    const dz = player.pos[2] - m.z;
-    const dist = Math.max(.001, Math.hypot(dx, dz));
-    const force = Math.max(4.2, 11 - dist * .85);
+    let dx = player.pos[0] - cx;
+    let dz = player.pos[2] - cz;
+    let dist = Math.hypot(dx, dz);
+    if (dist < .12) {
+      dx = cx - m.x;
+      dz = cz - m.z;
+      dist = Math.hypot(dx, dz) || 1;
+    }
+    const force = Math.max(5.8, 10 - dist * .65);
     player.vel[0] += (dx / dist) * force;
     player.vel[2] += (dz / dist) * force;
-    player.vel[1] = Math.max(player.vel[1], 5.3);
+    player.vel[1] = Math.max(player.vel[1], 4.8);
     shakeScreen();
     sound('block');
   }
@@ -2023,10 +2055,11 @@
     mission.machine.active = false;
     mission.disableProgress = 0;
     disableOverlay.classList.remove('show');
-    // Gun unlock happens only after shutdown: the spire detonates, its blocks
-    // are cleared, a supply crate takes its footprint, and zombie spawning begins.
-    explodeMachine();
-    for (const b of mission.machine.blocks) setBlock(b[0], b[1], b[2], 0, true);
+    // Gun unlock happens only after shutdown: the pressure pad detonates,
+    // reveals a supply crate, the beacon dies down, and zombie spawning begins.
+    explodeShutdownPad();
+    for (const b of mission.machine.padBlocks || []) setBlock(b[0], b[1], b[2], 0, true);
+    for (const b of mission.machine.beaconBlocks || []) setBlock(b[0], b[1], b[2], BLOCK.DARK_RED, true);
     queueRebuild();
     spawnSupplyCrate();
     mission.phase = PHASE_ZOMBIE_THREAT;
@@ -2035,7 +2068,7 @@
     openObjectiveBriefing({
       title: 'Eliminate infected: 0 / ' + infectedGoal,
       meta: currentIslandLabel() + ' // ' + currentBiomeLabel() + ' // Mission Updated',
-      body: 'Mission Command: source disabled. Supply crate deployed at the spire footprint. Open it, arm up, and eliminate ' + infectedGoal + ' infected before redeploy.',
+      body: 'Mission Command: source disabled. Supply crate revealed at the shutdown block. Open it, arm up, and eliminate ' + infectedGoal + ' infected before redeploy.',
       hudTitle: 'Eliminate infected',
       hudMeta: 'Gun online',
       afterOk: () => {
@@ -2109,7 +2142,7 @@
     }
     const onPad = playerOnMachinePad();
     mission.phase = onPad ? PHASE_DISABLE_MACHINE : PHASE_DROP;
-    // Shutdown is pressure-pad based. Step off the blinking red block and the
+    // Shutdown is pressure-pad based. Step off the translucent yellow block and the
     // meter resets, making the disable moment physical and readable.
     if (onPad) {
       mission.disableProgress = Math.min(1, mission.disableProgress + dt / MACHINE_DISABLE_SECONDS);
@@ -2143,7 +2176,7 @@
       objectiveMeta.textContent = mission.completed ? 'Island breach contained' : (mission.hudMeta || 'Gun online');
       return;
     }
-    objectiveText.textContent = playerOnMachinePad() ? '[ shutdown ]' : '[ find red block ]';
+    objectiveText.textContent = playerOnMachinePad() ? '[ shutdown ]' : '[ find yellow block ]';
     objectiveMeta.textContent = playerOnMachinePad()
       ? 'Shutdown meter active'
       : (mission.hudMeta || 'Toxin exposure active');
@@ -2439,7 +2472,7 @@
     queueObjectiveBriefing({
       title: 'Locate the contamination source',
       meta: currentIslandLabel() + ' // ' + currentBiomeLabel() + ' // Drop Phase',
-      body: 'Mission Command: toxin readings are climbing. You are unarmed until the source is shut down. Find the blinking metal spire on the high ground, then jump onto the blinking red block to disable it.',
+      body: 'Mission Command: toxin readings are climbing. You are unarmed until the source is shut down. Find the blinking metal spire on the high ground, then jump onto the translucent yellow block to disable it.',
       hudTitle: 'Locate the contamination source',
       hudMeta: 'Toxin exposure active',
       afterOk: startInsertionDrop
