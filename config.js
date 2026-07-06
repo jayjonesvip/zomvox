@@ -172,7 +172,7 @@ window.ZOMVOX_CONFIG = {
       Lower = faster reload.
       Higher = slower reload.
     */
-    reloadTime: 1.15,
+    reloadTime: 1.50,
 
     /*
       Fire cooldown in seconds between shots.
@@ -185,7 +185,7 @@ window.ZOMVOX_CONFIG = {
       Premium Grip reduces this by premiumGripMultiplier.
       Values above 1 are clamped so the upgrade cannot add recoil.
     */
-    recoilAmount: 0.08,
+    recoilAmount: 0.10,
 
     /*
       Upgrade tuning.
