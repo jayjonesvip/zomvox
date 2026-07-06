@@ -22,7 +22,7 @@ Desktop play uses mouse and keyboard. Mobile play is designed for landscape orie
 - Branded ZomVox splash screen using `assets/zomvox-splash.png`.
 - Splash screen build label using `BUILD_VERSION` plus the deployed document timestamp.
 - Favicon assets for browser tabs and installed shortcuts.
-- Procedural voxel terrain with grass, dirt, stone, sand, water, wood, leaves, bricks, glow markers, trees, and shorelines that switch between safe sand and dangerous rock.
+- Procedural voxel terrain with mission biomes: forest, dunes, rocky, swamp, and ashlands.
 - Fixed-size chunk generation so the game area stays bounded and performance remains predictable.
 - Player movement is clamped inside the generated world.
 - Targeted mesh rebuilding for mission set pieces and world updates.
@@ -81,7 +81,7 @@ Common tuning options live in `config.js` under `window.ZOMVOX_CONFIG`. Edit tha
 
 ```js
 window.ZOMVOX_CONFIG = {
-  buildVersion: '2026.07.06.4',
+  buildVersion: '2026.07.06.5',
   initialSeed: 729641,
 
   environment: {
@@ -99,7 +99,7 @@ window.ZOMVOX_CONFIG = {
     magSize: 6,
     reloadTime: 1.15,
     fireCooldown: 0.42,
-    recoilAmount: 0.026,
+    recoilAmount: 0.08,
     quickReloadMultiplier: 0.5,
     doubleMagMultiplier: 2,
     premiumGripMultiplier: 0.38,
@@ -108,7 +108,8 @@ window.ZOMVOX_CONFIG = {
   },
 
   mission: {
-    islandSeeds: [29190007, 482177, 735331, 918244, 126509],
+    islandSeeds: [29190, 482177, 735331, 918244, 126509],
+    biomes: ['forest', 'dunes', 'rocky', 'swamp', 'ashlands'],
     toxinDamagePerSecond: 1.15,
     disableSeconds: 3,
     machineActionRadius: 3.6,
@@ -151,7 +152,7 @@ Other sections in `config.js` expose safe defaults for:
 - `player`: collision size, starting health, starting ammo reserve, respawn reserve floor, and low-health heartbeat threshold.
 - `weapon`: magazine size, reload time, fire cooldown, recoil, upgrade multipliers, and long-range kill distance.
 - `enemies`: base enemy cap and horde escalation values.
-- `mission`: five island seeds, toxin drain, source disable timing/radius, insertion drop tuning, per-island infected objectives, fallback infected objective, and first wave size.
+- `mission`: five island seeds, per-island biomes, toxin drain, source disable timing/radius, insertion drop tuning, per-island infected objectives, fallback infected objective, and first wave size.
 - `pickups`: ammo/health pickup amounts and drop chances.
 - `timers`: death overlay delay, world rebuild meter duration, heartbeat interval, and day/night cycle length.
 - `audio`: optional mp3/wav overrides for each sound effect.

@@ -17,7 +17,7 @@ window.ZOMVOX_CONFIG = {
     Bump this when you make visible changes so you can tell the browser
     loaded the newest version.
   */
-  buildVersion: '2026.07.06.4',
+  buildVersion: '2026.07.06.5',
 
   /*
     Seed used for deterministic world generation.
@@ -170,7 +170,7 @@ window.ZOMVOX_CONFIG = {
 
       Premium Grip multiplies this by premiumGripMultiplier.
     */
-    recoilAmount: 0.026,
+    recoilAmount: 0.08,
 
     /*
       Upgrade tuning.
@@ -218,6 +218,20 @@ window.ZOMVOX_CONFIG = {
       Clearing the infected objective redeploys to the next seed.
     */
     islandSeeds: [29190, 482177, 735331, 918244, 126509],
+
+    /*
+      Biome for each mission island.
+
+      Options:
+      - 'forest' = mostly grass with frequent trees
+      - 'dunes' = mostly sand with saguaros and no trees
+      - 'rocky' = mostly stone with boulders and rare trees
+      - 'swamp' = mud/grass mix with sparse wet trees
+      - 'ashlands' = ash/stone with dead trees and boulders
+
+      These line up with islandSeeds by position.
+    */
+    biomes: ['forest', 'dunes', 'rocky', 'swamp', 'ashlands'],
 
     /*
       Health drained per second while the contamination machine is active.
