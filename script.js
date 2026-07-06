@@ -123,8 +123,6 @@
   const RESPAWN_RESERVE_FLOOR = Math.max(0, Math.floor(configNumber(PLAYER_CONFIG, 'respawnReserveFloor', 24)));
   const LOW_HEALTH_THRESHOLD = configNumber(PLAYER_CONFIG, 'lowHealthThreshold', 25);
   const MAG_SIZE = Math.max(1, Math.floor(configNumber(WEAPON_CONFIG, 'magSize', 6)));
-  const EXTENDED_MAG_SIZE = Math.max(MAG_SIZE, 12);
-  const EXTENDED_MAG_KILLS = 25;
   const RELOAD_TIME = Math.max(0.1, configNumber(WEAPON_CONFIG, 'reloadTime', 1.15));
   const ENEMY_CAP = Math.max(1, Math.floor(configNumber(ENEMY_CONFIG, 'baseCap', 18)));
   const HORDE_KILLS_PER_LEVEL = Math.max(1, Math.floor(configNumber(ENEMY_CONFIG, 'hordeKillsPerLevel', 5)));
@@ -201,7 +199,7 @@
   let touchMode = matchMedia('(pointer: coarse)').matches;
   let keys = Object.create(null);
   const touchInput = { moveX: 0, moveY: 0, jump: false, sprint: false, lookId: null, lookX: 0, lookY: 0, stickId: null };
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.05.6');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.06.1');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -439,6 +437,7 @@
   function beginWorldRebuild(seed) {
     if (worldRebuildState.active) return;
     const nextSeed = Number.isFinite(seed) ? seed : Math.floor(Math.random() * 999999);
+    document.body.classList.add('stage-transition');
     worldRebuildState.active = true;
     worldRebuildState.timer = 0;
     worldRebuildState.startedAt = performance.now();
@@ -1177,6 +1176,7 @@
   }
 
   function startInsertionDrop() {
+    document.body.classList.remove('stage-transition');
     const x = Math.floor(player.pos[0]);
     const z = Math.floor(player.pos[2]);
     const groundY = topSolidY(x, z) + 1.001;
@@ -1267,7 +1267,7 @@
   }
 
   function updateEnemies(dt) {
-    if (!gunUnlocked()) return;
+    if (!gunUnlocked() || mission.completed) return;
     nextSpawnTimer -= dt;
     const enemyCap = ENEMY_CAP + hordeLevel * HORDE_CAP_BONUS;
     if (nextSpawnTimer <= 0 && enemies.length < enemyCap) {
@@ -1478,11 +1478,6 @@
           scorePop('+300 TRIPLE KILL', 'combo');
         }
         lastKillTime = now;
-        if (player.kills >= EXTENDED_MAG_KILLS && player.magSize < EXTENDED_MAG_SIZE) {
-          setPlayerMagSize(EXTENDED_MAG_SIZE, true);
-          scorePop('EXTENDED MAG UNLOCKED', 'wave');
-          showToast('Extended mag unlocked: ' + EXTENDED_MAG_SIZE + ' rounds');
-        }
         sound('kill');
         checkHordeLevel();
         const dropRoll = Math.random();
@@ -1635,11 +1630,24 @@
     nextSpawnTimer = 4.5;
   }
 
+  function clearRemainingMissionEnemies() {
+    const survivors = enemies.filter(e => e.hp > 0);
+    if (!survivors.length) {
+      enemies = [];
+      return;
+    }
+    for (const e of survivors) spawnKillBurst(e.x, e.y + 1.1, e.z, e.big);
+    enemies = [];
+    scorePop('INFECTED PURGED', 'wave small');
+  }
+
   function completeMissionIsland() {
     if (mission.completed) return;
     mission.completed = true;
     mission.actionHeld = false;
     nextSpawnTimer = 999;
+    clearRemainingMissionEnemies();
+    document.body.classList.add('stage-transition');
     openObjectiveBriefing({
       title: 'Island contained',
       meta: currentIslandLabel() + ' // Mission Complete',
