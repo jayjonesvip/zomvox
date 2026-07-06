@@ -185,7 +185,7 @@ window.ZOMVOX_CONFIG = {
       Premium Grip reduces this by premiumGripMultiplier.
       Values above 1 are clamped so the upgrade cannot add recoil.
     */
-    recoilAmount: 0.10,
+    recoilAmount: 0.15,
 
     /*
       Upgrade tuning.
