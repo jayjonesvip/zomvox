@@ -69,6 +69,9 @@
     else if (name === 'pickupHealth') { tone(660, .07, 'sine', .04, 880); setTimeout(() => tone(990, .08, 'triangle', .035, 1320), 70); }
     else if (name === 'bite') { noise(.08, .08, 430); tone(72, .09, 'sawtooth', .045, 38); }
     else if (name === 'hurt') { tone(85, .12, 'sawtooth', .07, 45); }
+    else if (name === 'toxin') { tone(115, .11, 'sawtooth', .045, 62); noise(.08, .045, 360); }
+    else if (name === 'land') { noise(.07, .09, 300); tone(95, .06, 'sine', .045, 55); }
+    else if (name === 'objectiveClear') { tone(220, .08, 'triangle', .05, 330); setTimeout(() => tone(440, .09, 'triangle', .05, 660), 85); setTimeout(() => tone(720, .11, 'sine', .045, 960), 175); }
     else if (name === 'wave') { tone(180, .08, 'sawtooth', .05, 120); setTimeout(() => tone(330, .09, 'triangle', .045, 480), 85); }
     else if (name === 'heartbeat') { tone(55, .11, 'sine', .045, 45); }
   }
