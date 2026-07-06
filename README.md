@@ -20,8 +20,8 @@ Desktop play uses mouse and keyboard. Mobile play is designed for landscape orie
 - Fixed-size chunk generation so the game area stays bounded and performance remains predictable.
 - Player movement is clamped inside the generated world.
 - Chunk-level mesh rebuilding for destructible blocks.
-- Mission-based opening loop with military-style objective briefings, a no-gun exploration phase, metal-spire shutdown objective, explosive supply crate reward, delayed zombie threat, and redeployment across five seeded islands.
-- Six-round blaster magazine with reserve ammo and a 12-round extended-mag unlock after 25 kills.
+- Mission-based opening loop with military-style objective briefings, a no-gun exploration phase, metal-spire shutdown objective, explosive supply crate reward, delayed zombie threat, and escalating redeployment objectives across five seeded islands.
+- Compact ammo HUD on desktop and mobile, plus a six-round blaster magazine with reserve ammo and a 12-round extended-mag unlock after 25 kills.
 - Ammo pickups that add six rounds at a time.
 - Zombie spawning, pursuit, attack cooldowns, retreat steps after attacks, deaths, score popups, and pickup drops.
 - Mobile-only landscape gate.
@@ -76,7 +76,7 @@ Common tuning options live in `config.js` under `window.ZOMVOX_CONFIG`. Edit tha
 
 ```js
 window.ZOMVOX_CONFIG = {
-  buildVersion: '2026.07.05.3',
+  buildVersion: '2026.07.05.4',
   initialSeed: 729641,
 
   environment: {
@@ -95,6 +95,7 @@ window.ZOMVOX_CONFIG = {
     toxinDamagePerSecond: 1.15,
     disableSeconds: 3,
     machineActionRadius: 3.6,
+    infectedGoals: [25, 50, 100, 250, 500],
     infectedGoal: 50,
     firstWaveSize: 3
   }
@@ -131,7 +132,7 @@ Other sections in `config.js` expose safe defaults for:
 - `player`: collision size, starting health, starting ammo reserve, respawn reserve floor, and low-health heartbeat threshold.
 - `weapon`: magazine size, reload time, and long-range kill distance.
 - `enemies`: base enemy cap and horde escalation values.
-- `mission`: five island seeds, toxin drain, source disable timing/radius, infected objective goal, and first wave size.
+- `mission`: five island seeds, toxin drain, source disable timing/radius, per-island infected objectives, fallback infected objective, and first wave size.
 - `pickups`: ammo/health pickup amounts and drop chances.
 - `timers`: death overlay delay, world rebuild meter duration, heartbeat interval, and day/night cycle length.
 - `audio`: optional mp3/wav overrides for each sound effect.
