@@ -400,11 +400,11 @@ window.ZOMVOX_CONFIG = {
         Drop mp3/wav loops into assets/ and set the matching file name here.
       */
       ambientMenu: 'mainloop.mp3',
-      ambientForest: '',
-      ambientDunes: '',
-      ambientRocky: '',
+      ambientForest: 'forest_birds.mp3',
+      ambientDunes: 'wind_ambience.mp3',
+      ambientRocky: 'wind_mountain.mp3',
       ambientSwamp: 'swamp.mp3',
-      ambientAshlands: ''
+      ambientAshlands: 'jungle_birds.mp3'
     }
   }
 };
