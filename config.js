@@ -70,7 +70,7 @@ window.ZOMVOX_CONFIG = {
       Higher values create larger chunks.
       Lower values can make chunk rebuilds lighter.
     */
-    chunkSize: 16,
+    chunkSize: 12,
 
     /*
       How many chunks generate outward from the center.
@@ -97,7 +97,7 @@ window.ZOMVOX_CONFIG = {
       Higher value = more flooded/lake areas.
       Lower value = drier world.
     */
-    waterLevel: 6,
+    waterLevel: 5,
 
     /*
       Terrain height tuning.
@@ -185,7 +185,7 @@ window.ZOMVOX_CONFIG = {
       Premium Grip reduces this by premiumGripMultiplier.
       Values above 1 are clamped so the upgrade cannot add recoil.
     */
-    recoilAmount: 0.25,
+    recoilAmount: 0.33,
 
     /*
       Upgrade tuning.
