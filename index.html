@@ -4,10 +4,47 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
 <title>ZomVox: Zombies and Voxels</title>
+<meta name="description" content="Play ZomVox, a mobile-friendly voxel zombie survival game with story missions, quick hunts, biomes, perks, and blocky undead combat." />
+<meta name="keywords" content="ZomVox, zombie game, voxel game, browser game, mobile zombie game, survival game, quick hunt, zombies and voxels" />
+<meta name="author" content="ZomVox" />
+<meta name="robots" content="index, follow" />
+<link rel="canonical" href="https://zomvox.com/" />
+<meta name="theme-color" content="#07120c" />
+<meta name="application-name" content="ZomVox" />
+<meta name="apple-mobile-web-app-title" content="ZomVox" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="ZomVox" />
+<meta property="og:title" content="ZomVox: Zombies and Voxels" />
+<meta property="og:description" content="Drop onto voxel islands, hunt zombies, unlock perks, and survive story missions or quick biome hunts." />
+<meta property="og:url" content="https://zomvox.com/" />
+<meta property="og:image" content="https://zomvox.com/assets/zomvox-splash.png" />
+<meta property="og:image:width" content="1280" />
+<meta property="og:image:height" content="640" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="ZomVox: Zombies and Voxels" />
+<meta name="twitter:description" content="A browser-based voxel zombie survival game built for fast story missions and quick hunts." />
+<meta name="twitter:image" content="https://zomvox.com/assets/zomvox-splash.png" />
 <link rel="icon" href="assets/favicon.ico" sizes="16x16 32x32 48x48 256x256" />
 <link rel="icon" type="image/png" href="assets/favicon.png" sizes="512x512" />
+<link rel="apple-touch-icon" href="assets/favicon.png" />
 <link rel="preload" as="image" href="assets/zomvox-splash.png" />
 <link rel="stylesheet" href="styles.css" />
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "name": "ZomVox",
+  "alternateName": "ZomVox: Zombies and Voxels",
+  "url": "https://zomvox.com/",
+  "image": "https://zomvox.com/assets/zomvox-splash.png",
+  "description": "A browser-based voxel zombie survival game with story missions, quick hunts, biomes, perks, and blocky undead combat.",
+  "genre": ["Survival", "Shooter", "Action"],
+  "gamePlatform": ["Web browser", "Mobile browser"],
+  "applicationCategory": "Game"
+}
+</script>
 </head>
 <body>
 <canvas id="game"></canvas>
@@ -91,15 +128,15 @@
     <div class="portraitGround"></div>
   </div>
   <div class="portraitContent">
-    <div class="portraitBrand">Zom<b>Vox</b></div>
-    <div class="portraitKicker">Zombies and Voxels</div>
+    <div class="zomvoxLogo portraitLogo" aria-label="ZomVox"><span>Zom</span><b>Vox</b></div>
     <div class="rotateGlyph" aria-hidden="true">
       <div class="phoneShape"></div>
       <div class="rotateArc"></div>
     </div>
-    <h2>Rotate to Landscape</h2>
-    <p>Turn sideways, shoulder the Block Blaster, and clear the voxel frontier before the dead swarm the shoreline.</p>
-    <div class="portraitCallout">Kill zombies. Grab ammo. Survive nightfall.</div>
+    <h2>Rotate to Start Hunting</h2>
+    <p>ZomVox plays in landscape. Live hunts pause here until you rotate back.</p>
+    <div class="portraitCallout">Zombies and Voxels</div>
+    <div class="portraitPause">Hunt Paused</div>
   </div>
 </div>
 <div id="splash" aria-live="polite">

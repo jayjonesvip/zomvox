@@ -238,9 +238,10 @@
   let nextSpawnTimer = 3.5;
   let locked = false;
   let touchMode = matchMedia('(pointer: coarse)').matches;
+  const portraitQuery = matchMedia('(orientation: portrait)');
   let keys = Object.create(null);
   const touchInput = { moveX: 0, moveY: 0, jump: false, lookId: null, lookX: 0, lookY: 0, stickId: null };
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.06.16');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.06.17');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -617,6 +618,34 @@
 
   function isGameLive() {
     return menu.style.display === 'none' && splash.style.display === 'none' && !worldRebuildState.active && !deathState.active;
+  }
+
+  function shouldPauseForPortrait() {
+    const mobileLike = touchMode || matchMedia('(pointer: coarse)').matches;
+    return mobileLike &&
+      portraitQuery.matches &&
+      menu.style.display === 'none' &&
+      splash.style.display === 'none' &&
+      !worldRebuildState.active &&
+      !deathState.active &&
+      !isBriefingOpen() &&
+      !isUpgradeOpen();
+  }
+
+  function updatePortraitPauseState() {
+    const paused = shouldPauseForPortrait();
+    document.body.classList.toggle('portrait-paused', paused);
+    if (paused) {
+      touchInput.moveX = 0;
+      touchInput.moveY = 0;
+      touchInput.jump = false;
+      touchInput.lookId = null;
+      touchInput.stickId = null;
+      if (stickKnob) stickKnob.style.transform = 'translate(0, 0)';
+      player.vel[0] = 0;
+      player.vel[2] = 0;
+    }
+    return paused;
   }
 
   function isBriefingOpen() {
@@ -2419,6 +2448,10 @@ function playerOnMachinePad() {
 
   function update(dt) {
     updateCommandBanner(dt);
+    if (updatePortraitPauseState()) {
+      updateHud();
+      return;
+    }
     if (worldRebuildState.active) {
       updateWorldRebuild(dt);
       updateHud();
