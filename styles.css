@@ -150,6 +150,7 @@
   body.story-death .deathTitle{ color:#d7ffc7; font-size:clamp(42px, 9vw, 92px); text-shadow:0 4px 0 rgba(0,0,0,.75), 0 0 28px rgba(145,243,110,.34); }
   body.story-death #deathFill{ background:linear-gradient(90deg,#5dff6e,#ffe16d); box-shadow:0 0 22px rgba(145,243,110,.46); }
   body.story-death #deathOverlay.ready #deathGiveUp{ display:inline-block; }
+  body.quick-mode #deathOverlay.ready #deathGiveUp{ display:inline-block; }
   body.story-reviving #deathOverlay{ opacity:1; visibility:visible; pointer-events:none; background:#000; transition:opacity .7s ease, visibility .7s ease; }
   body.story-reviving.story-revive-fade #deathOverlay{ opacity:0; visibility:visible; }
   body.story-reviving .deathCard{ display:none; }
