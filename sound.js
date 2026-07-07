@@ -4,8 +4,13 @@
   const config = window.ZOMVOX_CONFIG || {};
   const soundFiles = (config.audio && config.audio.files) || {};
 
-  let enabled = true;
+  let sfxEnabled = true;
+  let ambientEnabled = true;
   let audioCtx = null;
+  let ambientSource = null;
+  let ambientGain = null;
+  let ambientTargetName = '';
+  let activeAmbientName = '';
 
   // decoded AudioBuffers, not HTMLAudioElement objects
   const bufferCache = new Map();
@@ -215,9 +220,88 @@
     return false;
   }
 
+  function stopAmbient() {
+    if (ambientSource) {
+      try { ambientSource.stop(); } catch (_) {}
+      ambientSource.onended = null;
+      ambientSource.disconnect();
+    }
+    if (ambientGain) ambientGain.disconnect();
+    ambientSource = null;
+    ambientGain = null;
+    activeAmbientName = '';
+  }
+
+  function startAmbientBuffer(name, buffer) {
+    const ctx = getAudio();
+    if (!ctx || !buffer || !ambientEnabled || ambientTargetName !== name) return;
+
+    stopAmbient();
+
+    const src = ctx.createBufferSource();
+    const gain = ctx.createGain();
+
+    src.buffer = buffer;
+    src.loop = true;
+    gain.gain.value = .32;
+
+    src.connect(gain);
+    gain.connect(ctx.destination);
+
+    src.onended = () => {
+      if (ambientSource === src) {
+        ambientSource = null;
+        ambientGain = null;
+        activeAmbientName = '';
+      }
+    };
+
+    ambientSource = src;
+    ambientGain = gain;
+    activeAmbientName = name;
+    src.start(ctx.currentTime);
+  }
+
+  function requestAmbient(name) {
+    if (!ambientEnabled || !name) {
+      ambientTargetName = '';
+      stopAmbient();
+      return;
+    }
+
+    if (activeAmbientName === name && ambientSource) return;
+
+    ambientTargetName = name;
+
+    const hasOverride = Object.prototype.hasOwnProperty.call(soundFiles, name);
+    const fileName = hasOverride ? soundFiles[name] : '';
+
+    if (!fileName) {
+      stopAmbient();
+      return;
+    }
+
+    const key = soundKey(fileName);
+    const buffer = bufferCache.get(key);
+
+    if (buffer) {
+      startAmbientBuffer(name, buffer);
+      return;
+    }
+
+    loadFile(fileName).then(loadedBuffer => {
+      if (ambientTargetName === name) startAmbientBuffer(name, loadedBuffer);
+    });
+  }
+
   window.ZomVoxSound = {
     setEnabled(value) {
-      enabled = !!value;
+      sfxEnabled = !!value;
+    },
+
+    setAmbientEnabled(value) {
+      ambientEnabled = !!value;
+      if (!ambientEnabled) stopAmbient();
     },
 
     prime() {
@@ -230,7 +314,7 @@
     },
 
     play(name) {
-      if (!enabled) return;
+      if (!sfxEnabled) return;
 
       const hasOverride = Object.prototype.hasOwnProperty.call(soundFiles, name);
       const fileName = hasOverride
@@ -242,6 +326,15 @@
       if (playFile(name, fileName)) return;
 
       synth(name);
+    },
+
+    playAmbient(name) {
+      requestAmbient(name);
+    },
+
+    stopAmbient() {
+      ambientTargetName = '';
+      stopAmbient();
     }
   };
 })();

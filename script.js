@@ -69,6 +69,7 @@
   const settingAmmo = $('settingAmmo');
   const settingControls = $('settingControls');
   const settingSound = $('settingSound');
+  const settingAmbient = $('settingAmbient');
   const settingFullscreen = $('settingFullscreen');
   const quickBiomeButtons = quickBiomePanel ? Array.from(quickBiomePanel.querySelectorAll('[data-biome]')) : [];
 
@@ -241,7 +242,7 @@
   const portraitQuery = matchMedia('(orientation: portrait)');
   let keys = Object.create(null);
   const touchInput = { moveX: 0, moveY: 0, jump: false, lookId: null, lookX: 0, lookY: 0, stickId: null };
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.06.17');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.07.01');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -250,6 +251,8 @@
   let killComboCount = 0;
   let dayAmount = 1;
   let soundEnabled = true;
+  let ambientEnabled = true;
+  let activeAmbientCue = '';
   let waterDamageTimer = 0;
   let hordeLevel = 0;
   let heartbeatTimer = 0;
@@ -544,7 +547,10 @@
         splashFill.style.width = '100%';
         setTimeout(() => {
           splash.classList.add('hide');
-          setTimeout(() => { splash.style.display = 'none'; }, 420);
+          setTimeout(() => {
+            splash.style.display = 'none';
+            updateAmbientSound(true);
+          }, 420);
         }, 180);
       }
     }
@@ -553,10 +559,13 @@
 
   function applySettings() {
     soundEnabled = !!settingSound.checked;
+    ambientEnabled = !!settingAmbient.checked;
     window.ZomVoxSound?.setEnabled(soundEnabled);
+    window.ZomVoxSound?.setAmbientEnabled(ambientEnabled);
     document.body.classList.toggle('hide-health', !settingHealth.checked);
     document.body.classList.toggle('hide-ammo', !settingAmmo.checked);
     document.body.classList.toggle('hide-controls', !settingControls.checked);
+    updateAmbientSound(true);
   }
 
   function beginWorldRebuild(seed) {
@@ -600,6 +609,26 @@
   function currentBiomeLabel() {
     const biome = currentBiome();
     return biome.charAt(0).toUpperCase() + biome.slice(1);
+  }
+
+  // Ambient is a separate looping channel: menu ambience or one loop per biome.
+  function ambientCueForBiome(biome = currentBiome()) {
+    const normalized = normalizeBiome(biome);
+    return 'ambient' + normalized.charAt(0).toUpperCase() + normalized.slice(1);
+  }
+
+  function desiredAmbientCue() {
+    if (!ambientEnabled || splash.style.display !== 'none' || worldRebuildState.active) return '';
+    if (menu.style.display !== 'none') return 'ambientMenu';
+    return ambientCueForBiome();
+  }
+
+  function updateAmbientSound(force = false) {
+    const cue = desiredAmbientCue();
+    if (!force && cue === activeAmbientCue) return;
+    activeAmbientCue = cue;
+    if (cue) window.ZomVoxSound?.playAmbient(cue);
+    else window.ZomVoxSound?.stopAmbient();
   }
 
   function currentInfectedGoal() {
@@ -770,7 +799,7 @@
   }
   function initSettings() {
     settingFullscreen.checked = touchMode;
-    [settingHealth, settingAmmo, settingControls, settingSound].forEach(el => {
+    [settingHealth, settingAmmo, settingControls, settingSound, settingAmbient].forEach(el => {
       el.addEventListener('change', applySettings);
     });
     applySettings();
@@ -2447,6 +2476,7 @@ function playerOnMachinePad() {
   }
 
   function update(dt) {
+    updateAmbientSound();
     updateCommandBanner(dt);
     if (updatePortraitPauseState()) {
       updateHud();
@@ -2857,8 +2887,9 @@ function currentWaterIsDangerous() {
 
   function enterGameFromMenu() {
     applySettings();
-    if (soundEnabled) window.ZomVoxSound?.prime();
+    if (soundEnabled || ambientEnabled) window.ZomVoxSound?.prime();
     menu.style.display = 'none';
+    updateAmbientSound(true);
     if (touchMode) requestMobileFullscreen();
     if (mission.pendingBriefing) {
       locked = touchMode;
@@ -2933,6 +2964,7 @@ function currentWaterIsDangerous() {
     if (touchMode) return;
     locked = document.pointerLockElement === canvas;
     menu.style.display = locked || deathState.active || isBriefingOpen() || isUpgradeOpen() ? 'none' : 'flex';
+    updateAmbientSound(true);
   });
   document.addEventListener('mousemove', (e) => {
     if (!locked) return;
