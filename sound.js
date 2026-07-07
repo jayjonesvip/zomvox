@@ -129,6 +129,14 @@
       setTimeout(() => tone(330, .09, 'triangle', .045, 480), 85);
     } else if (name === 'heartbeat') {
       tone(55, .11, 'sine', .045, 45);
+    } else if (name === 'confirm') {
+      tone(640, .045, 'triangle', .04, 820);
+    } else if (name === 'briefing') {
+      tone(180, .07, 'sine', .035, 260);
+      setTimeout(() => tone(410, .08, 'triangle', .04, 540), 85);
+    } else if (name === 'perkEquip') {
+      tone(480, .055, 'triangle', .045, 720);
+      setTimeout(() => tone(960, .08, 'sine', .04, 1280), 65);
     }
   }
 

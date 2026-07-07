@@ -17,7 +17,7 @@ window.ZOMVOX_CONFIG = {
     Bump this when you make visible changes so you can tell the browser
     loaded the newest version.
   */
-  buildVersion: '2026.07.06.15',
+  buildVersion: '2026.07.06.16',
 
   /*
     Seed used for deterministic world generation.
@@ -390,7 +390,10 @@ window.ZOMVOX_CONFIG = {
       land: '',
       objectiveClear: 'floraphonic-arcade-ui-6-229503.mp3',
       wave: null,
-      heartbeat: null
+      heartbeat: null,
+      confirm: null,
+      briefing: null,
+      perkEquip: null
     }
   }
 };
