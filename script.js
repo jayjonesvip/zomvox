@@ -242,7 +242,7 @@
   const portraitQuery = matchMedia('(orientation: portrait)');
   let keys = Object.create(null);
   const touchInput = { moveX: 0, moveY: 0, jump: false, lookId: null, lookX: 0, lookY: 0, stickId: null };
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.07.02');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.07.03');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -343,6 +343,10 @@
 
   function currentZombieDamage(amount) {
     return amount * (activePerks.bodyArmor ? 0.8 : 1);
+  }
+
+  function resetActivePerks() {
+    for (const key of Object.keys(activePerks)) activePerks[key] = false;
   }
 
   function setPlayerMagSize(size, refill = false) {
@@ -2941,6 +2945,7 @@ function currentWaterIsDangerous() {
     sound('confirm');
     mission.mode = MODE_QUICK;
     mission.quickBiome = normalizeBiome(biome);
+    resetActivePerks();
     document.body.classList.add('quick-mode');
     generateWorld(quickSeedForBiome(mission.quickBiome));
     enterGameFromMenu();
