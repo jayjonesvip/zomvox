@@ -15,6 +15,8 @@
   const reserveText = $('reserveText');
   const menu = $('menu');
   const play = $('play');
+  const quickStart = $('quickStart');
+  const quickBiomePanel = $('quickBiomePanel');
   const toast = $('toast');
   const gunSprite = $('gunSprite');
   const damageFlash = $('damageFlash');
@@ -64,6 +66,7 @@
   const settingControls = $('settingControls');
   const settingSound = $('settingSound');
   const settingFullscreen = $('settingFullscreen');
+  const quickBiomeButtons = quickBiomePanel ? Array.from(quickBiomePanel.querySelectorAll('[data-biome]')) : [];
 
   const CONFIG = window.ZOMVOX_CONFIG || {};
   function configSection(name) {
@@ -185,6 +188,8 @@
   const PHASE_DROP = 'drop';
   const PHASE_DISABLE_MACHINE = 'disableMachine';
   const PHASE_ZOMBIE_THREAT = 'zombieThreat';
+  const MODE_STORY = 'story';
+  const MODE_QUICK = 'quick';
 
   let currentSeed = MISSION_SEEDS[0] || INITIAL_SEED;
   let world = new Map();
@@ -231,7 +236,7 @@
   let touchMode = matchMedia('(pointer: coarse)').matches;
   let keys = Object.create(null);
   const touchInput = { moveX: 0, moveY: 0, jump: false, lookId: null, lookX: 0, lookY: 0, stickId: null };
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.06.12');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.06.13');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -246,6 +251,8 @@
   const deathState = { active: false, timer: 0, duration: DEATH_READY_DELAY, ready: false };
   const worldRebuildState = { active: false, timer: 0, startedAt: 0, duration: WORLD_REBUILD_DURATION, seed: null };
   const mission = {
+    mode: MODE_STORY,
+    quickBiome: 'forest',
     phase: PHASE_DROP,
     machine: null,
     supplyCrate: null,
@@ -563,7 +570,13 @@
     return ['forest', 'dunes', 'rocky', 'swamp', 'ashlands'].includes(biome) ? biome : 'forest';
   }
 
+  function quickSeedForBiome(biome) {
+    const idx = DEFAULT_MISSION_BIOMES.indexOf(normalizeBiome(biome));
+    return INITIAL_SEED + 100003 * (idx + 1);
+  }
+
   function currentBiome() {
+    if (mission.mode === MODE_QUICK) return normalizeBiome(mission.quickBiome);
     return MISSION_BIOMES[mission.islandIndex] || 'forest';
   }
 
@@ -693,7 +706,7 @@
       worldRebuildState.active = false;
       worldOverlay.classList.remove('show');
       generateWorld(nextSeed);
-      if (isGameLive()) openObjectiveBriefing();
+      if (isGameLive() && mission.mode === MODE_STORY) openObjectiveBriefing();
     }
   }
 
@@ -1470,7 +1483,9 @@ function playerOnMachinePad() {
     player.vel = [0, -INSERTION_FALL_SPEED * .55, 0];
     player.pos[1] = Math.min(MAX_Y + INSERTION_DROP_HEIGHT, groundY + INSERTION_DROP_HEIGHT);
     scorePop('DROP INBOUND', 'small');
-    showToast('Mission Command: insertion started. Look around. Movement unlocks on touchdown.');
+    showToast(mission.mode === MODE_QUICK
+      ? 'Quick Hunt: drop started. Look around. Movement unlocks on touchdown.'
+      : 'Mission Command: insertion started. Look around. Movement unlocks on touchdown.');
   }
 
   function finishInsertionDrop() {
@@ -1481,7 +1496,9 @@ function playerOnMachinePad() {
     player.grounded = true;
     sound('land');
     scorePop('TOUCHDOWN', 'pickup small');
-    showToast('Boots down. Locate the contamination source.');
+    showToast(mission.mode === MODE_QUICK
+      ? 'Boots down. Hunt the infected.'
+      : 'Boots down. Locate the contamination source.');
   }
 
   function updateMovement(dt) {
@@ -2066,6 +2083,7 @@ function playerOnMachinePad() {
   }
 
   function checkMissionCompletion() {
+    if (mission.mode !== MODE_STORY) return;
     if (mission.phase === PHASE_ZOMBIE_THREAT && player.kills >= currentInfectedGoal()) completeMissionIsland();
   }
 
@@ -2231,6 +2249,11 @@ function playerOnMachinePad() {
   }
 
   function updateDisableInteraction(dt) {
+    if (mission.mode !== MODE_STORY) {
+      mission.disableProgress = 0;
+      hideProgressOverlay();
+      return;
+    }
     if (!mission.machine || !mission.machine.active) {
       disableOverlay.classList.remove('show');
       return;
@@ -2250,6 +2273,7 @@ function playerOnMachinePad() {
   }
 
   function updateExtractionBeacon(dt) {
+    if (mission.mode !== MODE_STORY) return;
     mission.beaconMessageCooldown = Math.max(0, mission.beaconMessageCooldown - dt);
     const nearBeacon = playerNearDropBeacon();
     if (!nearBeacon) {
@@ -2284,6 +2308,12 @@ function playerOnMachinePad() {
   function updateMissionHud() {
     if (!objectiveText || !objectiveMeta) return;
     document.body.classList.toggle('stage-cleared', mission.completed && !mission.extractionCalled);
+    document.body.classList.toggle('quick-mode', mission.mode === MODE_QUICK);
+    if (mission.mode === MODE_QUICK) {
+      objectiveText.textContent = '[ quick hunt ]';
+      objectiveMeta.textContent = player.kills + ' cleared';
+      return;
+    }
     if (!mission.objectiveAcknowledged) {
       objectiveText.textContent = '[ orders ]';
       objectiveMeta.textContent = currentIslandLabel();
@@ -2598,6 +2628,8 @@ function currentWaterIsDangerous() {
   }
 
   function generateWorld(seed) {
+    const activeMode = mission.mode || MODE_STORY;
+    const activeQuickBiome = normalizeBiome(mission.quickBiome);
     currentSeed = seed;
     mission.islandIndex = missionSeedIndex(seed);
     world = new Map();
@@ -2616,6 +2648,8 @@ function currentWaterIsDangerous() {
     player.reloading = false;
     player.reloadTimer = 0;
     player.shotCooldown = 0;
+    mission.mode = activeMode;
+    mission.quickBiome = activeQuickBiome;
     mission.phase = PHASE_DROP;
     mission.machine = null;
     mission.supplyCrate = null;
@@ -2633,6 +2667,7 @@ function currentWaterIsDangerous() {
     mission.nextHudTitle = '';
     mission.nextHudMeta = '';
     mission.briefingActive = false;
+    mission.pendingBriefing = null;
     mission.briefingAfterOk = null;
     mission.upgradeActive = false;
     mission.upgradeAfterChoice = null;
@@ -2653,6 +2688,7 @@ function currentWaterIsDangerous() {
     deathState.ready = false;
     deathState.timer = 0;
     document.body.classList.remove('dead', 'low-health', 'stage-cleared');
+    document.body.classList.toggle('quick-mode', mission.mode === MODE_QUICK);
     deathOverlay.classList.remove('show', 'ready');
     upgradeOverlay.classList.remove('show');
     document.body.classList.remove('upgrade-open');
@@ -2671,14 +2707,27 @@ function currentWaterIsDangerous() {
     // Center landmark and starting chunks.
     player.pos = [0.5, 18, 0.5];
     ensureChunks(true);
-    
-    placeDropBeacon(2, 2);
-    
-    placeContaminationMachine();
+    if (mission.mode === MODE_STORY) {
+      placeDropBeacon(2, 2);
+      placeContaminationMachine();
+    }
     player.pos = [0.5, topSolidY(0, 0) + 2.2, 0.5];
     player.vel = [0, 0, 0];
     ensureChunks(true);
     rebuildMeshes();
+    if (mission.mode === MODE_QUICK) {
+      mission.phase = PHASE_ZOMBIE_THREAT;
+      mission.objectiveAcknowledged = true;
+      mission.hudTitle = 'Quick Hunt';
+      mission.hudMeta = currentBiomeLabel();
+      setWeaponUnlocked(true);
+      nextSpawnTimer = 1.6;
+      startInsertionDrop();
+      spawnInitialWave();
+      showCommandBanner('QUICK HUNT', currentBiomeLabel() + ' drop zone', 2.8);
+      showToast('Quick Hunt: survive the infected.');
+      return;
+    }
     queueObjectiveBriefing({
       title: 'Locate the contamination source',
       meta: currentIslandLabel() + ' // ' + currentBiomeLabel() + ' // Drop Phase',
@@ -2690,7 +2739,7 @@ function currentWaterIsDangerous() {
     showToast('Drop beacon online. Locate the contamination source.');
   }
 
-  function startGame() {
+  function enterGameFromMenu() {
     applySettings();
     if (soundEnabled) window.ZomVoxSound?.prime();
     menu.style.display = 'none';
@@ -2706,6 +2755,30 @@ function currentWaterIsDangerous() {
     }
     requestPointerLockSafe();
   }
+
+  function startStoryGame() {
+    if (mission.mode !== MODE_STORY || !mission.pendingBriefing) {
+      mission.mode = MODE_STORY;
+      mission.quickBiome = 'forest';
+      document.body.classList.remove('quick-mode');
+      generateWorld(MISSION_SEEDS[0] || INITIAL_SEED);
+    }
+    enterGameFromMenu();
+  }
+
+  function toggleQuickBiomePanel() {
+    if (!quickBiomePanel) return;
+    quickBiomePanel.hidden = !quickBiomePanel.hidden;
+  }
+
+  function startQuickGame(biome) {
+    mission.mode = MODE_QUICK;
+    mission.quickBiome = normalizeBiome(biome);
+    document.body.classList.add('quick-mode');
+    generateWorld(quickSeedForBiome(mission.quickBiome));
+    enterGameFromMenu();
+  }
+
   function requestPointerLockSafe() {
     if (!canvas.requestPointerLock) return;
     try {
@@ -2717,7 +2790,11 @@ function currentWaterIsDangerous() {
     if (!deathState.active || !deathState.ready) return;
     respawn();
   }
-  play.addEventListener('click', startGame);
+  play.addEventListener('click', startStoryGame);
+  if (quickStart) quickStart.addEventListener('click', toggleQuickBiomePanel);
+  for (const btn of quickBiomeButtons) {
+    btn.addEventListener('click', () => startQuickGame(btn.dataset.biome));
+  }
   briefingOk.addEventListener('click', acknowledgeObjectiveBriefing);
   deathContinue.addEventListener('click', continueFromDeath);
   canvas.addEventListener('click', () => {
@@ -2747,7 +2824,9 @@ function currentWaterIsDangerous() {
     }
     keys[e.code] = true;
     if (e.code === 'KeyR' && !e.repeat) startReload();
-    if (e.code === 'KeyN' && !e.repeat) beginWorldRebuild(nextMissionSeed());
+    if (e.code === 'KeyN' && !e.repeat) {
+      beginWorldRebuild(mission.mode === MODE_QUICK ? quickSeedForBiome(mission.quickBiome) : nextMissionSeed());
+    }
   });
   document.addEventListener('keyup', (e) => { keys[e.code] = false; });
   canvas.addEventListener('mousedown', (e) => {

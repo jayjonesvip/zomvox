@@ -127,7 +127,20 @@
       <label class="setting"><input id="settingSound" type="checkbox" checked />Sound</label>
       <label class="setting"><input id="settingFullscreen" type="checkbox" checked />Fullscreen</label>
     </div>
-    <button id="play">Play</button>
+    <div class="startActions">
+      <button id="play" class="startBtn primaryStart" type="button">Story Mode</button>
+      <button id="quickStart" class="startBtn secondaryStart" type="button">Quick Hunt</button>
+    </div>
+    <div id="quickBiomePanel" class="quickBiomePanel" hidden>
+      <div class="quickBiomeTitle">Choose Drop Zone</div>
+      <div class="quickBiomeGrid">
+        <button type="button" data-biome="forest">Forest</button>
+        <button type="button" data-biome="dunes">Dunes</button>
+        <button type="button" data-biome="rocky">Rocky</button>
+        <button type="button" data-biome="swamp">Swamp</button>
+        <button type="button" data-biome="ashlands">Ashlands</button>
+      </div>
+    </div>
   </div>
 </div>
 <script src="config.js"></script>
