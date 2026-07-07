@@ -1,4 +1,4 @@
-/*
+8/*
   ZOMVOX CONFIG
 
   This file is for gameplay tuning only.
@@ -271,7 +271,7 @@ window.ZOMVOX_CONFIG = {
 
       These line up with islandSeeds by position.
     */
-    infectedGoals: [25, 50, 100, 250, 500],
+    infectedGoals: [2, 2, 2, 2, 2],
 
     /*
       Fallback combat objective if infectedGoals is removed.
