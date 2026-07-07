@@ -157,8 +157,17 @@
   .settingsPanel{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin:0 0 18px; }
   .setting{ display:flex; align-items:center; gap:8px; border:1px solid rgba(255,255,255,.13); background:rgba(255,255,255,.055); border-radius:8px; padding:9px 10px; color:#dcecf7; font-size:13px; font-weight:800; user-select:none; }
   .setting input{ width:18px; height:18px; accent-color:#86ee66; }
-  button#play{ appearance:none; border:0; border-radius:16px; padding:14px 20px; color:#06230e; font-size:18px; font-weight:900; background:linear-gradient(180deg,#c5ffa8,#72df60); box-shadow:0 14px 40px rgba(105,216,90,.26), inset 0 2px 0 rgba(255,255,255,.45); cursor:pointer; }
-  button#play:hover{ filter:brightness(1.05); }
+  .startActions{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+  .startBtn{ appearance:none; border:0; border-radius:16px; padding:14px 20px; font-size:18px; font-weight:1000; text-transform:uppercase; cursor:pointer; }
+  .primaryStart{ color:#06230e; background:linear-gradient(180deg,#c5ffa8,#72df60); box-shadow:0 14px 40px rgba(105,216,90,.26), inset 0 2px 0 rgba(255,255,255,.45); }
+  .secondaryStart{ color:#210606; background:linear-gradient(180deg,#ffe07b,#ff6948); box-shadow:0 14px 40px rgba(255,98,72,.24), inset 0 2px 0 rgba(255,255,255,.36); }
+  .startBtn:hover,.quickBiomeGrid button:hover{ filter:brightness(1.05); }
+  .quickBiomePanel{ margin-top:10px; padding:10px; border:1px solid rgba(255,255,255,.14); border-radius:10px; background:rgba(255,255,255,.055); }
+  .quickBiomePanel[hidden]{ display:none; }
+  .quickBiomeTitle{ color:#d7ffc7; font-size:12px; font-weight:1000; letter-spacing:.14em; text-transform:uppercase; margin-bottom:8px; }
+  .quickBiomeGrid{ display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:7px; }
+  .quickBiomeGrid button{ appearance:none; border:1px solid rgba(255,255,255,.18); border-radius:8px; padding:9px 6px; color:#edf8ff; font-size:12px; font-weight:1000; text-transform:uppercase; background:rgba(6,12,16,.72); box-shadow:inset 0 1px 0 rgba(255,255,255,.1); cursor:pointer; }
+  body.quick-mode #missionPanel{ display:none; }
   #splash{ position:fixed; inset:0; z-index:35; overflow:hidden; background:#02070b; transition:opacity .38s ease, visibility .38s ease; }
   #splash.hide{ opacity:0; visibility:hidden; pointer-events:none; }
   #splash::before{ content:""; position:absolute; inset:0; background:url("assets/zomvox-splash.png") center/cover no-repeat; filter:saturate(1.06) contrast(1.02); }
@@ -232,7 +241,12 @@
     .settingsPanel{ grid-template-columns:repeat(2,minmax(0,1fr)); gap:5px; margin-bottom:8px; }
     .setting{ padding:5px 7px; font-size:11px; }
     .setting input{ width:16px; height:16px; }
-    button#play{ border-radius:10px; padding:8px 14px; font-size:15px; }
+    .startActions{ gap:6px; }
+    .startBtn{ border-radius:10px; padding:8px 10px; font-size:14px; }
+    .quickBiomePanel{ margin-top:6px; padding:7px; }
+    .quickBiomeTitle{ font-size:10px; margin-bottom:5px; }
+    .quickBiomeGrid{ grid-template-columns:repeat(5,minmax(0,1fr)); gap:4px; }
+    .quickBiomeGrid button{ border-radius:7px; padding:6px 4px; font-size:10px; }
     .splashLoad{ right:calc(12px + env(safe-area-inset-right)); bottom:calc(12px + env(safe-area-inset-bottom)); width:min(300px, calc(100vw - 24px)); padding:9px; }
     .splashVersion{ font-size:9px; margin-bottom:4px; }
     .splashStatus{ font-size:11px; margin-bottom:6px; }
