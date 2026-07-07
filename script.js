@@ -50,10 +50,12 @@
   const worldText = $('worldText');
   const worldFill = $('worldFill');
   const deathOverlay = $('deathOverlay');
+  const deathTitle = $('deathTitle');
   const deathFill = $('deathFill');
   const deathText = $('deathText');
   const deathStats = $('deathStats');
   const deathContinue = $('deathContinue');
+  const deathGiveUp = $('deathGiveUp');
   const mobileControls = $('mobileControls');
   const stickBase = $('stickBase');
   const stickKnob = $('stickKnob');
@@ -238,7 +240,7 @@
   let touchMode = matchMedia('(pointer: coarse)').matches;
   let keys = Object.create(null);
   const touchInput = { moveX: 0, moveY: 0, jump: false, lookId: null, lookX: 0, lookY: 0, stickId: null };
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.06.14');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.06.15');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -1728,8 +1730,18 @@ function playerOnMachinePad() {
     player.reloadTimer = 0;
     reloadOverlay.classList.remove('show');
     reloadOverlayFill.style.width = '0%';
-    deathText.textContent = 'Final stats';
-    renderDeathStats();
+    document.body.classList.toggle('story-death', mission.mode === MODE_STORY);
+    if (mission.mode === MODE_STORY) {
+      deathTitle.textContent = 'MISSION FAILURE';
+      deathText.textContent = 'Command uplink searching for revive authorization';
+      deathStats.textContent = '';
+      deathContinue.textContent = 'Continue';
+    } else {
+      deathTitle.textContent = 'YOU DIED!';
+      deathText.textContent = 'Final stats';
+      renderDeathStats();
+      deathContinue.textContent = 'Continue';
+    }
     deathFill.style.width = '0%';
     deathOverlay.classList.remove('ready');
     deathOverlay.classList.add('show');
@@ -1740,7 +1752,9 @@ function playerOnMachinePad() {
     deathFill.style.width = (progress * 100).toFixed(1) + '%';
     if (progress >= 1 && !deathState.ready) {
       deathState.ready = true;
-      deathText.textContent = 'Click continue to respawn';
+      deathText.textContent = mission.mode === MODE_STORY
+        ? 'Mission Command can remotely revive you'
+        : 'Click continue to respawn';
       deathOverlay.classList.add('ready');
     }
   }
@@ -1762,9 +1776,15 @@ function playerOnMachinePad() {
     lastKillTime = -999;
     killComboCount = 0;
     resetLifeStats();
-    document.body.classList.remove('dead', 'low-health');
-    deathOverlay.classList.remove('show', 'ready');
+    document.body.classList.remove('dead', 'low-health', 'story-death');
+    if (mission.mode === MODE_STORY) {
+      document.body.classList.add('story-reviving');
+    } else {
+      deathOverlay.classList.remove('show');
+    }
+    deathOverlay.classList.remove('ready');
     deathStats.textContent = '';
+    deathTitle.textContent = 'YOU DIED!';
     deathText.textContent = 'Respawning...';
     deathFill.style.width = '0%';
     reloadOverlay.classList.remove('show');
@@ -1776,7 +1796,39 @@ function playerOnMachinePad() {
     currentChunkZ = 999999;
     ensureChunks(true);
     enemies = enemies.filter(e => Math.hypot(e.x - player.pos[0], e.z - player.pos[2]) > 34);
-    showToast('Respawned at the old marker. Deaths: ' + player.deaths);
+    if (mission.mode === MODE_STORY) {
+      showToast('Mission Command: remote revive complete.');
+      setTimeout(() => {
+        document.body.classList.add('story-revive-fade');
+      }, 120);
+      setTimeout(() => {
+        deathOverlay.classList.remove('show');
+        document.body.classList.remove('story-reviving', 'story-revive-fade');
+        if (!touchMode && menu.style.display === 'none') requestPointerLockSafe();
+      }, 880);
+    } else {
+      showToast('Respawned at the old marker. Deaths: ' + player.deaths);
+    }
+  }
+
+  function giveUpMission() {
+    if (!deathState.active || !deathState.ready || mission.mode !== MODE_STORY) return;
+    deathState.active = false;
+    deathState.ready = false;
+    deathState.timer = 0;
+    locked = false;
+    if (document.pointerLockElement === canvas && document.exitPointerLock) document.exitPointerLock();
+    document.body.classList.remove('dead', 'low-health', 'story-death', 'story-reviving', 'story-revive-fade');
+    deathOverlay.classList.remove('show', 'ready');
+    deathStats.textContent = '';
+    deathText.textContent = 'Respawning...';
+    deathFill.style.width = '0%';
+    menu.style.display = 'flex';
+    mission.mode = MODE_STORY;
+    mission.quickBiome = 'forest';
+    document.body.classList.remove('quick-mode');
+    generateWorld(MISSION_SEEDS[0] || INITIAL_SEED);
+    showToast('Mission abandoned. Awaiting new orders.');
   }
 
   function startReload() {
@@ -2708,12 +2760,13 @@ function currentWaterIsDangerous() {
     deathState.active = false;
     deathState.ready = false;
     deathState.timer = 0;
-    document.body.classList.remove('dead', 'low-health', 'stage-cleared');
+    document.body.classList.remove('dead', 'low-health', 'stage-cleared', 'story-death', 'story-reviving', 'story-revive-fade');
     document.body.classList.toggle('quick-mode', mission.mode === MODE_QUICK);
     deathOverlay.classList.remove('show', 'ready');
     upgradeOverlay.classList.remove('show');
     document.body.classList.remove('upgrade-open');
     deathStats.textContent = '';
+    deathTitle.textContent = 'YOU DIED!';
     deathText.textContent = 'Respawning...';
     deathFill.style.width = '0%';
     reloadOverlay.classList.remove('show');
@@ -2828,6 +2881,7 @@ function currentWaterIsDangerous() {
   }
   briefingOk.addEventListener('click', acknowledgeObjectiveBriefing);
   deathContinue.addEventListener('click', continueFromDeath);
+  deathGiveUp.addEventListener('click', giveUpMission);
   canvas.addEventListener('click', () => {
     if (deathState.active) {
       continueFromDeath();
