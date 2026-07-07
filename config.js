@@ -403,7 +403,7 @@ window.ZOMVOX_CONFIG = {
       ambientForest: '',
       ambientDunes: '',
       ambientRocky: '',
-      ambientSwamp: '',
+      ambientSwamp: 'swamp.mp3',
       ambientAshlands: ''
     }
   }
