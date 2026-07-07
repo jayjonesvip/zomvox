@@ -17,7 +17,7 @@ window.ZOMVOX_CONFIG = {
     Bump this when you make visible changes so you can tell the browser
     loaded the newest version.
   */
-  buildVersion: '2026.07.06.17',
+  buildVersion: '2026.07.07.01',
 
   /*
     Seed used for deterministic world generation.
@@ -393,7 +393,18 @@ window.ZOMVOX_CONFIG = {
       heartbeat: null,
       confirm: null,
       briefing: null,
-      perkEquip: null
+      perkEquip: null,
+
+      /*
+        Ambient loops are file-only. Leave as '' to keep that area silent.
+        Drop mp3/wav loops into assets/ and set the matching file name here.
+      */
+      ambientMenu: '',
+      ambientForest: '',
+      ambientDunes: '',
+      ambientRocky: '',
+      ambientSwamp: '',
+      ambientAshlands: ''
     }
   }
 };
