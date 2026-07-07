@@ -240,7 +240,7 @@
   let touchMode = matchMedia('(pointer: coarse)').matches;
   let keys = Object.create(null);
   const touchInput = { moveX: 0, moveY: 0, jump: false, lookId: null, lookX: 0, lookY: 0, stickId: null };
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.06.15');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.06.16');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -652,11 +652,13 @@
     objectiveBriefing.classList.add('show');
     document.body.classList.add('briefing-open');
     player.vel = [0, 0, 0];
+    sound('briefing');
     if (document.pointerLockElement === canvas && document.exitPointerLock) document.exitPointerLock();
   }
 
   function acknowledgeObjectiveBriefing() {
     if (!mission.briefingActive) return;
+    sound('confirm');
     mission.briefingActive = false;
     objectiveBriefing.classList.remove('show');
     document.body.classList.remove('briefing-open');
@@ -703,7 +705,7 @@
     if (id === 'doubleMag') setPlayerMagSize(effectiveMagSize(), true);
     scorePop(choice.name.toUpperCase(), 'pickup small');
     showToast('Perk installed: ' + choice.name);
-    sound('pickup');
+    sound('perkEquip');
     mission.upgradeActive = false;
     upgradeOverlay.classList.remove('show');
     document.body.classList.remove('upgrade-open');
@@ -1813,6 +1815,7 @@ function playerOnMachinePad() {
 
   function giveUpMission() {
     if (!deathState.active || !deathState.ready || mission.mode !== MODE_STORY) return;
+    sound('confirm');
     deathState.active = false;
     deathState.ready = false;
     deathState.timer = 0;
@@ -2841,6 +2844,7 @@ function currentWaterIsDangerous() {
   }
 
   function startStoryGame() {
+    sound('confirm');
     if (mission.mode !== MODE_STORY || !mission.pendingBriefing) {
       mission.mode = MODE_STORY;
       mission.quickBiome = 'forest';
@@ -2852,10 +2856,12 @@ function currentWaterIsDangerous() {
 
   function toggleQuickBiomePanel() {
     if (!quickBiomePanel) return;
+    sound('confirm');
     quickBiomePanel.hidden = !quickBiomePanel.hidden;
   }
 
   function startQuickGame(biome) {
+    sound('confirm');
     mission.mode = MODE_QUICK;
     mission.quickBiome = normalizeBiome(biome);
     document.body.classList.add('quick-mode');
@@ -2872,6 +2878,7 @@ function currentWaterIsDangerous() {
   }
   function continueFromDeath() {
     if (!deathState.active || !deathState.ready) return;
+    sound('confirm');
     respawn();
   }
   play.addEventListener('click', startStoryGame);
