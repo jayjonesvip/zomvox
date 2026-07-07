@@ -242,7 +242,7 @@
   const portraitQuery = matchMedia('(orientation: portrait)');
   let keys = Object.create(null);
   const touchInput = { moveX: 0, moveY: 0, jump: false, lookId: null, lookX: 0, lookY: 0, stickId: null };
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.07.01');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.07.02');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -1796,11 +1796,13 @@ function playerOnMachinePad() {
       deathText.textContent = 'Command uplink searching for revive authorization';
       deathStats.textContent = '';
       deathContinue.textContent = 'Continue';
+      deathGiveUp.textContent = 'Give Up';
     } else {
       deathTitle.textContent = 'YOU DIED!';
       deathText.textContent = 'Final stats';
       renderDeathStats();
-      deathContinue.textContent = 'Continue';
+      deathContinue.textContent = 'Continue Hunt';
+      deathGiveUp.textContent = 'Main Menu';
     }
     deathFill.style.width = '0%';
     deathOverlay.classList.remove('ready');
@@ -1814,7 +1816,7 @@ function playerOnMachinePad() {
       deathState.ready = true;
       deathText.textContent = mission.mode === MODE_STORY
         ? 'Mission Command can remotely revive you'
-        : 'Click continue to respawn';
+        : 'Continue hunt or return to main menu';
       deathOverlay.classList.add('ready');
     }
   }
@@ -1871,8 +1873,7 @@ function playerOnMachinePad() {
     }
   }
 
-  function giveUpMission() {
-    if (!deathState.active || !deathState.ready || mission.mode !== MODE_STORY) return;
+  function returnToMainMenuFromDeath(message, showQuickPicker = false) {
     sound('confirm');
     deathState.active = false;
     deathState.ready = false;
@@ -1882,14 +1883,26 @@ function playerOnMachinePad() {
     document.body.classList.remove('dead', 'low-health', 'story-death', 'story-reviving', 'story-revive-fade');
     deathOverlay.classList.remove('show', 'ready');
     deathStats.textContent = '';
+    deathTitle.textContent = 'YOU DIED!';
     deathText.textContent = 'Respawning...';
     deathFill.style.width = '0%';
     menu.style.display = 'flex';
     mission.mode = MODE_STORY;
     mission.quickBiome = 'forest';
+    if (quickBiomePanel) quickBiomePanel.hidden = !showQuickPicker;
     document.body.classList.remove('quick-mode');
     generateWorld(MISSION_SEEDS[0] || INITIAL_SEED);
-    showToast('Mission abandoned. Awaiting new orders.');
+    updateAmbientSound(true);
+    showToast(message);
+  }
+
+  function giveUpMission() {
+    if (!deathState.active || !deathState.ready) return;
+    if (mission.mode === MODE_STORY) {
+      returnToMainMenuFromDeath('Mission abandoned. Awaiting new orders.');
+      return;
+    }
+    returnToMainMenuFromDeath('Quick Hunt ended. Choose another drop zone.', true);
   }
 
   function startReload() {
