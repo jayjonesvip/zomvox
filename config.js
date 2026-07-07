@@ -393,13 +393,13 @@ window.ZOMVOX_CONFIG = {
       heartbeat: null,
       confirm: null,
       briefing: null,
-      perkEquip: null,
+      perkEquip: 'freesound_community-item-equip-6904.mp3',
 
       /*
         Ambient loops are file-only. Leave as '' to keep that area silent.
         Drop mp3/wav loops into assets/ and set the matching file name here.
       */
-      ambientMenu: '',
+      ambientMenu: 'mainloop.mp3',
       ambientForest: '',
       ambientDunes: '',
       ambientRocky: '',
