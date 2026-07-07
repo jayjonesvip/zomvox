@@ -39,6 +39,8 @@
   const briefingOk = $('briefingOk');
   const upgradeOverlay = $('upgradeOverlay');
   const upgradeMeta = $('upgradeMeta');
+  const upgradeTitle = $('upgradeTitle');
+  const upgradeBody = $('upgradeBody');
   const upgradeOptions = $('upgradeOptions');
   const scoreFeed = $('scoreFeed');
   const reticle = $('reticle');
@@ -236,7 +238,7 @@
   let touchMode = matchMedia('(pointer: coarse)').matches;
   let keys = Object.create(null);
   const touchInput = { moveX: 0, moveY: 0, jump: false, lookId: null, lookX: 0, lookY: 0, stickId: null };
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.06.13');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.06.14');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -284,18 +286,22 @@
     toastLockTimer: 0
   };
 
-  const weaponUpgrades = {
+  const activePerks = {
     quickReload: false,
     doubleMag: false,
     premiumGrip: false,
-    hairTrigger: false
+    hairTrigger: false,
+    fleetFeet: false,
+    bodyArmor: false
   };
 
-  const WEAPON_UPGRADE_CHOICES = [
+  const PERK_CHOICES = [
     { id: 'quickReload', name: 'Quick Reload', desc: 'Field-drilled swap. Reload time cut in half.' },
     { id: 'doubleMag', name: 'Double Stack', desc: 'Doubles magazine capacity for longer pushes.' },
     { id: 'premiumGrip', name: 'Premium Grip', desc: 'Stabilized handle. Shot recoil is heavily reduced.' },
-    { id: 'hairTrigger', name: 'Hair Trigger', desc: 'Tuned trigger group. Fire cooldown is cut in half.' }
+    { id: 'hairTrigger', name: 'Hair Trigger', desc: 'Tuned trigger group. Fire cooldown is cut in half.' },
+    { id: 'fleetFeet', name: 'Fleet Feet', desc: 'Move 25% faster across hostile terrain.' },
+    { id: 'bodyArmor', name: 'Body Armor', desc: 'Zombie bite damage reduced by 20%.' }
   ];
 
   function syncBulletRack(size) {
@@ -308,21 +314,29 @@
   }
 
   function effectiveMagSize() {
-    return MAG_SIZE * (weaponUpgrades.doubleMag ? DOUBLE_MAG_MULTIPLIER : 1);
+    return MAG_SIZE * (activePerks.doubleMag ? DOUBLE_MAG_MULTIPLIER : 1);
   }
 
   function currentReloadTime() {
-    return RELOAD_TIME * (weaponUpgrades.quickReload ? QUICK_RELOAD_MULTIPLIER : 1);
+    return RELOAD_TIME * (activePerks.quickReload ? QUICK_RELOAD_MULTIPLIER : 1);
   }
 
   function currentFireCooldown() {
-    return FIRE_COOLDOWN * (weaponUpgrades.hairTrigger ? HAIR_TRIGGER_MULTIPLIER : 1);
+    return FIRE_COOLDOWN * (activePerks.hairTrigger ? HAIR_TRIGGER_MULTIPLIER : 1);
   }
 
   function currentRecoilAmount() {
     // Premium Grip is a recoil reducer. Clamp the multiplier above so config
-    // tweaks can never accidentally make the upgrade kick harder.
-    return RECOIL_AMOUNT * (weaponUpgrades.premiumGrip ? PREMIUM_GRIP_MULTIPLIER : 1);
+    // tweaks can never accidentally make the perk kick harder.
+    return RECOIL_AMOUNT * (activePerks.premiumGrip ? PREMIUM_GRIP_MULTIPLIER : 1);
+  }
+
+  function currentPlayerSpeedMultiplier() {
+    return activePerks.fleetFeet ? 1.25 : 1;
+  }
+
+  function currentZombieDamage(amount) {
+    return amount * (activePerks.bodyArmor ? 0.8 : 1);
   }
 
   function setPlayerMagSize(size, refill = false) {
@@ -651,15 +665,17 @@
     if (!touchMode && menu.style.display === 'none' && !deathState.active && !worldRebuildState.active && !isUpgradeOpen()) requestPointerLockSafe();
   }
 
-  function openUpgradeChoice(afterChoice) {
-    const available = WEAPON_UPGRADE_CHOICES.filter(choice => !weaponUpgrades[choice.id]);
+  function openPerkChoice(afterChoice, options = {}) {
+    const available = PERK_CHOICES.filter(choice => !activePerks[choice.id]);
     if (!upgradeOverlay || !upgradeOptions || !available.length) {
       if (afterChoice) afterChoice();
       return;
     }
     mission.upgradeActive = true;
     mission.upgradeAfterChoice = afterChoice || null;
-    if (upgradeMeta) upgradeMeta.textContent = currentIslandLabel() + ' // ' + currentBiomeLabel() + ' // Armory Selection';
+    if (upgradeMeta) upgradeMeta.textContent = options.meta || (currentIslandLabel() + ' // ' + currentBiomeLabel() + ' // Perk Selection');
+    if (upgradeTitle) upgradeTitle.textContent = options.title || 'Choose Perk';
+    if (upgradeBody) upgradeBody.textContent = options.body || 'Pick one perk before redeploy.';
     upgradeOptions.innerHTML = '';
     for (const choice of available) {
       const btn = document.createElement('button');
@@ -669,7 +685,7 @@
       btn.innerHTML = '<span class="upgradeName"></span><span class="upgradeDesc"></span>';
       btn.querySelector('.upgradeName').textContent = choice.name;
       btn.querySelector('.upgradeDesc').textContent = choice.desc;
-      btn.addEventListener('click', () => chooseWeaponUpgrade(choice.id));
+      btn.addEventListener('click', () => choosePerk(choice.id));
       upgradeOptions.appendChild(btn);
     }
     upgradeOverlay.classList.add('show');
@@ -678,13 +694,13 @@
     if (document.pointerLockElement === canvas && document.exitPointerLock) document.exitPointerLock();
   }
 
-  function chooseWeaponUpgrade(id) {
-    const choice = WEAPON_UPGRADE_CHOICES.find(item => item.id === id);
-    if (!choice || weaponUpgrades[id]) return;
-    weaponUpgrades[id] = true;
+  function choosePerk(id) {
+    const choice = PERK_CHOICES.find(item => item.id === id);
+    if (!choice || activePerks[id]) return;
+    activePerks[id] = true;
     if (id === 'doubleMag') setPlayerMagSize(effectiveMagSize(), true);
     scorePop(choice.name.toUpperCase(), 'pickup small');
-    showToast('Armory upgrade installed: ' + choice.name);
+    showToast('Perk installed: ' + choice.name);
     sound('pickup');
     mission.upgradeActive = false;
     upgradeOverlay.classList.remove('show');
@@ -692,6 +708,7 @@
     const afterChoice = mission.upgradeAfterChoice;
     mission.upgradeAfterChoice = null;
     if (afterChoice) afterChoice();
+    if (!touchMode && menu.style.display === 'none' && !deathState.active && !worldRebuildState.active && !isBriefingOpen() && !isUpgradeOpen()) requestPointerLockSafe();
   }
 
   function updateWorldRebuild(dt) {
@@ -1518,7 +1535,7 @@ function playerOnMachinePad() {
     gunSprite.classList.toggle('moving', movingInput);
     const len = Math.hypot(mx, mz) || 1; mx /= len; mz /= len;
     const sprint = keys.ShiftLeft || keys.ShiftRight;
-    const speed = 5.35 * (sprint ? 1.55 : 1.0) * surfaceMoveMultiplier(player.pos[0], player.pos[2]);
+    const speed = 5.35 * currentPlayerSpeedMultiplier() * (sprint ? 1.55 : 1.0) * surfaceMoveMultiplier(player.pos[0], player.pos[2]);
     player.vel[0] = insertion ? 0 : mx * speed;
     player.vel[2] = insertion ? 0 : mz * speed;
     player.vel[1] -= (insertion ? 9 : 22) * dt;
@@ -1679,7 +1696,7 @@ function playerOnMachinePad() {
       const attackRange = e.big ? 1.82 : (stats.kind === 'speedy' ? 1.42 : 1.58);
       const attackDist = Math.hypot(player.pos[0] - e.x, player.pos[2] - e.z) || 1;
       if (attackDist < attackRange && Math.abs(player.pos[1] - e.y) < 2.25 && e.attack <= 0) {
-        damagePlayer(stats.damage, 'bite');
+        damagePlayer(currentZombieDamage(stats.damage), 'bite');
         e.attack = stats.attackCooldown;
         e.retreat = stats.retreat;
       }
@@ -2077,7 +2094,11 @@ function playerOnMachinePad() {
       body: 'Mission Command: extraction confirmed. Confirm redeploy and we will drop you onto the next contaminated island.',
       hudTitle: 'Island breach contained',
       hudMeta: 'Redeploying',
-      afterOk: () => openUpgradeChoice(() => beginWorldRebuild(nextMissionSeed()))
+      afterOk: () => openPerkChoice(() => beginWorldRebuild(nextMissionSeed()), {
+        meta: currentIslandLabel() + ' // ' + currentBiomeLabel() + ' // Perk Selection',
+        title: 'Choose Perk',
+        body: 'Pick one perk before redeploy.'
+      })
     });
     scorePop('EXTRACTION CONFIRMED', 'wave');
   }
@@ -2722,10 +2743,16 @@ function currentWaterIsDangerous() {
       mission.hudMeta = currentBiomeLabel();
       setWeaponUnlocked(true);
       nextSpawnTimer = 1.6;
-      startInsertionDrop();
-      spawnInitialWave();
-      showCommandBanner('QUICK HUNT', currentBiomeLabel() + ' drop zone', 2.8);
-      showToast('Quick Hunt: survive the infected.');
+      openPerkChoice(() => {
+        startInsertionDrop();
+        spawnInitialWave();
+        showCommandBanner('QUICK HUNT', currentBiomeLabel() + ' drop zone', 2.8);
+        showToast('Quick Hunt: survive the infected.');
+      }, {
+        meta: 'Quick Hunt // ' + currentBiomeLabel() + ' // Perk Selection',
+        title: 'Choose Perk',
+        body: 'Pick one perk before the drop.'
+      });
       return;
     }
     queueObjectiveBriefing({
@@ -2747,6 +2774,10 @@ function currentWaterIsDangerous() {
     if (mission.pendingBriefing) {
       locked = touchMode;
       openObjectiveBriefing();
+      return;
+    }
+    if (isUpgradeOpen()) {
+      locked = touchMode;
       return;
     }
     locked = true;
