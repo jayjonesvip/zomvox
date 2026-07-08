@@ -3,6 +3,9 @@
 
   const config = window.ZOMVOX_CONFIG || {};
   const soundFiles = (config.audio && config.audio.files) || {};
+  const SILENCE_TRIM_THRESHOLD = 0.003;
+  const SILENCE_TRIM_MAX_SECONDS = 0.65;
+  const SILENCE_TRIM_PREROLL_SECONDS = 0.006;
 
   let sfxEnabled = true;
   let ambientEnabled = true;
@@ -15,6 +18,7 @@
   // decoded AudioBuffers, not HTMLAudioElement objects
   const bufferCache = new Map();
   const loadingCache = new Map();
+  const leadInCache = new WeakMap();
 
   function getAudio() {
     const AC = window.AudioContext || window.webkitAudioContext;
@@ -196,7 +200,30 @@
     return Array.from(new Set(files));
   }
 
-  function playBuffer(buffer, gainValue = 1) {
+  function leadInOffset(buffer) {
+    if (!buffer || buffer.duration < 0.08) return 0;
+    if (leadInCache.has(buffer)) return leadInCache.get(buffer);
+
+    const maxSamples = Math.min(buffer.length, Math.floor(buffer.sampleRate * SILENCE_TRIM_MAX_SECONDS));
+    let offset = 0;
+
+    // MP3s from public SFX libraries often have padded silence before the hit.
+    // Find the first meaningful sample and keep a tiny pre-roll so attacks stay natural.
+    scan:
+    for (let i = 0; i < maxSamples; i += 32) {
+      for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
+        if (Math.abs(buffer.getChannelData(channel)[i]) >= SILENCE_TRIM_THRESHOLD) {
+          offset = Math.max(0, i / buffer.sampleRate - SILENCE_TRIM_PREROLL_SECONDS);
+          break scan;
+        }
+      }
+    }
+
+    leadInCache.set(buffer, offset);
+    return offset;
+  }
+
+  function playBuffer(buffer, gainValue = 1, trimLeadingSilence = true) {
     const ctx = getAudio();
     if (!ctx || !buffer) return false;
 
@@ -209,7 +236,7 @@
     src.connect(gain);
     gain.connect(ctx.destination);
 
-    src.start(ctx.currentTime);
+    src.start(ctx.currentTime, trimLeadingSilence ? leadInOffset(buffer) : 0);
     return true;
   }
 
@@ -221,7 +248,7 @@
     const buffer = bufferCache.get(key);
 
     if (buffer) {
-      playBuffer(buffer);
+      playBuffer(buffer, 1, true);
       return true;
     }
 
