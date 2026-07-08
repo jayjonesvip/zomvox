@@ -379,7 +379,7 @@ window.ZOMVOX_CONFIG = {
       reloadDone: null,
       block: null,
       hit: 'hit.mp3',
-      head: 'hit.mp3',
+      head: 'freesound_community-086230_headshotwav-40654.mp3',
       kill: 'hit.mp3',
       pickup: 'pickup.mp3',
       pickupAmmo: 'freesound_community-item-equip-6904.mp3',
