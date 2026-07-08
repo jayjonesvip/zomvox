@@ -1,4 +1,4 @@
-88/*
+/*
   ZOMVOX CONFIG
 
   This file is for gameplay tuning only.
