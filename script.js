@@ -247,7 +247,7 @@
   const portraitQuery = matchMedia('(orientation: portrait)');
   let keys = Object.create(null);
   const touchInput = { moveX: 0, moveY: 0, jump: false, lookId: null, lookX: 0, lookY: 0, stickId: null };
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.08.07');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.08.08');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -262,7 +262,19 @@
   let hordeLevel = 0;
   let heartbeatTimer = 0;
   const deathState = { active: false, timer: 0, duration: DEATH_READY_DELAY, ready: false };
-  const replayState = { recorder: null, chunks: [], blob: null, url: '', mimeType: '', active: false };
+  const REPLAY_WIDTH = 1080;
+  const REPLAY_HEIGHT = 1920;
+  const replayState = {
+    recorder: null,
+    chunks: [],
+    blob: null,
+    url: '',
+    mimeType: '',
+    active: false,
+    canvas: null,
+    ctx: null,
+    videoStream: null
+  };
   const worldRebuildState = { active: false, timer: 0, startedAt: 0, duration: WORLD_REBUILD_DURATION, seed: null };
   const mission = {
     mode: MODE_STORY,
@@ -540,7 +552,8 @@
   }
 
   function replaySupported() {
-    return !!(canvas.captureStream && window.MediaRecorder);
+    const testCanvas = document.createElement('canvas');
+    return !!(testCanvas.captureStream && window.MediaRecorder);
   }
 
   function replayMimeType() {
@@ -563,15 +576,85 @@
     if (replayState.url) URL.revokeObjectURL(replayState.url);
     replayState.blob = null;
     replayState.url = '';
-    replayState.chunks = [];
+    if (!replayState.active) replayState.chunks = [];
     setReplayDownloadVisible(false);
+  }
+
+  function ensureReplayCanvas() {
+    if (!replayState.canvas) {
+      replayState.canvas = document.createElement('canvas');
+      replayState.canvas.width = REPLAY_WIDTH;
+      replayState.canvas.height = REPLAY_HEIGHT;
+      replayState.ctx = replayState.canvas.getContext('2d');
+    }
+    return replayState.ctx ? replayState.canvas : null;
+  }
+
+  function cleanupReplayCapture() {
+    if (replayState.videoStream) {
+      replayState.videoStream.getVideoTracks().forEach(track => track.stop());
+      replayState.videoStream = null;
+    }
+  }
+
+  function drawReplayFrame() {
+    const replayCanvas = replayState.canvas;
+    const ctx = replayState.ctx;
+    if (!replayState.active || !replayCanvas || !ctx) return;
+
+    const w = replayCanvas.width;
+    const h = replayCanvas.height;
+    const sourceW = canvas.width || 1;
+    const sourceH = canvas.height || 1;
+    const gameAspect = sourceW / Math.max(1, sourceH);
+    const targetW = w;
+    const targetH = Math.min(Math.round(targetW / gameAspect), Math.round(h * 0.64));
+    const x = Math.floor((w - targetW) / 2);
+    const y = Math.floor((h - targetH) / 2);
+
+    ctx.fillStyle = '#030607';
+    ctx.fillRect(0, 0, w, h);
+
+    const gradient = ctx.createLinearGradient(0, 0, 0, h);
+    gradient.addColorStop(0, 'rgba(145, 243, 110, 0.18)');
+    gradient.addColorStop(0.42, 'rgba(0, 0, 0, 0)');
+    gradient.addColorStop(1, 'rgba(255, 230, 109, 0.12)');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, w, h);
+
+    ctx.save();
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
+    ctx.shadowBlur = 24;
+    ctx.drawImage(canvas, x, y, targetW, targetH);
+    ctx.restore();
+
+    ctx.fillStyle = '#91f36e';
+    ctx.font = '900 82px Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('ZomVox', w / 2, 160);
+
+    ctx.fillStyle = '#f4fff0';
+    ctx.font = '800 38px Arial, sans-serif';
+    ctx.fillText('Zombies and Voxels', w / 2, 224);
+
+    ctx.fillStyle = '#ffe66d';
+    ctx.font = '900 44px Arial, sans-serif';
+    ctx.fillText('zomvox.com', w / 2, h - 145);
   }
 
   function startReplayRecording() {
     if (!replaySupported() || replayState.active || deathState.active) return;
     clearReplay();
     try {
-      const stream = canvas.captureStream(30);
+      const replayCanvas = ensureReplayCanvas();
+      if (!replayCanvas) return;
+      const videoStream = replayCanvas.captureStream(30);
+      replayState.videoStream = videoStream;
+      const audioStream = window.ZomVoxSound?.recordingStream?.();
+      const stream = new MediaStream();
+      videoStream.getVideoTracks().forEach(track => stream.addTrack(track));
+      if (audioStream) audioStream.getAudioTracks().forEach(track => stream.addTrack(track));
       const mimeType = replayMimeType();
       const options = mimeType ? { mimeType } : undefined;
       const recorder = new MediaRecorder(stream, options);
@@ -580,6 +663,7 @@
       replayState.mimeType = mimeType || recorder.mimeType || 'video/webm';
       replayState.active = true;
       replayState.chunks = [];
+      drawReplayFrame();
 
       recorder.addEventListener('dataavailable', event => {
         if (event.data && event.data.size > 0) replayState.chunks.push(event.data);
@@ -587,7 +671,7 @@
       recorder.addEventListener('stop', () => {
         replayState.active = false;
         replayState.recorder = null;
-        stream.getTracks().forEach(track => track.stop());
+        cleanupReplayCapture();
         if (!replayState.chunks.length) {
           setReplayDownloadVisible(false);
           return;
@@ -602,6 +686,7 @@
       console.warn(err);
       replayState.active = false;
       replayState.recorder = null;
+      cleanupReplayCapture();
       setReplayDownloadVisible(false);
     }
   }
@@ -616,6 +701,7 @@
       console.warn(err);
       replayState.active = false;
       replayState.recorder = null;
+      cleanupReplayCapture();
       setReplayDownloadVisible(false);
     }
   }
@@ -2967,6 +3053,7 @@ function currentWaterIsDangerous() {
     frameCounter++;
     update(dt);
     render(now / 1000);
+    drawReplayFrame();
     requestAnimationFrame(loop);
   }
 
@@ -3144,8 +3231,8 @@ function currentWaterIsDangerous() {
     applySettings();
     if (soundEnabled || ambientEnabled) window.ZomVoxSound?.prime();
     menu.style.display = 'none';
-    updateAmbientSound(true);
     startReplayRecording();
+    updateAmbientSound(true);
     if (touchMode) requestMobileFullscreen();
     if (mission.pendingBriefing) {
       locked = touchMode;

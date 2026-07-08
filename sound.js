@@ -16,6 +16,7 @@
   let activeAmbientName = '';
   let activeOneShots = 0;
   let landSource = null;
+  let recordingDestination = null;
 
   // decoded AudioBuffers, not HTMLAudioElement objects
   const bufferCache = new Map();
@@ -42,6 +43,21 @@
     return audioCtx;
   }
 
+  function recordingStream() {
+    const ctx = getAudio();
+    if (!ctx || !ctx.createMediaStreamDestination) return null;
+    if (!recordingDestination) recordingDestination = ctx.createMediaStreamDestination();
+    return recordingDestination.stream;
+  }
+
+  function connectOutput(node) {
+    const ctx = getAudio();
+    if (!ctx || !node) return;
+    node.connect(ctx.destination);
+    if (!recordingDestination) return;
+    try { node.connect(recordingDestination); } catch (_) {}
+  }
+
   function tone(freq, dur = .08, type = 'square', gain = .05, endFreq = null) {
     const ctx = getAudio();
     if (!ctx) return;
@@ -61,7 +77,7 @@
     g.gain.exponentialRampToValueAtTime(0.001, now + dur);
 
     osc.connect(g);
-    g.connect(ctx.destination);
+    connectOutput(g);
 
     osc.start(now);
     osc.stop(now + dur + .02);
@@ -93,7 +109,7 @@
     src.buffer = buffer;
     src.connect(filt);
     filt.connect(g);
-    g.connect(ctx.destination);
+    connectOutput(g);
 
     src.start(now);
     src.stop(now + dur + .02);
@@ -127,7 +143,7 @@
     src.buffer = buffer;
     src.connect(band);
     band.connect(gain);
-    gain.connect(ctx.destination);
+    connectOutput(gain);
 
     src.start(now);
     src.stop(now + dur + .02);
@@ -294,7 +310,7 @@
     gain.gain.value = gainValue;
 
     src.connect(gain);
-    gain.connect(ctx.destination);
+    connectOutput(gain);
 
     activeOneShots++;
     src.onended = () => {
@@ -352,7 +368,7 @@
     gain.gain.value = .32;
 
     src.connect(gain);
-    gain.connect(ctx.destination);
+    connectOutput(gain);
 
     src.onended = () => {
       if (ambientSource === src) {
@@ -466,6 +482,10 @@
     stopAmbient() {
       ambientTargetName = '';
       stopAmbient();
+    },
+
+    recordingStream() {
+      return recordingStream();
     }
   };
 })();
