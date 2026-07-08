@@ -14,6 +14,8 @@
   let ambientGain = null;
   let ambientTargetName = '';
   let activeAmbientName = '';
+  let activeOneShots = 0;
+  let landSource = null;
 
   // decoded AudioBuffers, not HTMLAudioElement objects
   const bufferCache = new Map();
@@ -134,8 +136,8 @@
       tone(115, .11, 'sawtooth', .045, 62);
       noise(.08, .045, 360);
     } else if (name === 'land') {
-      noise(.07, .09, 300);
-      tone(95, .06, 'sine', .045, 55);
+      noise(.055, .025, 260);
+      tone(90, .045, 'sine', .018, 55);
     } else if (name === 'objectiveClear') {
       tone(220, .08, 'triangle', .05, 330);
       setTimeout(() => tone(440, .09, 'triangle', .05, 660), 85);
@@ -223,9 +225,28 @@
     return offset;
   }
 
-  function playBuffer(buffer, gainValue = 1, trimLeadingSilence = true) {
+  function stopLand() {
+    if (!landSource) return;
+    try { landSource.stop(); } catch (_) {}
+    landSource.onended = null;
+    landSource.disconnect();
+    landSource = null;
+    activeOneShots = Math.max(0, activeOneShots - 1);
+  }
+
+  function trackSynthOneShot(name) {
+    activeOneShots++;
+    setTimeout(() => {
+      activeOneShots = Math.max(0, activeOneShots - 1);
+    }, name === 'land' ? 120 : 260);
+  }
+
+  function playBuffer(buffer, gainValue = 1, trimLeadingSilence = true, name = '') {
     const ctx = getAudio();
     if (!ctx || !buffer) return false;
+
+    if (name === 'land' && activeOneShots > 0) return true;
+    if (name !== 'land') stopLand();
 
     const src = ctx.createBufferSource();
     const gain = ctx.createGain();
@@ -235,6 +256,13 @@
 
     src.connect(gain);
     gain.connect(ctx.destination);
+
+    activeOneShots++;
+    src.onended = () => {
+      activeOneShots = Math.max(0, activeOneShots - 1);
+      if (landSource === src) landSource = null;
+    };
+    if (name === 'land') landSource = src;
 
     src.start(ctx.currentTime, trimLeadingSilence ? leadInOffset(buffer) : 0);
     return true;
@@ -248,7 +276,7 @@
     const buffer = bufferCache.get(key);
 
     if (buffer) {
-      playBuffer(buffer, 1, true);
+      playBuffer(buffer, name === 'land' ? .28 : 1, true, name);
       return true;
     }
 
@@ -383,8 +411,12 @@
 
       if (fileName === '') return;
 
+      if (name === 'land' && activeOneShots > 0) return;
+      if (name !== 'land') stopLand();
+
       if (playFile(name, fileName)) return;
 
+      trackSynthOneShot(name);
       synth(name);
     },
 
