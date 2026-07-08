@@ -251,7 +251,7 @@ window.ZOMVOX_CONFIG = {
     /*
       Health drained per second while the contamination machine is active.
     */
-    toxinDamagePerSecond: 1.15,
+    toxinDamagePerSecond: 2.50,
 
     /*
       Seconds the player must stand on the translucent yellow shutdown block.
@@ -271,7 +271,7 @@ window.ZOMVOX_CONFIG = {
 
       These line up with islandSeeds by position.
     */
-    infectedGoals: [2, 2, 2, 2, 2],
+    infectedGoals: [20, 25, 50, 75, 100],
 
     /*
       Fallback combat objective if infectedGoals is removed.
