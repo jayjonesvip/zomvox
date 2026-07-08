@@ -1,4 +1,4 @@
-8/*
+88/*
   ZOMVOX CONFIG
 
   This file is for gameplay tuning only.
@@ -373,7 +373,7 @@ window.ZOMVOX_CONFIG = {
       Use an empty string '' to disable a specific sound.
     */
     files: {
-      shoot: 'shoot.mp3',
+      shoot: 'dragon-studio-gunshot-504030.mp3'
       empty: 'empty.mp3',
       reloadStart: 'reload.mp3',
       reloadDone: null,
