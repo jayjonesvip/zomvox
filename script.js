@@ -58,6 +58,7 @@
   const deathText = $('deathText');
   const deathStats = $('deathStats');
   const deathShare = $('deathShare');
+  const deathDownload = $('deathDownload');
   const deathContinue = $('deathContinue');
   const deathGiveUp = $('deathGiveUp');
   const mobileControls = $('mobileControls');
@@ -246,7 +247,7 @@
   const portraitQuery = matchMedia('(orientation: portrait)');
   let keys = Object.create(null);
   const touchInput = { moveX: 0, moveY: 0, jump: false, lookId: null, lookX: 0, lookY: 0, stickId: null };
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.08.06');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.08.07');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -261,6 +262,7 @@
   let hordeLevel = 0;
   let heartbeatTimer = 0;
   const deathState = { active: false, timer: 0, duration: DEATH_READY_DELAY, ready: false };
+  const replayState = { recorder: null, chunks: [], blob: null, url: '', mimeType: '', active: false };
   const worldRebuildState = { active: false, timer: 0, startedAt: 0, duration: WORLD_REBUILD_DURATION, seed: null };
   const mission = {
     mode: MODE_STORY,
@@ -535,6 +537,100 @@
       showToast('Run copied to clipboard.');
       setTimeout(() => { button.textContent = 'Share your run'; }, 1200);
     }
+  }
+
+  function replaySupported() {
+    return !!(canvas.captureStream && window.MediaRecorder);
+  }
+
+  function replayMimeType() {
+    const types = [
+      'video/webm;codecs=vp9',
+      'video/webm;codecs=vp8',
+      'video/webm',
+      'video/mp4'
+    ];
+    if (!window.MediaRecorder || !MediaRecorder.isTypeSupported) return '';
+    return types.find(type => MediaRecorder.isTypeSupported(type)) || '';
+  }
+
+  function setReplayDownloadVisible(visible) {
+    if (!deathDownload) return;
+    deathDownload.classList.toggle('hidden', !visible);
+  }
+
+  function clearReplay() {
+    if (replayState.url) URL.revokeObjectURL(replayState.url);
+    replayState.blob = null;
+    replayState.url = '';
+    replayState.chunks = [];
+    setReplayDownloadVisible(false);
+  }
+
+  function startReplayRecording() {
+    if (!replaySupported() || replayState.active || deathState.active) return;
+    clearReplay();
+    try {
+      const stream = canvas.captureStream(30);
+      const mimeType = replayMimeType();
+      const options = mimeType ? { mimeType } : undefined;
+      const recorder = new MediaRecorder(stream, options);
+
+      replayState.recorder = recorder;
+      replayState.mimeType = mimeType || recorder.mimeType || 'video/webm';
+      replayState.active = true;
+      replayState.chunks = [];
+
+      recorder.addEventListener('dataavailable', event => {
+        if (event.data && event.data.size > 0) replayState.chunks.push(event.data);
+      });
+      recorder.addEventListener('stop', () => {
+        replayState.active = false;
+        replayState.recorder = null;
+        stream.getTracks().forEach(track => track.stop());
+        if (!replayState.chunks.length) {
+          setReplayDownloadVisible(false);
+          return;
+        }
+        replayState.blob = new Blob(replayState.chunks, { type: replayState.mimeType || 'video/webm' });
+        if (replayState.url) URL.revokeObjectURL(replayState.url);
+        replayState.url = URL.createObjectURL(replayState.blob);
+        setReplayDownloadVisible(deathState.active);
+      });
+      recorder.start(1000);
+    } catch (err) {
+      console.warn(err);
+      replayState.active = false;
+      replayState.recorder = null;
+      setReplayDownloadVisible(false);
+    }
+  }
+
+  function stopReplayRecording() {
+    const recorder = replayState.recorder;
+    if (!recorder || recorder.state === 'inactive') return;
+    try {
+      recorder.requestData();
+      recorder.stop();
+    } catch (err) {
+      console.warn(err);
+      replayState.active = false;
+      replayState.recorder = null;
+      setReplayDownloadVisible(false);
+    }
+  }
+
+  function downloadReplay() {
+    if (!replayState.blob || !replayState.url) return;
+    sound('confirm');
+    const ext = replayState.mimeType.includes('mp4') ? 'mp4' : 'webm';
+    const name = 'zomvox-' + currentBiome() + '-' + Date.now() + '.' + ext;
+    const link = document.createElement('a');
+    link.href = replayState.url;
+    link.download = name;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
   }
 
   function sound(name) {
@@ -1924,6 +2020,7 @@ function playerOnMachinePad() {
     player.reloadTimer = 0;
     reloadOverlay.classList.remove('show');
     reloadOverlayFill.style.width = '0%';
+    stopReplayRecording();
     document.body.classList.toggle('story-death', mission.mode === MODE_STORY);
     if (mission.mode === MODE_STORY) {
       deathTitle.textContent = 'MISSION FAILURE';
@@ -1973,6 +2070,7 @@ function playerOnMachinePad() {
     lastKillTime = -999;
     killComboCount = 0;
     resetLifeStats();
+    clearReplay();
     document.body.classList.remove('dead', 'low-health', 'story-death');
     if (mission.mode === MODE_STORY) {
       document.body.classList.add('story-reviving');
@@ -1995,6 +2093,7 @@ function playerOnMachinePad() {
     ensureChunks(true);
     enemies = enemies.filter(e => Math.hypot(e.x - player.pos[0], e.z - player.pos[2]) > 34);
     if (mission.mode === MODE_STORY) {
+      startReplayRecording();
       showToast('Mission Command: remote revive complete.');
       setTimeout(() => {
         document.body.classList.add('story-revive-fade');
@@ -2005,6 +2104,7 @@ function playerOnMachinePad() {
         if (!touchMode && menu.style.display === 'none') requestPointerLockSafe();
       }, 880);
     } else {
+      startReplayRecording();
       showToast('Respawned at the old marker. Deaths: ' + player.deaths);
     }
   }
@@ -2020,6 +2120,7 @@ function playerOnMachinePad() {
     deathOverlay.classList.remove('show', 'ready');
     deathStats.textContent = '';
     hideDeathShare();
+    clearReplay();
     deathTitle.textContent = 'YOU DIED!';
     deathText.textContent = 'Respawning...';
     deathFill.style.width = '0%';
@@ -2984,6 +3085,7 @@ function currentWaterIsDangerous() {
     document.body.classList.remove('upgrade-open');
     deathStats.textContent = '';
     hideDeathShare();
+    clearReplay();
     renderBriefingShare(null);
     deathTitle.textContent = 'YOU DIED!';
     deathText.textContent = 'Respawning...';
@@ -3043,6 +3145,7 @@ function currentWaterIsDangerous() {
     if (soundEnabled || ambientEnabled) window.ZomVoxSound?.prime();
     menu.style.display = 'none';
     updateAmbientSound(true);
+    startReplayRecording();
     if (touchMode) requestMobileFullscreen();
     if (mission.pendingBriefing) {
       locked = touchMode;
@@ -3107,6 +3210,7 @@ function currentWaterIsDangerous() {
   briefingOk.addEventListener('click', acknowledgeObjectiveBriefing);
   if (briefingShareButton) briefingShareButton.addEventListener('click', () => shareRunFromButton(briefingShareButton));
   if (deathShare) deathShare.addEventListener('click', () => shareRunFromButton(deathShare));
+  if (deathDownload) deathDownload.addEventListener('click', downloadReplay);
   deathContinue.addEventListener('click', continueFromDeath);
   deathGiveUp.addEventListener('click', giveUpMission);
   canvas.addEventListener('click', () => {
