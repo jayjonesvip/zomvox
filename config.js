@@ -17,7 +17,7 @@ window.ZOMVOX_CONFIG = {
     Bump this when you make visible changes so you can tell the browser
     loaded the newest version.
   */
-  buildVersion: '2026.07.08.03',
+  buildVersion: '2026.07.08.04',
 
   /*
     Seed used for deterministic world generation.
@@ -392,7 +392,7 @@ window.ZOMVOX_CONFIG = {
       wave: null,
       heartbeat: null,
       confirm: null,
-      briefing: 'notification.mp3',
+      briefing: null,
       perkEquip: 'freesound_community-item-equip-6904.mp3',
 
       /*
