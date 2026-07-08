@@ -182,7 +182,9 @@
     } else if (name === 'heartbeat') {
       tone(55, .11, 'sine', .045, 45);
     } else if (name === 'confirm') {
-      tone(640, .045, 'triangle', .04, 820);
+      noise(.012, .018, 2600);
+      tone(1150, .018, 'square', .018, 640);
+      setTimeout(() => tone(420, .018, 'triangle', .012, 260), 18);
     } else if (name === 'briefing') {
       radioStatic(.045, .07, 1200);
       tone(1180, .025, 'square', .018, 680);

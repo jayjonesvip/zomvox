@@ -17,7 +17,7 @@ window.ZOMVOX_CONFIG = {
     Bump this when you make visible changes so you can tell the browser
     loaded the newest version.
   */
-  buildVersion: '2026.07.08.04',
+  buildVersion: '2026.07.08.05',
 
   /*
     Seed used for deterministic world generation.
@@ -373,38 +373,38 @@ window.ZOMVOX_CONFIG = {
       Use an empty string '' to disable a specific sound.
     */
     files: {
-      shoot: 'gunshot.mp3',
+      shoot: 'shoot.mp3',
       empty: 'empty.mp3',
-      reloadStart: 'reload.mp3',
+      reloadStart: 'reloadStart.mp3',
       reloadDone: null,
       block: null,
       hit: 'hit.mp3',
-      head: 'freesound_community-086230_headshotwav-40654.mp3',
+      head: 'head.mp3',
       kill: 'hit.mp3',
       pickup: 'pickup.mp3',
-      pickupAmmo: 'freesound_community-item-equip-6904.mp3',
+      pickupAmmo: 'pickupAmmo.mp3',
       pickupHealth: 'pickup.mp3',
-      bite: 'freesound_community-zombie-bite-96528.mp3',
+      bite: 'bite.mp3',
       hurt: 'hurt.mp3',
-      toxin: 'freesound_community-male-gasp-3-82554.mp3',
+      toxin: 'toxin.mp3',
       land: 'land.mp3',
-      objectiveClear: 'floraphonic-arcade-ui-6-229503.mp3',
+      objectiveClear: 'objectiveClear.mp3',
       wave: null,
       heartbeat: null,
       confirm: null,
       briefing: null,
-      perkEquip: 'freesound_community-item-equip-6904.mp3',
+      perkEquip: 'pickupAmmo.mp3',
 
       /*
         Ambient loops are file-only. Leave as '' to keep that area silent.
         Drop mp3/wav loops into assets/ and set the matching file name here.
       */
-      ambientMenu: 'mainloop.mp3',
-      ambientForest: 'forest_birds.mp3',
-      ambientDunes: 'desert_ambience.mp3',
-      ambientRocky: 'wind_mountain.mp3',
-      ambientSwamp: 'swamp.mp3',
-      ambientAshlands: 'scary_wind.mp3'
+      ambientMenu: 'ambientMenu.mp3',
+      ambientForest: 'ambientForest.mp3',
+      ambientDunes: 'ambientDunes.mp3',
+      ambientRocky: 'ambientRocky.mp3',
+      ambientSwamp: 'ambientSwamp.mp3',
+      ambientAshlands: 'ambientAshlands.mp3'
     }
   }
 };
