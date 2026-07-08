@@ -99,6 +99,40 @@
     src.stop(now + dur + .02);
   }
 
+  function radioStatic(dur = .08, gainValue = .04, center = 1600) {
+    const ctx = getAudio();
+    if (!ctx) return;
+
+    const len = Math.max(1, Math.floor(ctx.sampleRate * dur));
+    const buffer = ctx.createBuffer(1, len, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+
+    for (let i = 0; i < len; i++) {
+      const envelope = 1 - i / len;
+      data[i] = (Math.random() * 2 - 1) * (0.35 + Math.random() * 0.65) * envelope;
+    }
+
+    const src = ctx.createBufferSource();
+    const band = ctx.createBiquadFilter();
+    const gain = ctx.createGain();
+    const now = ctx.currentTime;
+
+    band.type = 'bandpass';
+    band.frequency.setValueAtTime(center, now);
+    band.Q.setValueAtTime(1.8, now);
+
+    gain.gain.setValueAtTime(gainValue, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+
+    src.buffer = buffer;
+    src.connect(band);
+    band.connect(gain);
+    gain.connect(ctx.destination);
+
+    src.start(now);
+    src.stop(now + dur + .02);
+  }
+
   function synth(name) {
     if (name === 'shoot') {
       noise(.045, .12, 950);
@@ -150,8 +184,11 @@
     } else if (name === 'confirm') {
       tone(640, .045, 'triangle', .04, 820);
     } else if (name === 'briefing') {
-      tone(180, .07, 'sine', .035, 260);
-      setTimeout(() => tone(410, .08, 'triangle', .04, 540), 85);
+      radioStatic(.045, .07, 1200);
+      tone(1180, .025, 'square', .018, 680);
+      setTimeout(() => radioStatic(.13, .045, 2100), 34);
+      setTimeout(() => tone(330, .035, 'square', .018, 190), 128);
+      setTimeout(() => radioStatic(.055, .026, 850), 168);
     } else if (name === 'perkEquip') {
       tone(480, .055, 'triangle', .045, 720);
       setTimeout(() => tone(960, .08, 'sine', .04, 1280), 65);
