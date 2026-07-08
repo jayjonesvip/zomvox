@@ -242,7 +242,7 @@
   const portraitQuery = matchMedia('(orientation: portrait)');
   let keys = Object.create(null);
   const touchInput = { moveX: 0, moveY: 0, jump: false, lookId: null, lookX: 0, lookY: 0, stickId: null };
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.07.03');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.08.01');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -531,20 +531,38 @@
 
   function runSplash() {
     if (splashVersion) splashVersion.textContent = buildVersionText();
+    let audioProgress = (soundEnabled || ambientEnabled) ? 0 : 1;
+    let audioReady = !(soundEnabled || ambientEnabled);
+    const preload = (soundEnabled || ambientEnabled) ? window.ZomVoxSound?.prime?.(info => {
+      audioProgress = Math.max(audioProgress, info.progress || 0);
+    }) : null;
+    if (preload && typeof preload.finally === 'function') {
+      preload.finally(() => {
+        audioProgress = 1;
+        audioReady = true;
+      });
+    } else {
+      audioProgress = 1;
+      audioReady = true;
+    }
     const messages = [
       'Getting latest version...',
+      'Preloading audio...',
       'Generating world...',
       'Calibrating display...'
     ];
     const duration = 2600;
+    const maxDuration = 4400;
     const start = performance.now();
     function step(now) {
       const t = Math.min(1, (now - start) / duration);
+      const timeout = (now - start) >= maxDuration;
       const eased = 1 - Math.pow(1 - t, 2.2);
       const idx = Math.min(messages.length - 1, Math.floor(t * messages.length));
+      const progress = Math.min(.98, eased * .72 + audioProgress * .28);
       splashStatus.textContent = messages[idx];
-      splashFill.style.width = (Math.max(.04, eased) * 100).toFixed(1) + '%';
-      if (t < 1) {
+      splashFill.style.width = (Math.max(.04, progress) * 100).toFixed(1) + '%';
+      if (t < 1 || (!audioReady && !timeout)) {
         requestAnimationFrame(step);
       } else {
         splashStatus.textContent = 'Ready.';

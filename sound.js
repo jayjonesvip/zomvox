@@ -20,7 +20,14 @@
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return null;
 
-    if (!audioCtx) audioCtx = new AC();
+    if (!audioCtx) {
+      try {
+        audioCtx = new AC();
+      } catch (err) {
+        console.warn(err);
+        return null;
+      }
+    }
 
     if (audioCtx.state === 'suspended') {
       audioCtx.resume().catch(() => {});
@@ -184,6 +191,11 @@
     return promise;
   }
 
+  function configuredFiles() {
+    const files = Object.values(soundFiles).filter(fileName => !!fileName);
+    return Array.from(new Set(files));
+  }
+
   function playBuffer(buffer, gainValue = 1) {
     const ctx = getAudio();
     if (!ctx || !buffer) return false;
@@ -304,13 +316,34 @@
       if (!ambientEnabled) stopAmbient();
     },
 
-    prime() {
+    prime(onProgress) {
       getAudio();
 
-      Object.entries(soundFiles).forEach(([, fileName]) => {
-        if (!fileName) return;
-        loadFile(fileName);
-      });
+      const files = configuredFiles();
+      const total = files.length;
+      let loaded = 0;
+
+      function report(fileName = '', ok = true) {
+        if (typeof onProgress !== 'function') return;
+        onProgress({
+          loaded,
+          total,
+          fileName,
+          ok,
+          progress: total ? loaded / total : 1
+        });
+      }
+
+      report();
+      if (!total) return Promise.resolve([]);
+
+      return Promise.all(files.map(fileName => {
+        return loadFile(fileName).then(buffer => {
+          loaded++;
+          report(fileName, !!buffer);
+          return buffer;
+        });
+      }));
     },
 
     play(name) {
