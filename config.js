@@ -70,7 +70,7 @@ window.ZOMVOX_CONFIG = {
       Higher values create larger chunks.
       Lower values can make chunk rebuilds lighter.
     */
-    chunkSize: 12,
+    chunkSize: 8,
 
     /*
       How many chunks generate outward from the center.
@@ -81,7 +81,7 @@ window.ZOMVOX_CONFIG = {
       Example:
       4 = 9 x 9 chunks
     */
-    chunkRadius: 4,
+    chunkRadius: 3,
 
     /*
       Max terrain height.
