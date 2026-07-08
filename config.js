@@ -401,10 +401,10 @@ window.ZOMVOX_CONFIG = {
       */
       ambientMenu: 'mainloop.mp3',
       ambientForest: 'forest_birds.mp3',
-      ambientDunes: 'wind_ambience.mp3',
+      ambientDunes: 'desert_ambience.mp3',
       ambientRocky: 'wind_mountain.mp3',
       ambientSwamp: 'swamp.mp3',
-      ambientAshlands: 'jungle_birds.mp3'
+      ambientAshlands: 'scary_wind.mp3'
     }
   }
 };
