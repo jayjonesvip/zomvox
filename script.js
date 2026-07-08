@@ -36,6 +36,9 @@
   const briefingMeta = $('briefingMeta');
   const briefingObjective = $('briefingObjective');
   const briefingBody = $('briefingBody');
+  const briefingShare = $('briefingShare');
+  const briefingShareStats = $('briefingShareStats');
+  const briefingShareButton = $('briefingShareButton');
   const briefingOk = $('briefingOk');
   const upgradeOverlay = $('upgradeOverlay');
   const upgradeMeta = $('upgradeMeta');
@@ -54,6 +57,7 @@
   const deathFill = $('deathFill');
   const deathText = $('deathText');
   const deathStats = $('deathStats');
+  const deathShare = $('deathShare');
   const deathContinue = $('deathContinue');
   const deathGiveUp = $('deathGiveUp');
   const mobileControls = $('mobileControls');
@@ -242,7 +246,7 @@
   const portraitQuery = matchMedia('(orientation: portrait)');
   let keys = Object.create(null);
   const touchInput = { moveX: 0, moveY: 0, jump: false, lookId: null, lookX: 0, lookY: 0, stickId: null };
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.08.05');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.08.06');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -409,22 +413,128 @@
     player.lifeStartedAt = performance.now();
   }
 
-  function formatLifeStats() {
-    const seconds = Math.max(0, Math.floor((performance.now() - player.lifeStartedAt) / 1000));
-    const minutes = Math.floor(seconds / 60);
-    const remain = String(seconds % 60).padStart(2, '0');
-    return [
-      ['Kills', player.lifeKills],
-      ['Headshots', player.lifeHeadshots],
-      ['Longest shot', Math.round(player.lifeLongestShot) + 'm'],
-      ['Survived', minutes + ':' + remain]
-    ];
+  function runSeconds() {
+    return Math.max(0, Math.floor((performance.now() - player.lifeStartedAt) / 1000));
   }
 
-  function renderDeathStats() {
-    deathStats.innerHTML = formatLifeStats()
-      .map(([label, value]) => '<span>' + label + '<br>' + value + '</span>')
-      .join('');
+  function formatRunTime(seconds = runSeconds()) {
+    const minutes = Math.floor(seconds / 60);
+    const remain = String(seconds % 60).padStart(2, '0');
+    return minutes + ':' + remain;
+  }
+
+  function activePerkNames() {
+    return PERK_CHOICES
+      .filter(choice => activePerks[choice.id])
+      .map(choice => choice.name);
+  }
+
+  function runShareUrl() {
+    if (location.protocol === 'http:' || location.protocol === 'https:') {
+      return location.origin + location.pathname;
+    }
+    return 'https://zomvox.com/';
+  }
+
+  function buildRunSummary(title) {
+    const perks = activePerkNames();
+    const perkText = perks.length ? perks.join(' + ') : 'None';
+    const seconds = runSeconds();
+    const stats = [
+      ['Kills', player.lifeKills],
+      ['Headshots', player.lifeHeadshots],
+      ['Biome', currentBiomeLabel()],
+      ['Perk used', perks.length > 1 ? perks.length + ' perks' : perkText],
+      ['Time survived', formatRunTime(seconds)]
+    ];
+    const text = [
+      'ZomVox: Zombies and Voxels',
+      title,
+      'Kills: ' + player.lifeKills,
+      'Headshots: ' + player.lifeHeadshots,
+      'Biome: ' + currentBiomeLabel(),
+      'Perk used: ' + perkText,
+      'Time survived: ' + formatRunTime(seconds),
+      'Play: ' + runShareUrl()
+    ].join('\n');
+    return { stats, text };
+  }
+
+  function renderRunStats(target, summary) {
+    if (!target || !summary) return;
+    target.innerHTML = '';
+    for (const [label, value] of summary.stats) {
+      const item = document.createElement('span');
+      const labelNode = document.createTextNode(label);
+      const valueNode = document.createElement('b');
+      valueNode.textContent = value;
+      item.append(labelNode, document.createElement('br'), valueNode);
+      target.appendChild(item);
+    }
+  }
+
+  function setShareButton(button, summary) {
+    if (!button) return;
+    if (!summary) {
+      button.classList.add('hidden');
+      button.dataset.shareText = '';
+      return;
+    }
+    button.dataset.shareText = summary.text;
+    button.textContent = 'Share your run';
+    button.classList.remove('hidden');
+  }
+
+  function renderDeathStats(summary = buildRunSummary('Quick Hunt run ended')) {
+    renderRunStats(deathStats, summary);
+    setShareButton(deathShare, summary);
+  }
+
+  function hideDeathShare() {
+    setShareButton(deathShare, null);
+  }
+
+  function renderBriefingShare(summary) {
+    if (!briefingShare || !briefingShareStats) return;
+    if (!summary) {
+      briefingShare.classList.add('hidden');
+      briefingShareStats.textContent = '';
+      setShareButton(briefingShareButton, null);
+      return;
+    }
+    renderRunStats(briefingShareStats, summary);
+    setShareButton(briefingShareButton, summary);
+    briefingShare.classList.remove('hidden');
+  }
+
+  function fallbackCopyText(text) {
+    const box = document.createElement('textarea');
+    box.value = text;
+    box.setAttribute('readonly', '');
+    box.style.position = 'fixed';
+    box.style.left = '-9999px';
+    document.body.appendChild(box);
+    box.select();
+    try { document.execCommand('copy'); }
+    finally { box.remove(); }
+  }
+
+  async function shareRunFromButton(button) {
+    const text = button && button.dataset.shareText;
+    if (!text) return;
+    sound('confirm');
+    try {
+      if (navigator.clipboard && window.isSecureContext) await navigator.clipboard.writeText(text);
+      else fallbackCopyText(text);
+      button.textContent = 'Copied';
+      showToast('Run copied to clipboard.');
+      setTimeout(() => { button.textContent = 'Share your run'; }, 1200);
+    } catch (_) {
+      fallbackCopyText(text);
+      button.textContent = 'Copied';
+      showToast('Run copied to clipboard.');
+      setTimeout(() => { button.textContent = 'Share your run'; }, 1200);
+    }
   }
 
   function sound(name) {
@@ -729,6 +839,7 @@
     briefingMeta.textContent = briefing.meta || currentIslandLabel();
     briefingObjective.textContent = briefing.title;
     briefingBody.textContent = briefing.body;
+    renderBriefingShare(briefing.shareSummary || null);
     objectiveBriefing.classList.add('show');
     document.body.classList.add('briefing-open');
     player.vel = [0, 0, 0];
@@ -742,6 +853,7 @@
     mission.briefingActive = false;
     objectiveBriefing.classList.remove('show');
     document.body.classList.remove('briefing-open');
+    renderBriefingShare(null);
     setHudObjective(mission.nextHudTitle || '', mission.nextHudMeta || '');
     const afterOk = mission.briefingAfterOk;
     mission.briefingAfterOk = null;
@@ -1817,12 +1929,13 @@ function playerOnMachinePad() {
       deathTitle.textContent = 'MISSION FAILURE';
       deathText.textContent = 'Command uplink searching for revive authorization';
       deathStats.textContent = '';
+      hideDeathShare();
       deathContinue.textContent = 'Continue';
       deathGiveUp.textContent = 'Give Up';
     } else {
       deathTitle.textContent = 'YOU DIED!';
       deathText.textContent = 'Final stats';
-      renderDeathStats();
+      renderDeathStats(buildRunSummary('Quick Hunt run ended'));
       deathContinue.textContent = 'Continue Hunt';
       deathGiveUp.textContent = 'Main Menu';
     }
@@ -1868,6 +1981,7 @@ function playerOnMachinePad() {
     }
     deathOverlay.classList.remove('ready');
     deathStats.textContent = '';
+    hideDeathShare();
     deathTitle.textContent = 'YOU DIED!';
     deathText.textContent = 'Respawning...';
     deathFill.style.width = '0%';
@@ -1905,6 +2019,7 @@ function playerOnMachinePad() {
     document.body.classList.remove('dead', 'low-health', 'story-death', 'story-reviving', 'story-revive-fade');
     deathOverlay.classList.remove('show', 'ready');
     deathStats.textContent = '';
+    hideDeathShare();
     deathTitle.textContent = 'YOU DIED!';
     deathText.textContent = 'Respawning...';
     deathFill.style.width = '0%';
@@ -2240,6 +2355,7 @@ function playerOnMachinePad() {
       title: 'Island contained',
       meta: currentIslandLabel() + ' // ' + currentBiomeLabel() + ' // Mission Complete',
       body: 'Mission Command: extraction confirmed. Confirm redeploy and we will drop you onto the next contaminated island.',
+      shareSummary: buildRunSummary('Mission cleared'),
       hudTitle: 'Island breach contained',
       hudMeta: 'Redeploying',
       afterOk: () => openPerkChoice(() => beginWorldRebuild(nextMissionSeed()), {
@@ -2867,6 +2983,8 @@ function currentWaterIsDangerous() {
     upgradeOverlay.classList.remove('show');
     document.body.classList.remove('upgrade-open');
     deathStats.textContent = '';
+    hideDeathShare();
+    renderBriefingShare(null);
     deathTitle.textContent = 'YOU DIED!';
     deathText.textContent = 'Respawning...';
     deathFill.style.width = '0%';
@@ -2987,6 +3105,8 @@ function currentWaterIsDangerous() {
     btn.addEventListener('click', () => startQuickGame(btn.dataset.biome));
   }
   briefingOk.addEventListener('click', acknowledgeObjectiveBriefing);
+  if (briefingShareButton) briefingShareButton.addEventListener('click', () => shareRunFromButton(briefingShareButton));
+  if (deathShare) deathShare.addEventListener('click', () => shareRunFromButton(deathShare));
   deathContinue.addEventListener('click', continueFromDeath);
   deathGiveUp.addEventListener('click', giveUpMission);
   canvas.addEventListener('click', () => {

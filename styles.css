@@ -117,6 +117,13 @@
   .briefingBody{ color:#cfe2d5; font-size:15px; line-height:1.35; font-weight:800; border-left:3px solid rgba(145,243,110,.5); padding:2px 0 2px 12px; margin-bottom:16px; }
   #briefingOk{ appearance:none; border:0; border-radius:8px; padding:11px 22px; color:#071508; font-size:15px; font-weight:1000; letter-spacing:.08em; text-transform:uppercase; background:linear-gradient(180deg,#d8ff75,#74ef59); box-shadow:0 12px 34px rgba(92,255,85,.22), inset 0 2px 0 rgba(255,255,255,.42); cursor:pointer; }
   #briefingOk:hover{ filter:brightness(1.05); }
+  .hidden{ display:none!important; }
+  .runShare{ margin:0 0 14px; padding:10px; border:1px solid rgba(255,224,88,.34); border-radius:8px; background:rgba(255,224,88,.06); box-shadow:inset 0 1px 0 rgba(255,255,255,.06); }
+  .runShareStats,.deathStats{ width:min(560px, 86vw); margin:0 auto 10px; display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:7px; }
+  .runShareStats span,.deathStats span{ min-height:42px; display:flex; flex-direction:column; justify-content:center; padding:7px 5px; border:1px solid rgba(255,255,255,.18); border-radius:8px; background:rgba(0,0,0,.32); color:#f4f4f4; font-size:10px; line-height:1.25; font-weight:900; text-transform:uppercase; text-shadow:0 2px 0 rgba(0,0,0,.72); overflow:hidden; }
+  .runShareStats b,.deathStats b{ color:#ffe66d; font-size:13px; line-height:1.1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .shareRunBtn{ display:inline-block; margin:0 5px 12px; appearance:none; border:1px solid rgba(255,255,255,.24); border-radius:8px; padding:9px 16px; color:#081308; font-size:13px; font-weight:1000; letter-spacing:.07em; text-transform:uppercase; background:linear-gradient(180deg,#d8ff75,#74ef59); box-shadow:0 10px 28px rgba(92,255,85,.18), inset 0 2px 0 rgba(255,255,255,.35); cursor:pointer; }
+  .shareRunBtn:hover{ filter:brightness(1.05); }
   #upgradeOverlay{ pointer-events:none; position:fixed; inset:0; display:flex; align-items:center; justify-content:center; padding:22px; z-index:33; opacity:0; visibility:hidden; background:radial-gradient(circle at 50% 45%, rgba(255,220,92,.12), rgba(2,8,9,.78) 58%, rgba(0,0,0,.94)), repeating-linear-gradient(0deg, rgba(255,255,255,.025) 0 1px, transparent 1px 5px); transition:opacity .16s, visibility .16s; }
   #upgradeOverlay.show{ pointer-events:auto; opacity:1; visibility:visible; }
   .upgradeCard{ position:relative; width:min(640px, calc(100vw - 34px)); padding:18px; border-radius:8px; border:1px solid rgba(255,220,92,.46); background:linear-gradient(180deg, rgba(26,22,13,.95), rgba(5,8,8,.95)); box-shadow:0 28px 80px rgba(0,0,0,.62), inset 0 0 0 1px rgba(255,255,255,.06), 0 0 34px rgba(255,204,83,.12); overflow:hidden; }
@@ -138,8 +145,7 @@
   .deathCard{ width:min(720px, calc(100vw - 34px)); text-align:center; transform:skewY(-3deg); }
   .deathTitle{ color:#ff2f2f; font-size:clamp(54px, 13vw, 138px); line-height:.8; font-weight:1000; letter-spacing:0; text-transform:uppercase; text-shadow:0 5px 0 rgba(0,0,0,.75), 0 0 32px rgba(255,0,0,.45); filter:drop-shadow(0 0 16px rgba(255,38,38,.36)); }
   .deathText{ margin:16px 0 10px; color:#f7f0e8; font-size:13px; font-weight:900; letter-spacing:.18em; text-transform:uppercase; text-shadow:0 2px 0 rgba(0,0,0,.9); }
-  .deathStats{ width:min(460px, 78vw); margin:0 auto 14px; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:7px; }
-  .deathStats span{ padding:8px 6px; border:1px solid rgba(255,255,255,.18); border-radius:8px; background:rgba(0,0,0,.32); color:#f4f4f4; font-size:11px; line-height:1.35; font-weight:900; text-transform:uppercase; text-shadow:0 2px 0 rgba(0,0,0,.72); }
+  .deathStats{ margin-bottom:8px; }
   .deathMeter{ width:min(420px, 74vw); height:13px; margin:0 auto; border:1px solid rgba(255,255,255,.24); background:rgba(0,0,0,.56); border-radius:999px; overflow:hidden; box-shadow:inset 0 2px 8px rgba(0,0,0,.48); }
   #deathFill{ height:100%; width:0%; background:linear-gradient(90deg,#ff2d2d,#ffcf45); box-shadow:0 0 22px rgba(255,47,47,.56); transition:width .08s linear; }
   #deathContinue,#deathGiveUp{ display:none; margin:16px 5px 0; appearance:none; border:0; border-radius:10px; padding:10px 20px; color:#210606; font-size:16px; font-weight:1000; text-transform:uppercase; background:linear-gradient(180deg,#ffe16d,#ff5d3d); box-shadow:0 14px 40px rgba(255,50,50,.3), inset 0 2px 0 rgba(255,255,255,.34); cursor:pointer; }
@@ -284,6 +290,10 @@
     .briefingCard{ width:min(430px, calc(100vw - 24px)); padding:14px; }
     .briefingObjective{ font-size:22px; }
     .briefingBody{ font-size:13px; margin-bottom:12px; }
+    .runShareStats,.deathStats{ grid-template-columns:repeat(3,minmax(0,1fr)); gap:5px; }
+    .runShareStats span,.deathStats span{ min-height:34px; padding:5px 4px; font-size:9px; }
+    .runShareStats b,.deathStats b{ font-size:11px; }
+    .shareRunBtn{ padding:8px 12px; font-size:11px; margin-bottom:8px; }
     #briefingOk{ padding:9px 18px; font-size:13px; }
     #upgradeOverlay{ padding:12px; }
     .upgradeCard{ width:min(520px, calc(100vw - 24px)); padding:14px; }
