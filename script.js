@@ -247,7 +247,7 @@
   const portraitQuery = matchMedia('(orientation: portrait)');
   let keys = Object.create(null);
   const touchInput = { moveX: 0, moveY: 0, jump: false, lookId: null, lookX: 0, lookY: 0, stickId: null };
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.08.10');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.08.11');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -560,10 +560,12 @@
 
   function replayMimeType() {
     const types = [
+      'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
+      'video/mp4;codecs=avc1.640028,mp4a.40.2',
+      'video/mp4',
       'video/webm;codecs=vp9',
       'video/webm;codecs=vp8',
-      'video/webm',
-      'video/mp4'
+      'video/webm'
     ];
     if (!window.MediaRecorder || !MediaRecorder.isTypeSupported) return '';
     return types.find(type => MediaRecorder.isTypeSupported(type)) || '';
