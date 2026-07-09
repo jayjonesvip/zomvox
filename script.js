@@ -58,7 +58,6 @@
   const deathText = $('deathText');
   const deathStats = $('deathStats');
   const deathShare = $('deathShare');
-  const deathDownload = $('deathDownload');
   const deathContinue = $('deathContinue');
   const deathGiveUp = $('deathGiveUp');
   const mobileControls = $('mobileControls');
@@ -247,7 +246,7 @@
   const portraitQuery = matchMedia('(orientation: portrait)');
   let keys = Object.create(null);
   const touchInput = { moveX: 0, moveY: 0, jump: false, lookId: null, lookX: 0, lookY: 0, stickId: null };
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.08.11');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.08.12');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -262,21 +261,6 @@
   let hordeLevel = 0;
   let heartbeatTimer = 0;
   const deathState = { active: false, timer: 0, duration: DEATH_READY_DELAY, ready: false };
-  const REPLAY_WIDTH = 1080;
-  const REPLAY_HEIGHT = 1920;
-  const replayGunImage = new Image();
-  replayGunImage.src = 'assets/zomvox-gun-spritesheet.png';
-  const replayState = {
-    recorder: null,
-    chunks: [],
-    blob: null,
-    url: '',
-    mimeType: '',
-    active: false,
-    canvas: null,
-    ctx: null,
-    videoStream: null
-  };
   const worldRebuildState = { active: false, timer: 0, startedAt: 0, duration: WORLD_REBUILD_DURATION, seed: null };
   const mission = {
     mode: MODE_STORY,
@@ -551,203 +535,6 @@
       showToast('Run copied to clipboard.');
       setTimeout(() => { button.textContent = 'Share your run'; }, 1200);
     }
-  }
-
-  function replaySupported() {
-    const testCanvas = document.createElement('canvas');
-    return !!(testCanvas.captureStream && window.MediaRecorder);
-  }
-
-  function replayMimeType() {
-    const types = [
-      'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
-      'video/mp4;codecs=avc1.640028,mp4a.40.2',
-      'video/mp4',
-      'video/webm;codecs=vp9',
-      'video/webm;codecs=vp8',
-      'video/webm'
-    ];
-    if (!window.MediaRecorder || !MediaRecorder.isTypeSupported) return '';
-    return types.find(type => MediaRecorder.isTypeSupported(type)) || '';
-  }
-
-  function setReplayDownloadVisible(visible) {
-    if (!deathDownload) return;
-    deathDownload.classList.toggle('hidden', !visible);
-  }
-
-  function clearReplay() {
-    if (replayState.url) URL.revokeObjectURL(replayState.url);
-    replayState.blob = null;
-    replayState.url = '';
-    if (!replayState.active) replayState.chunks = [];
-    setReplayDownloadVisible(false);
-  }
-
-  function ensureReplayCanvas() {
-    if (!replayState.canvas) {
-      replayState.canvas = document.createElement('canvas');
-      replayState.canvas.width = REPLAY_WIDTH;
-      replayState.canvas.height = REPLAY_HEIGHT;
-      replayState.ctx = replayState.canvas.getContext('2d');
-    }
-    return replayState.ctx ? replayState.canvas : null;
-  }
-
-  function cleanupReplayCapture() {
-    if (replayState.videoStream) {
-      replayState.videoStream.getVideoTracks().forEach(track => track.stop());
-      replayState.videoStream = null;
-    }
-  }
-
-  function drawReplayGun(ctx, gameX, gameY, gameW, gameH) {
-    if (!gunSprite || replayGunImage.complete === false || !replayGunImage.naturalWidth) return;
-    if (document.body.classList.contains('no-gun') || document.body.classList.contains('stage-transition')) return;
-
-    const gunStyle = getComputedStyle(gunSprite);
-    if (gunStyle.display === 'none' || gunStyle.visibility === 'hidden' || Number(gunStyle.opacity) === 0) return;
-
-    const gunRect = gunSprite.getBoundingClientRect();
-    const gameRect = canvas.getBoundingClientRect();
-    if (!gunRect.width || !gunRect.height || !gameRect.width || !gameRect.height) return;
-
-    const frame = gunSprite.classList.contains('shooting')
-      ? 2
-      : (gunSprite.classList.contains('moving') ? 1 : 0);
-    const spriteW = replayGunImage.naturalWidth / 3;
-    const spriteH = replayGunImage.naturalHeight;
-    const scaleX = gameW / gameRect.width;
-    const scaleY = gameH / gameRect.height;
-    const x = gameX + (gunRect.left - gameRect.left) * scaleX;
-    const y = gameY + (gunRect.top - gameRect.top) * scaleY;
-    const w = gunRect.width * scaleX;
-    const h = gunRect.height * scaleY;
-
-    ctx.drawImage(replayGunImage, spriteW * frame, 0, spriteW, spriteH, x, y, w, h);
-  }
-
-  function drawReplayFrame() {
-    const replayCanvas = replayState.canvas;
-    const ctx = replayState.ctx;
-    if (!replayState.active || !replayCanvas || !ctx) return;
-
-    const w = replayCanvas.width;
-    const h = replayCanvas.height;
-    const sourceW = canvas.width || 1;
-    const sourceH = canvas.height || 1;
-    const gameAspect = sourceW / Math.max(1, sourceH);
-    const targetW = w;
-    const targetH = Math.min(Math.round(targetW / gameAspect), Math.round(h * 0.64));
-    const x = Math.floor((w - targetW) / 2);
-    const y = Math.floor((h - targetH) / 2);
-
-    ctx.fillStyle = '#030607';
-    ctx.fillRect(0, 0, w, h);
-
-    const gradient = ctx.createLinearGradient(0, 0, 0, h);
-    gradient.addColorStop(0, 'rgba(145, 243, 110, 0.18)');
-    gradient.addColorStop(0.42, 'rgba(0, 0, 0, 0)');
-    gradient.addColorStop(1, 'rgba(255, 230, 109, 0.12)');
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, w, h);
-
-    ctx.save();
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
-    ctx.shadowBlur = 24;
-    ctx.drawImage(canvas, x, y, targetW, targetH);
-    ctx.restore();
-    drawReplayGun(ctx, x, y, targetW, targetH);
-
-    ctx.fillStyle = '#91f36e';
-    ctx.font = '900 82px Arial, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('ZomVox', w / 2, 160);
-
-    ctx.fillStyle = '#f4fff0';
-    ctx.font = '800 38px Arial, sans-serif';
-    ctx.fillText('Zombies and Voxels', w / 2, 224);
-
-    ctx.fillStyle = '#ffe66d';
-    ctx.font = '900 44px Arial, sans-serif';
-    ctx.fillText('zomvox.com', w / 2, h - 145);
-  }
-
-  function startReplayRecording() {
-    if (!replaySupported() || replayState.active || deathState.active) return;
-    clearReplay();
-    try {
-      const replayCanvas = ensureReplayCanvas();
-      if (!replayCanvas) return;
-      const videoStream = replayCanvas.captureStream(30);
-      replayState.videoStream = videoStream;
-      const audioStream = window.ZomVoxSound?.recordingStream?.();
-      const stream = new MediaStream();
-      videoStream.getVideoTracks().forEach(track => stream.addTrack(track));
-      if (audioStream) audioStream.getAudioTracks().forEach(track => stream.addTrack(track));
-      const mimeType = replayMimeType();
-      const options = mimeType ? { mimeType } : undefined;
-      const recorder = new MediaRecorder(stream, options);
-
-      replayState.recorder = recorder;
-      replayState.mimeType = mimeType || recorder.mimeType || 'video/webm';
-      replayState.active = true;
-      replayState.chunks = [];
-      drawReplayFrame();
-
-      recorder.addEventListener('dataavailable', event => {
-        if (event.data && event.data.size > 0) replayState.chunks.push(event.data);
-      });
-      recorder.addEventListener('stop', () => {
-        replayState.active = false;
-        replayState.recorder = null;
-        cleanupReplayCapture();
-        if (!replayState.chunks.length) {
-          setReplayDownloadVisible(false);
-          return;
-        }
-        replayState.blob = new Blob(replayState.chunks, { type: replayState.mimeType || 'video/webm' });
-        if (replayState.url) URL.revokeObjectURL(replayState.url);
-        replayState.url = URL.createObjectURL(replayState.blob);
-        setReplayDownloadVisible(deathState.active);
-      });
-      recorder.start(1000);
-    } catch (err) {
-      console.warn(err);
-      replayState.active = false;
-      replayState.recorder = null;
-      cleanupReplayCapture();
-      setReplayDownloadVisible(false);
-    }
-  }
-
-  function stopReplayRecording() {
-    const recorder = replayState.recorder;
-    if (!recorder || recorder.state === 'inactive') return;
-    try {
-      recorder.requestData();
-      recorder.stop();
-    } catch (err) {
-      console.warn(err);
-      replayState.active = false;
-      replayState.recorder = null;
-      cleanupReplayCapture();
-      setReplayDownloadVisible(false);
-    }
-  }
-
-  function downloadReplay() {
-    if (!replayState.blob || !replayState.url) return;
-    sound('confirm');
-    const ext = replayState.mimeType.includes('mp4') ? 'mp4' : 'webm';
-    const name = 'zomvox-' + currentBiome() + '-' + Date.now() + '.' + ext;
-    const link = document.createElement('a');
-    link.href = replayState.url;
-    link.download = name;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
   }
 
   function sound(name) {
@@ -2137,7 +1924,6 @@ function playerOnMachinePad() {
     player.reloadTimer = 0;
     reloadOverlay.classList.remove('show');
     reloadOverlayFill.style.width = '0%';
-    stopReplayRecording();
     document.body.classList.toggle('story-death', mission.mode === MODE_STORY);
     if (mission.mode === MODE_STORY) {
       deathTitle.textContent = 'MISSION FAILURE';
@@ -2187,7 +1973,6 @@ function playerOnMachinePad() {
     lastKillTime = -999;
     killComboCount = 0;
     resetLifeStats();
-    clearReplay();
     document.body.classList.remove('dead', 'low-health', 'story-death');
     if (mission.mode === MODE_STORY) {
       document.body.classList.add('story-reviving');
@@ -2210,7 +1995,6 @@ function playerOnMachinePad() {
     ensureChunks(true);
     enemies = enemies.filter(e => Math.hypot(e.x - player.pos[0], e.z - player.pos[2]) > 34);
     if (mission.mode === MODE_STORY) {
-      startReplayRecording();
       showToast('Mission Command: remote revive complete.');
       setTimeout(() => {
         document.body.classList.add('story-revive-fade');
@@ -2221,7 +2005,6 @@ function playerOnMachinePad() {
         if (!touchMode && menu.style.display === 'none') requestPointerLockSafe();
       }, 880);
     } else {
-      startReplayRecording();
       showToast('Respawned at the old marker. Deaths: ' + player.deaths);
     }
   }
@@ -2237,7 +2020,6 @@ function playerOnMachinePad() {
     deathOverlay.classList.remove('show', 'ready');
     deathStats.textContent = '';
     hideDeathShare();
-    clearReplay();
     deathTitle.textContent = 'YOU DIED!';
     deathText.textContent = 'Respawning...';
     deathFill.style.width = '0%';
@@ -3084,7 +2866,6 @@ function currentWaterIsDangerous() {
     frameCounter++;
     update(dt);
     render(now / 1000);
-    drawReplayFrame();
     requestAnimationFrame(loop);
   }
 
@@ -3203,7 +2984,6 @@ function currentWaterIsDangerous() {
     document.body.classList.remove('upgrade-open');
     deathStats.textContent = '';
     hideDeathShare();
-    clearReplay();
     renderBriefingShare(null);
     deathTitle.textContent = 'YOU DIED!';
     deathText.textContent = 'Respawning...';
@@ -3262,7 +3042,6 @@ function currentWaterIsDangerous() {
     applySettings();
     if (soundEnabled || ambientEnabled) window.ZomVoxSound?.prime();
     menu.style.display = 'none';
-    startReplayRecording();
     updateAmbientSound(true);
     if (touchMode) requestMobileFullscreen();
     if (mission.pendingBriefing) {
@@ -3328,7 +3107,6 @@ function currentWaterIsDangerous() {
   briefingOk.addEventListener('click', acknowledgeObjectiveBriefing);
   if (briefingShareButton) briefingShareButton.addEventListener('click', () => shareRunFromButton(briefingShareButton));
   if (deathShare) deathShare.addEventListener('click', () => shareRunFromButton(deathShare));
-  if (deathDownload) deathDownload.addEventListener('click', downloadReplay);
   deathContinue.addEventListener('click', continueFromDeath);
   deathGiveUp.addEventListener('click', giveUpMission);
   canvas.addEventListener('click', () => {
