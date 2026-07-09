@@ -17,7 +17,7 @@ window.ZOMVOX_CONFIG = {
     Bump this when you make visible changes so you can tell the browser
     loaded the newest version.
   */
-  buildVersion: '2026.07.08.12',
+  buildVersion: '2026.07.09.01',
 
   /*
     Seed used for deterministic world generation.
@@ -129,6 +129,14 @@ window.ZOMVOX_CONFIG = {
       Larger = easier to collide with walls/blocks.
     */
     radius: 0.31,
+
+    /*
+      Auto-step height for walking up normal terrain without jumping.
+
+      1.05 lets players climb one-block hills while still stopping at
+      taller ledges and mission props.
+    */
+    stepHeight: 1.05,
 
     /*
       Health after starting or respawning.
