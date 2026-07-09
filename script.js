@@ -247,7 +247,7 @@
   const portraitQuery = matchMedia('(orientation: portrait)');
   let keys = Object.create(null);
   const touchInput = { moveX: 0, moveY: 0, jump: false, lookId: null, lookX: 0, lookY: 0, stickId: null };
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.08.09');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.08.10');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -264,8 +264,8 @@
   const deathState = { active: false, timer: 0, duration: DEATH_READY_DELAY, ready: false };
   const REPLAY_WIDTH = 1080;
   const REPLAY_HEIGHT = 1920;
-  const REPLAY_FRAME_MS = 1000 / 30;
-  const REPLAY_MIN_SECONDS = 5;
+  const replayGunImage = new Image();
+  replayGunImage.src = 'assets/zomvox-gun-spritesheet.png';
   const replayState = {
     recorder: null,
     chunks: [],
@@ -275,11 +275,7 @@
     active: false,
     canvas: null,
     ctx: null,
-    videoStream: null,
-    frameTrack: null,
-    frameTimer: 0,
-    startedAt: 0,
-    stopRequested: false
+    videoStream: null
   };
   const worldRebuildState = { active: false, timer: 0, startedAt: 0, duration: WORLD_REBUILD_DURATION, seed: null };
   const mission = {
@@ -597,21 +593,42 @@
   }
 
   function cleanupReplayCapture() {
-    if (replayState.frameTimer) {
-      clearInterval(replayState.frameTimer);
-      replayState.frameTimer = 0;
-    }
-    replayState.frameTrack = null;
     if (replayState.videoStream) {
       replayState.videoStream.getVideoTracks().forEach(track => track.stop());
       replayState.videoStream = null;
     }
   }
 
-  function drawReplayFrame(force = false) {
+  function drawReplayGun(ctx, gameX, gameY, gameW, gameH) {
+    if (!gunSprite || replayGunImage.complete === false || !replayGunImage.naturalWidth) return;
+    if (document.body.classList.contains('no-gun') || document.body.classList.contains('stage-transition')) return;
+
+    const gunStyle = getComputedStyle(gunSprite);
+    if (gunStyle.display === 'none' || gunStyle.visibility === 'hidden' || Number(gunStyle.opacity) === 0) return;
+
+    const gunRect = gunSprite.getBoundingClientRect();
+    const gameRect = canvas.getBoundingClientRect();
+    if (!gunRect.width || !gunRect.height || !gameRect.width || !gameRect.height) return;
+
+    const frame = gunSprite.classList.contains('shooting')
+      ? 2
+      : (gunSprite.classList.contains('moving') ? 1 : 0);
+    const spriteW = replayGunImage.naturalWidth / 3;
+    const spriteH = replayGunImage.naturalHeight;
+    const scaleX = gameW / gameRect.width;
+    const scaleY = gameH / gameRect.height;
+    const x = gameX + (gunRect.left - gameRect.left) * scaleX;
+    const y = gameY + (gunRect.top - gameRect.top) * scaleY;
+    const w = gunRect.width * scaleX;
+    const h = gunRect.height * scaleY;
+
+    ctx.drawImage(replayGunImage, spriteW * frame, 0, spriteW, spriteH, x, y, w, h);
+  }
+
+  function drawReplayFrame() {
     const replayCanvas = replayState.canvas;
     const ctx = replayState.ctx;
-    if ((!replayState.active && !force) || !replayCanvas || !ctx) return;
+    if (!replayState.active || !replayCanvas || !ctx) return;
 
     const w = replayCanvas.width;
     const h = replayCanvas.height;
@@ -638,6 +655,7 @@
     ctx.shadowBlur = 24;
     ctx.drawImage(canvas, x, y, targetW, targetH);
     ctx.restore();
+    drawReplayGun(ctx, x, y, targetW, targetH);
 
     ctx.fillStyle = '#91f36e';
     ctx.font = '900 82px Arial, sans-serif';
@@ -654,29 +672,14 @@
     ctx.fillText('zomvox.com', w / 2, h - 145);
   }
 
-  function requestReplayFrame() {
-    drawReplayFrame();
-    if (replayState.frameTrack && typeof replayState.frameTrack.requestFrame === 'function') {
-      replayState.frameTrack.requestFrame();
-    }
-  }
-
   function startReplayRecording() {
     if (!replaySupported() || replayState.active || deathState.active) return;
     clearReplay();
     try {
       const replayCanvas = ensureReplayCanvas();
       if (!replayCanvas) return;
-      drawReplayFrame(true);
-      let videoStream = replayCanvas.captureStream(0);
-      let videoTrack = videoStream.getVideoTracks()[0] || null;
-      if (!videoTrack || typeof videoTrack.requestFrame !== 'function') {
-        videoStream.getTracks().forEach(track => track.stop());
-        videoStream = replayCanvas.captureStream(30);
-        videoTrack = videoStream.getVideoTracks()[0] || null;
-      }
+      const videoStream = replayCanvas.captureStream(30);
       replayState.videoStream = videoStream;
-      replayState.frameTrack = videoTrack;
       const audioStream = window.ZomVoxSound?.recordingStream?.();
       const stream = new MediaStream();
       videoStream.getVideoTracks().forEach(track => stream.addTrack(track));
@@ -689,10 +692,7 @@
       replayState.mimeType = mimeType || recorder.mimeType || 'video/webm';
       replayState.active = true;
       replayState.chunks = [];
-      replayState.startedAt = performance.now();
-      replayState.stopRequested = false;
-      replayState.frameTimer = setInterval(requestReplayFrame, REPLAY_FRAME_MS);
-      requestReplayFrame();
+      drawReplayFrame();
 
       recorder.addEventListener('dataavailable', event => {
         if (event.data && event.data.size > 0) replayState.chunks.push(event.data);
@@ -700,7 +700,6 @@
       recorder.addEventListener('stop', () => {
         replayState.active = false;
         replayState.recorder = null;
-        replayState.stopRequested = false;
         cleanupReplayCapture();
         if (!replayState.chunks.length) {
           setReplayDownloadVisible(false);
@@ -716,7 +715,6 @@
       console.warn(err);
       replayState.active = false;
       replayState.recorder = null;
-      replayState.stopRequested = false;
       cleanupReplayCapture();
       setReplayDownloadVisible(false);
     }
@@ -725,13 +723,6 @@
   function stopReplayRecording() {
     const recorder = replayState.recorder;
     if (!recorder || recorder.state === 'inactive') return;
-    const elapsed = (performance.now() - replayState.startedAt) / 1000;
-    if (elapsed < REPLAY_MIN_SECONDS) {
-      if (replayState.stopRequested) return;
-      replayState.stopRequested = true;
-      setTimeout(stopReplayRecording, Math.ceil((REPLAY_MIN_SECONDS - elapsed) * 1000));
-      return;
-    }
     try {
       recorder.requestData();
       recorder.stop();
@@ -739,7 +730,6 @@
       console.warn(err);
       replayState.active = false;
       replayState.recorder = null;
-      replayState.stopRequested = false;
       cleanupReplayCapture();
       setReplayDownloadVisible(false);
     }
