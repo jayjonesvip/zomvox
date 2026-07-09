@@ -16,7 +16,6 @@
   let activeAmbientName = '';
   let activeOneShots = 0;
   let landSource = null;
-  let recordingDestination = null;
 
   // decoded AudioBuffers, not HTMLAudioElement objects
   const bufferCache = new Map();
@@ -43,19 +42,10 @@
     return audioCtx;
   }
 
-  function recordingStream() {
-    const ctx = getAudio();
-    if (!ctx || !ctx.createMediaStreamDestination) return null;
-    if (!recordingDestination) recordingDestination = ctx.createMediaStreamDestination();
-    return recordingDestination.stream;
-  }
-
   function connectOutput(node) {
     const ctx = getAudio();
     if (!ctx || !node) return;
     node.connect(ctx.destination);
-    if (!recordingDestination) return;
-    try { node.connect(recordingDestination); } catch (_) {}
   }
 
   function tone(freq, dur = .08, type = 'square', gain = .05, endFreq = null) {
@@ -482,10 +472,6 @@
     stopAmbient() {
       ambientTargetName = '';
       stopAmbient();
-    },
-
-    recordingStream() {
-      return recordingStream();
     }
   };
 })();
