@@ -155,6 +155,12 @@ window.ZOMVOX_CONFIG = {
     terrainMarshDepth: 16
   },
 
+  player: {
+    height: 1.76,
+    radius: 0.31,
+    stepHeight: 1.05
+  },
+
   weapon: {
     magSize: 6,
     reloadTime: 1.15,
@@ -213,7 +219,7 @@ Biome water notes:
 Other sections in `config.js` expose safe defaults for:
 
 - `world`: chunk size, fixed map radius, max terrain height, water level, and terrain roughness/depression tuning.
-- `player`: collision size, starting health, starting ammo reserve, respawn reserve floor, and low-health heartbeat threshold.
+- `player`: collision size, one-block terrain auto-step height, starting health, starting ammo reserve, respawn reserve floor, and low-health heartbeat threshold.
 - `weapon`: magazine size, reload time, fire cooldown, recoil, upgrade multipliers, and long-range kill distance.
 - `enemies`: base enemy cap and horde escalation values.
 - `mission`: five island seeds, per-island biomes, toxin drain, source disable timing, insertion drop tuning, per-island infected objectives, fallback infected objective, and first wave size.

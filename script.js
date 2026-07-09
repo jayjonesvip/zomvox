@@ -153,6 +153,7 @@
   const TERRAIN_MARSH_DEPTH = configNumber(WORLD_CONFIG, 'terrainMarshDepth', 16);
   const PLAYER_HEIGHT = configNumber(PLAYER_CONFIG, 'height', 1.76);
   const PLAYER_RADIUS = configNumber(PLAYER_CONFIG, 'radius', 0.31);
+  const PLAYER_STEP_HEIGHT = Math.max(0, Math.min(1.25, configNumber(PLAYER_CONFIG, 'stepHeight', 1.05)));
   const STARTING_HEALTH = configNumber(PLAYER_CONFIG, 'startingHealth', 100);
   const STARTING_RESERVE = Math.max(0, Math.floor(configNumber(PLAYER_CONFIG, 'startingReserve', 36)));
   const RESPAWN_RESERVE_FLOOR = Math.max(0, Math.floor(configNumber(PLAYER_CONFIG, 'respawnReserveFloor', 24)));
@@ -246,7 +247,7 @@
   const portraitQuery = matchMedia('(orientation: portrait)');
   let keys = Object.create(null);
   const touchInput = { moveX: 0, moveY: 0, jump: false, lookId: null, lookX: 0, lookY: 0, stickId: null };
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.08.12');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.09.01');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -1169,6 +1170,10 @@
   }
   function isSolidType(type) { return !!type && type !== BLOCK.WATER && type !== BLOCK.LEAF; }
   function blocksMovement(type) { return !!type && type !== BLOCK.WATER && type !== BLOCK.LEAF; }
+  function isAutoStepSurface(type) {
+    return type === BLOCK.GRASS || type === BLOCK.DIRT || type === BLOCK.STONE ||
+      type === BLOCK.SAND || type === BLOCK.MUD || type === BLOCK.ASH;
+  }
 
   function seededHash(x, z) {
     const n = Math.sin((x * 127.1 + z * 311.7 + currentSeed * 0.0137)) * 43758.5453123;
@@ -1666,11 +1671,35 @@ function playerOnMachinePad() {
     }
     return false;
   }
+
+  function tryAutoStep(axis, dir, fromY) {
+    if (PLAYER_STEP_HEIGHT <= 0 || !player.grounded || player.vel[1] > 0 || axis === 1) return false;
+
+    const probeX = player.pos[0] + (axis === 0 ? dir * (PLAYER_RADIUS + 0.06) : 0);
+    const probeZ = player.pos[2] + (axis === 2 ? dir * (PLAYER_RADIUS + 0.06) : 0);
+    const surfaceY = topSolidY(probeX, probeZ);
+    const rise = surfaceY + 1.001 - fromY;
+
+    // Auto-step is for regular terrain only. Mission machines, trees, cactus,
+    // and other props still behave like deliberate obstacles.
+    if (rise <= 0.02 || rise > PLAYER_STEP_HEIGHT) return false;
+    if (!isAutoStepSurface(getBlock(Math.floor(probeX), surfaceY, Math.floor(probeZ)))) return false;
+
+    const stepped = player.pos.slice();
+    stepped[1] = surfaceY + 1.001;
+    if (collidesAt(stepped)) return false;
+    player.pos[1] = stepped[1];
+    player.grounded = true;
+    return true;
+  }
+
   function moveAxis(axis, amount) {
     if (amount === 0) return;
+    const fromY = player.pos[1];
     player.pos[axis] += amount;
     if (collidesAt(player.pos)) {
       const dir = Math.sign(amount);
+      if (tryAutoStep(axis, dir, fromY)) return;
       if (axis === 0) player.pos[axis] = dir > 0 ? Math.floor(player.pos[axis] + PLAYER_RADIUS) - PLAYER_RADIUS - 0.001 : Math.floor(player.pos[axis] - PLAYER_RADIUS + 1) + PLAYER_RADIUS + 0.001;
       if (axis === 1) {
         if (dir < 0) { player.pos[axis] = Math.floor(player.pos[axis]) + 1.001; player.grounded = true; }
