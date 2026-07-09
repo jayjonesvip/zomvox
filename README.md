@@ -43,6 +43,50 @@ Desktop play uses mouse and keyboard. Mobile play is designed for landscape orie
 - Dramatic `YOU DIED!` overlay with respawn meter.
 - Menu-safe gameplay pause so the player does not take damage before pressing Play.
 
+## Game Flow
+
+```mermaid
+flowchart TD
+    A[ZomVox splash] --> B[Main menu]
+    B --> C{Mode}
+
+    C -->|Story Mode| D[Mission briefing]
+    D --> E[Insertion drop]
+    E --> F[Explore island without gun]
+    F --> G[Locate contamination spire]
+    G --> H[Jump on yellow shutdown block]
+    H --> I[Disable toxin source]
+    I --> J[Supply crate reward]
+    J --> K[Gun unlocked]
+    K --> L[Eliminate infected objective]
+    L --> M{Objective cleared?}
+    M -->|No| L
+    M -->|Yes| N[Return to drop beacon]
+    N --> O[Extraction meter]
+    O --> P{More islands?}
+    P -->|Yes| Q[Perk choice]
+    Q --> D
+    P -->|No| R[Final mission clear]
+
+    C -->|Quick Hunt| S[Choose biome]
+    S --> T[Choose one perk]
+    T --> U[Insertion drop]
+    U --> V[Gun unlocked immediately]
+    V --> W[Survive endless infected]
+
+    L --> X{Player dies?}
+    W --> X
+    X -->|Story| Y[Mission failure]
+    Y --> Z{Continue?}
+    Z -->|Continue| AA[Remote revive]
+    AA --> L
+    Z -->|Give up| B
+    X -->|Quick Hunt| AB[Death stats]
+    AB --> AC{Continue hunt?}
+    AC -->|Continue| W
+    AC -->|Main menu| B
+```
+
 ## Desktop Controls
 
 - `WASD` or arrow keys: move
