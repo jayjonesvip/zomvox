@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+  <url>
+    <loc>https://zomvox.com/</loc>
+    <lastmod>2026-07-14</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://zomvox.com/assets/zomvox-splash.png</image:loc>
+      <image:title>ZomVox: Free Browser Voxel Zombie Survival Game</image:title>
+      <image:caption>Voxel zombie survival shooter with story missions, quick hunts, island biomes, perks, and blocky undead combat.</image:caption>
+    </image:image>
+  </url>
+</urlset>
