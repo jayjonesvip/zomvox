@@ -61,20 +61,20 @@
   #reserveText{ color:#f5fbff; font-size:24px; line-height:1; font-weight:1000; letter-spacing:.02em; text-shadow:0 2px 0 rgba(0,0,0,.6); }
   #reloadText{ color:#ffdc7a; font-size:12px; font-weight:900; margin-top:2px; min-height:15px; letter-spacing:.04em; text-transform:uppercase; }
 
-  #gunSprite{ pointer-events:none; position:fixed; right:0; bottom:-16px; width:min(42vw, 430px); aspect-ratio:1/1; z-index:5; background:url("assets/zomvox-gun-spritesheet.png") 0 0 / 300% 100% no-repeat; image-rendering:auto; filter:drop-shadow(0 18px 22px rgba(0,0,0,.55)); transform-origin:72% 78%; transition:transform .08s ease-out; }
+  #gunSprite{ pointer-events:none; position:fixed; right:clamp(22px,4vw,78px); bottom:-16px; width:min(39vw, 400px); aspect-ratio:1/1; z-index:5; background:url("assets/zomvox-gun-spritesheet.png") 0 0 / 300% 100% no-repeat; image-rendering:auto; filter:drop-shadow(0 18px 22px rgba(0,0,0,.55)); transform-origin:72% 78%; transition:transform .08s ease-out; }
   #gunSprite.moving{ background-position:50% 0; transform:translateY(8px) rotate(-2deg); }
   #gunSprite.shooting{ background-position:100% 0; transform:translate(8px,-4px) rotate(1deg); }
 
-  #scoreFeed{ pointer-events:none; position:fixed; left:50%; top:34%; transform:translateX(-50%); display:flex; flex-direction:column; align-items:center; gap:6px; z-index:6; }
-  .scorePop{ font-size:clamp(20px,3.2vw,34px); font-weight:1000; letter-spacing:.02em; color:#fff; text-shadow:0 3px 0 rgba(0,0,0,.75), 0 0 18px rgba(255,255,255,.35); animation:scoreRise 1.05s ease-out forwards; white-space:nowrap; }
+  #scoreFeed{ pointer-events:none; position:fixed; left:50%; top:34%; width:min(430px, 52vh, calc(100vw - 32px)); transform:translateX(-50%); display:flex; flex-direction:column; align-items:center; gap:5px; z-index:6; text-align:center; }
+  .scorePop{ max-width:100%; font-size:clamp(15px,2.1vw,24px); font-weight:1000; letter-spacing:.02em; color:#fff; text-shadow:0 2px 0 rgba(0,0,0,.8), 0 0 14px rgba(255,255,255,.3); animation:scoreRise 1.05s ease-out forwards; white-space:normal; overflow-wrap:break-word; line-height:.95; }
   .scorePop.head{ color:#ffe77e; text-shadow:0 3px 0 rgba(0,0,0,.75), 0 0 22px rgba(255,218,92,.55); }
   .scorePop.kill{ color:#aaff86; text-shadow:0 3px 0 rgba(0,0,0,.75), 0 0 22px rgba(130,255,103,.45); }
   .scorePop.block{ color:#bfe7ff; text-shadow:0 3px 0 rgba(0,0,0,.75), 0 0 22px rgba(117,202,255,.42); }
-  .scorePop.combo{ color:#ffad66; text-shadow:0 3px 0 rgba(0,0,0,.75), 0 0 24px rgba(255,140,42,.55); transform:scale(1.1); }
+  .scorePop.combo{ color:#ffad66; text-shadow:0 3px 0 rgba(0,0,0,.75), 0 0 24px rgba(255,140,42,.55); transform:scale(1.04); }
   .scorePop.pickup{ color:#8fffc8; text-shadow:0 3px 0 rgba(0,0,0,.75), 0 0 24px rgba(97,255,190,.48); }
   .scorePop.range{ color:#9fd8ff; text-shadow:0 3px 0 rgba(0,0,0,.75), 0 0 22px rgba(80,185,255,.48); }
-  .scorePop.wave{ color:#ff5f5f; font-size:clamp(18px,2.6vw,28px); letter-spacing:.08em; text-shadow:0 3px 0 rgba(0,0,0,.8), 0 0 24px rgba(255,80,80,.54); }
-  .scorePop.small{ font-size:clamp(16px,2.4vw,26px); }
+  .scorePop.wave{ color:#ff5f5f; font-size:clamp(14px,1.9vw,22px); letter-spacing:.06em; text-shadow:0 2px 0 rgba(0,0,0,.8), 0 0 20px rgba(255,80,80,.5); }
+  .scorePop.small{ font-size:clamp(12px,1.65vw,18px); }
   @keyframes scoreRise{ 0%{ opacity:0; transform:translateY(18px) scale(.88); } 14%{ opacity:1; transform:translateY(0) scale(1.05); } 72%{ opacity:1; } 100%{ opacity:0; transform:translateY(-58px) scale(.98); } }
 
   #healthStatus{ pointer-events:none; position:fixed; left:14px; top:12px; width:230px; padding:10px 12px; border-radius:8px; background:rgba(4,10,14,.82); border:1px solid rgba(255,255,255,.18); box-shadow:0 15px 42px rgba(0,0,0,.36); backdrop-filter:blur(10px); z-index:9; }
@@ -93,14 +93,14 @@
   #objectiveText{ color:#f3fff1; font-size:17px; line-height:1; font-weight:1000; text-shadow:0 2px 0 rgba(0,0,0,.6); white-space:nowrap; }
   body.stage-cleared #missionPanel{ border-color:rgba(255,225,87,.7); background:rgba(20,18,5,.86); box-shadow:0 15px 42px rgba(0,0,0,.34),0 0 24px rgba(255,217,74,.2); }
   body.stage-cleared #objectiveText{ color:#ffe66d; text-shadow:0 0 15px rgba(255,216,75,.42),0 2px 0 rgba(0,0,0,.65); }
-  #commandBanner{ pointer-events:none; position:fixed; left:50%; top:50%; width:min(520px, calc(100vw - 38px)); transform:translate(-50%,-50%) scale(.96); z-index:22; padding:18px 20px 16px; border:2px solid rgba(255,224,88,.82); border-radius:8px; background:linear-gradient(180deg, rgba(19,24,17,.95), rgba(3,8,8,.94)); box-shadow:0 28px 80px rgba(0,0,0,.58), inset 0 0 0 1px rgba(255,255,255,.08),0 0 38px rgba(255,219,76,.2); text-align:center; opacity:0; visibility:hidden; transition:opacity .14s, visibility .14s, transform .14s; }
+  #commandBanner{ pointer-events:none; position:fixed; left:50%; top:50%; width:min(430px, 54vh, calc(100vw - 38px)); transform:translate(-50%,-50%) scale(.96); z-index:22; padding:15px 16px 14px; border:2px solid rgba(255,224,88,.82); border-radius:8px; background:linear-gradient(180deg, rgba(19,24,17,.95), rgba(3,8,8,.94)); box-shadow:0 28px 80px rgba(0,0,0,.58), inset 0 0 0 1px rgba(255,255,255,.08),0 0 38px rgba(255,219,76,.2); text-align:center; opacity:0; visibility:hidden; transition:opacity .14s, visibility .14s, transform .14s; }
   #commandBanner.show{ opacity:1; visibility:visible; transform:translate(-50%,-50%) scale(1); }
   #commandBanner::before,#commandBanner::after{ content:""; position:absolute; left:12px; right:12px; height:1px; background:linear-gradient(90deg, transparent, rgba(255,224,88,.72), transparent); }
   #commandBanner::before{ top:8px; }
   #commandBanner::after{ bottom:8px; }
   .commandKicker{ color:#9df57c; font-size:12px; font-weight:1000; letter-spacing:.22em; text-transform:uppercase; margin-bottom:7px; text-shadow:0 0 14px rgba(145,243,110,.42); }
-  #commandBannerTitle{ color:#ffe66d; font-size:34px; font-weight:1000; line-height:.95; text-transform:uppercase; text-shadow:0 0 22px rgba(255,219,76,.38),0 3px 0 rgba(0,0,0,.7); }
-  #commandBannerBody{ color:#eef7df; font-size:14px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; margin-top:8px; text-shadow:0 2px 0 rgba(0,0,0,.62); }
+  #commandBannerTitle{ color:#ffe66d; font-size:clamp(22px,2.7vw,30px); font-weight:1000; line-height:.95; text-transform:uppercase; text-shadow:0 0 22px rgba(255,219,76,.38),0 3px 0 rgba(0,0,0,.7); }
+  #commandBannerBody{ color:#eef7df; font-size:clamp(10px,1.25vw,13px); font-weight:900; letter-spacing:.06em; text-transform:uppercase; margin-top:7px; text-shadow:0 2px 0 rgba(0,0,0,.62); }
   #disableOverlay{ pointer-events:none; position:fixed; left:50%; bottom:20%; transform:translateX(-50%) translateY(8px); width:min(390px, calc(100vw - 42px)); padding:11px 12px; border-radius:8px; background:rgba(4,10,12,.84); border:1px solid rgba(145,243,110,.38); box-shadow:0 16px 48px rgba(0,0,0,.4),0 0 28px rgba(78,255,74,.12); opacity:0; visibility:hidden; transition:.14s; z-index:10; }
   #disableOverlay.show{ opacity:1; visibility:visible; transform:translateX(-50%) translateY(0); }
   .disableTitle{ color:#d7ffc7; font-size:13px; font-weight:1000; letter-spacing:.16em; text-transform:uppercase; text-align:center; margin-bottom:8px; text-shadow:0 0 18px rgba(145,243,110,.32); }
@@ -279,9 +279,13 @@
     .bigHealthBar{ height:8px; }
     #missionPanel{ left:50%; right:auto; top:8px; width:min(170px, calc(100vw - 242px)); transform:translateX(-50%); padding:8px 7px; }
     #objectiveText{ font-size:13px; }
-    #commandBanner{ width:min(390px, calc(100vw - 28px)); padding:14px 16px 13px; }
-    #commandBannerTitle{ font-size:26px; }
-    #commandBannerBody{ font-size:11px; }
+    #scoreFeed{ top:31%; width:min(300px, 58vh, calc(100vw - 28px)); gap:4px; }
+    .scorePop{ font-size:clamp(12px,2.7vw,18px); line-height:.92; }
+    .scorePop.wave{ font-size:clamp(11px,2.4vw,16px); }
+    .scorePop.small{ font-size:clamp(10px,2.1vw,14px); }
+    #commandBanner{ width:min(330px, 58vh, calc(100vw - 28px)); padding:12px 14px; }
+    #commandBannerTitle{ font-size:22px; }
+    #commandBannerBody{ font-size:10px; line-height:1.15; }
     #disableOverlay{ bottom:16%; width:min(330px, calc(100vw - 32px)); padding:8px 10px; }
     .disableTitle{ font-size:11px; margin-bottom:6px; }
     .disableBar{ height:10px; }
@@ -303,7 +307,7 @@
     .upgradeDesc{ font-size:11px; }
     .bullet{ height:19px; border-width:1px; }
     .bullet::before{ width:10px; height:8px; top:-6px; border-width:1px; }
-    #gunSprite{ right:-28px; bottom:-42px; width:min(48vw, 280px); }
+    #gunSprite{ right:calc(12px + env(safe-area-inset-right)); bottom:-38px; width:min(44vw, 260px); }
     .grid{ grid-template-columns:1fr; }
     #mobileControls{ display:block; }
   }
