@@ -261,6 +261,7 @@ audio: {
     |-- favicon.png
     |-- shoot.mp3
     |-- zomvox-gun-spritesheet.png
+    |-- zomvox-profile.png
     `-- zomvox-splash.png
 ```
 
@@ -271,7 +272,7 @@ audio: {
 - `sound.js`: configurable audio playback with file overrides and synthesized fallback effects.
 - `styles.css`: visual styling, responsive mobile layout, splash screen, health/ammo HUD, death overlay, world rebuild overlay, and touch controls.
 - `script.js`: WebGL setup, procedural terrain, fixed world chunks, movement, combat, enemy behavior, pickups, world rebuilding, HUD updates, and game loop.
-- `assets/`: splash screen, favicon files, weapon sprite sheet, and optional audio files.
+- `assets/`: splash screen, favicon/profile images, weapon sprite sheet, and optional audio files.
 
 ## Hosting
 
