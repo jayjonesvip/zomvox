@@ -17,7 +17,7 @@ window.ZOMVOX_CONFIG = {
     Bump this when you make visible changes so you can tell the browser
     loaded the newest version.
   */
-  buildVersion: '2026.07.09.01',
+  buildVersion: '2026.07.14.01',
 
   /*
     Seed used for deterministic world generation.
@@ -137,6 +137,15 @@ window.ZOMVOX_CONFIG = {
       taller ledges and mission props.
     */
     stepHeight: 1.05,
+
+    /*
+      Camera smoothing after an auto-step.
+
+      Physics still moves instantly for reliable collision, but the camera
+      eases upward over this many milliseconds so one-block climbs feel
+      more natural.
+    */
+    stepSmoothMs: 120,
 
     /*
       Health after starting or respawning.

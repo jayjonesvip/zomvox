@@ -154,6 +154,7 @@
   const PLAYER_HEIGHT = configNumber(PLAYER_CONFIG, 'height', 1.76);
   const PLAYER_RADIUS = configNumber(PLAYER_CONFIG, 'radius', 0.31);
   const PLAYER_STEP_HEIGHT = Math.max(0, Math.min(1.25, configNumber(PLAYER_CONFIG, 'stepHeight', 1.05)));
+  const PLAYER_STEP_SMOOTH_SECONDS = Math.max(0.02, configNumber(PLAYER_CONFIG, 'stepSmoothMs', 120) / 1000);
   const STARTING_HEALTH = configNumber(PLAYER_CONFIG, 'startingHealth', 100);
   const STARTING_RESERVE = Math.max(0, Math.floor(configNumber(PLAYER_CONFIG, 'startingReserve', 36)));
   const RESPAWN_RESERVE_FLOOR = Math.max(0, Math.floor(configNumber(PLAYER_CONFIG, 'respawnReserveFloor', 24)));
@@ -247,7 +248,7 @@
   const portraitQuery = matchMedia('(orientation: portrait)');
   let keys = Object.create(null);
   const touchInput = { moveX: 0, moveY: 0, jump: false, lookId: null, lookX: 0, lookY: 0, stickId: null };
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.09.01');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.14.01');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -261,6 +262,7 @@
   let waterDamageTimer = 0;
   let hordeLevel = 0;
   let heartbeatTimer = 0;
+  let cameraStepOffsetY = 0;
   const deathState = { active: false, timer: 0, duration: DEATH_READY_DELAY, ready: false };
   const worldRebuildState = { active: false, timer: 0, startedAt: 0, duration: WORLD_REBUILD_DURATION, seed: null };
   const mission = {
@@ -1146,6 +1148,7 @@
     return [Math.sin(player.yaw) * cp, Math.sin(player.pitch), Math.cos(player.yaw) * cp];
   }
   function eyePos() { return [player.pos[0], player.pos[1] + 1.58, player.pos[2]]; }
+  function cameraEyePos() { return [player.pos[0], player.pos[1] + 1.58 + cameraStepOffsetY, player.pos[2]]; }
   function keyOf(x, y, z) { return x + ',' + y + ',' + z; }
   function chunkKey(cx, cz) { return cx + ',' + cz; }
   function chunkCoord(v) { return Math.floor(v / CHUNK_SIZE); }
@@ -1689,8 +1692,19 @@ function playerOnMachinePad() {
     stepped[1] = surfaceY + 1.001;
     if (collidesAt(stepped)) return false;
     player.pos[1] = stepped[1];
+    cameraStepOffsetY = Math.max(-PLAYER_STEP_HEIGHT, cameraStepOffsetY - rise);
     player.grounded = true;
     return true;
+  }
+
+  function updateCameraStepSmoothing(dt) {
+    if (cameraStepOffsetY >= 0) {
+      cameraStepOffsetY = 0;
+      return;
+    }
+    const blend = 1 - Math.pow(0.04, dt / PLAYER_STEP_SMOOTH_SECONDS);
+    cameraStepOffsetY += (0 - cameraStepOffsetY) * blend;
+    if (cameraStepOffsetY > -0.001) cameraStepOffsetY = 0;
   }
 
   function moveAxis(axis, amount) {
@@ -1721,6 +1735,7 @@ function playerOnMachinePad() {
     touchInput.moveX = 0;
     touchInput.moveY = 0;
     touchInput.jump = false;
+    cameraStepOffsetY = 0;
     player.grounded = false;
     player.vel = [0, -INSERTION_FALL_SPEED * .55, 0];
     player.pos[1] = Math.min(MAX_Y + INSERTION_DROP_HEIGHT, groundY + INSERTION_DROP_HEIGHT);
@@ -1733,6 +1748,7 @@ function playerOnMachinePad() {
   function finishInsertionDrop() {
     if (!mission.insertionActive) return;
     mission.insertionActive = false;
+    cameraStepOffsetY = 0;
     player.pos[1] = Math.max(player.pos[1], mission.insertionTargetY);
     player.vel = [0, 0, 0];
     player.grounded = true;
@@ -1776,6 +1792,7 @@ function playerOnMachinePad() {
     if (insertion && player.grounded) finishInsertionDrop();
     else if (!wasGrounded && player.grounded && landingSpeed > 3.2) sound('land');
     clampToWorld(player.pos);
+    updateCameraStepSmoothing(dt);
     ensureChunks();
     if (player.pos[1] < -20) damagePlayer(999);
   }
@@ -2017,6 +2034,7 @@ function playerOnMachinePad() {
     reloadOverlay.classList.remove('show');
     reloadOverlayFill.style.width = '0%';
     const sx = 0, sz = 0;
+    cameraStepOffsetY = 0;
     player.pos = [sx + .5, topSolidY(sx, sz) + 2.2, sz + .5];
     player.vel = [0, 0, 0];
     currentChunkX = 999999;
@@ -2859,7 +2877,7 @@ function currentWaterIsDangerous() {
 
     const aspect = canvas.width / canvas.height;
     const proj = mat4Perspective(Math.PI / 3, aspect, 0.06, 170);
-    const e = eyePos();
+    const e = cameraEyePos();
     const d = lookDir();
     const view = mat4LookAt(e, [e[0] + d[0], e[1] + d[1], e[2] + d[2]], [0, 1, 0]);
     const mvp = mat4Mul(proj, view);
@@ -3001,6 +3019,7 @@ function currentWaterIsDangerous() {
     nextSpawnTimer = 3.5;
     hordeLevel = 0;
     heartbeatTimer = 0;
+    cameraStepOffsetY = 0;
     lastKillTime = -999;
     killComboCount = 0;
     deathState.active = false;
