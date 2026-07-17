@@ -253,7 +253,7 @@
   const portraitQuery = matchMedia('(orientation: portrait)');
   let keys = Object.create(null);
   const touchInput = { moveX: 0, moveY: 0, jump: false, lookId: null, lookX: 0, lookY: 0, stickId: null };
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.17.01');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.17.02');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -1401,7 +1401,7 @@
           growTree(x, h, z, BLOCK.DEAD_WOOD, seededHash(x - 4, z + 8) > .35);
         } else if (biome === 'ashlands' && propRoll > 0.982) {
           growTree(x, h, z, BLOCK.DEAD_WOOD, false);
-        } else if (biome === 'tundra' && propRoll > 0.972) {
+        } else if (biome === 'tundra' && propRoll > 0.984) {
           growPineTree(x, h, z);
         }
       }
