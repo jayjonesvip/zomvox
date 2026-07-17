@@ -135,7 +135,11 @@
     ASH: 27,
     DEAD_WOOD: 28,
     DARK_RED: 29,
-    SHUTDOWN_PAD: 30
+    SHUTDOWN_PAD: 30,
+    SNOW: 31,
+    ICE: 32,
+    PINE_LEAF: 33,
+    CLOUD: 34
   };
 
   const CHUNK_SIZE = Math.max(4, Math.floor(configNumber(WORLD_CONFIG, 'chunkSize', 16)));
@@ -179,6 +183,7 @@
   const CONFIGURED_MISSION_SEEDS = configNumberArray(MISSION_CONFIG, 'islandSeeds', [INITIAL_SEED, 482177, 735331, 918244, 126509]).slice(0, 5);
   const MISSION_SEEDS = CONFIGURED_MISSION_SEEDS.length ? CONFIGURED_MISSION_SEEDS : [INITIAL_SEED];
   const DEFAULT_MISSION_BIOMES = ['forest', 'dunes', 'rocky', 'swamp', 'ashlands'];
+  const QUICK_BIOMES = ['forest', 'dunes', 'rocky', 'swamp', 'ashlands', 'tundra'];
   const CONFIGURED_MISSION_BIOMES = configStringArray(MISSION_CONFIG, 'biomes', DEFAULT_MISSION_BIOMES).slice(0, MISSION_SEEDS.length);
   const MISSION_BIOMES = MISSION_SEEDS.map((_, i) => normalizeBiome(CONFIGURED_MISSION_BIOMES[i] || DEFAULT_MISSION_BIOMES[i] || 'forest'));
   const DEFAULT_INFECTED_GOALS = [25, 50, 100, 250, 500];
@@ -248,7 +253,7 @@
   const portraitQuery = matchMedia('(orientation: portrait)');
   let keys = Object.create(null);
   const touchInput = { moveX: 0, moveY: 0, jump: false, lookId: null, lookX: 0, lookY: 0, stickId: null };
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.16.01');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.17.01');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -728,11 +733,11 @@
 
   function normalizeBiome(value) {
     const biome = String(value || 'forest').trim().toLowerCase();
-    return ['forest', 'dunes', 'rocky', 'swamp', 'ashlands'].includes(biome) ? biome : 'forest';
+    return ['forest', 'dunes', 'rocky', 'swamp', 'ashlands', 'tundra'].includes(biome) ? biome : 'forest';
   }
 
   function quickSeedForBiome(biome) {
-    const idx = DEFAULT_MISSION_BIOMES.indexOf(normalizeBiome(biome));
+    const idx = QUICK_BIOMES.indexOf(normalizeBiome(biome));
     return INITIAL_SEED + 100003 * (idx + 1);
   }
 
@@ -1041,6 +1046,10 @@
       if(t < 28.5) return vec3(0.18, 0.13, 0.09); /* dead wood */
       if(t < 29.5) return vec3(0.20, 0.015, 0.012); /* dead beacon */
       if(t < 30.5) return vec3(1.0, 0.86, 0.16) * (0.58 + step(0.45, sin(uTime * 7.0)) * 0.38); /* shutdown pad */
+      if(t < 31.5) return vec3(0.86, 0.91, 0.92); /* snow */
+      if(t < 32.5) return vec3(0.56, 0.82, 0.96); /* frozen water */
+      if(t < 33.5) return vec3(0.06, 0.25, 0.13); /* pine needles */
+      if(t < 34.5) return vec3(0.94, 0.97, 0.98); /* voxel cloud */
       return vec3(1.0, 0.45, 0.18); /* particles */
     }
     void main(){
@@ -1063,6 +1072,10 @@
       if(vType > 24.5 && vType < 25.5) color += vec3(0.02, 0.08, 0.02);
       if(vType > 26.5 && vType < 27.5) color *= 0.78 + step(0.62, hash(floor(vWorld.xz * 2.6 + vWorld.yy))) * 0.35;
       if(vType > 29.5 && vType < 30.5) color += vec3(0.45, 0.32, 0.02) * step(0.45, sin(uTime * 7.0));
+      if(vType > 30.5 && vType < 31.5) color += vec3(0.05, 0.06, 0.07) * max(n.y, 0.0);
+      if(vType > 31.5 && vType < 32.5) color += vec3(0.08, 0.16, 0.18) * max(n.y, 0.0);
+      if(vType > 32.5 && vType < 33.5) color *= 0.82 + step(0.62, hash(floor(vWorld.xz * 3.2 + vWorld.yy))) * 0.25;
+      if(vType > 33.5 && vType < 34.5) color *= 0.88 + max(n.y, 0.0) * 0.16;
       float edge = gridLine(vUv);
       color *= mix(0.58, 1.0, edge);
       float sun = max(dot(n, normalize(uLightDir)), 0.0);
@@ -1171,11 +1184,11 @@
     if (type) world.set(k, type); else world.delete(k);
     if (persist) edits.set(k, type || 0);
   }
-  function isSolidType(type) { return !!type && type !== BLOCK.WATER && type !== BLOCK.LEAF; }
-  function blocksMovement(type) { return !!type && type !== BLOCK.WATER && type !== BLOCK.LEAF; }
+  function isSolidType(type) { return !!type && type !== BLOCK.WATER && type !== BLOCK.LEAF && type !== BLOCK.PINE_LEAF && type !== BLOCK.CLOUD; }
+  function blocksMovement(type) { return !!type && type !== BLOCK.WATER && type !== BLOCK.LEAF && type !== BLOCK.PINE_LEAF && type !== BLOCK.CLOUD; }
   function isAutoStepSurface(type) {
     return type === BLOCK.GRASS || type === BLOCK.DIRT || type === BLOCK.STONE ||
-      type === BLOCK.SAND || type === BLOCK.MUD || type === BLOCK.ASH;
+      type === BLOCK.SAND || type === BLOCK.MUD || type === BLOCK.ASH || type === BLOCK.SNOW || type === BLOCK.ICE;
   }
 
   function seededHash(x, z) {
@@ -1249,6 +1262,7 @@
     if (biome === 'rocky') return { top: roll < .95 ? BLOCK.STONE : BLOCK.GRASS, near: roll < .95 ? BLOCK.STONE : BLOCK.DIRT };
     if (biome === 'swamp') return { top: roll < .72 || beach ? BLOCK.MUD : BLOCK.GRASS, near: roll < .72 || beach ? BLOCK.MUD : BLOCK.DIRT };
     if (biome === 'ashlands') return { top: roll < .82 ? BLOCK.ASH : BLOCK.STONE, near: roll < .82 ? BLOCK.ASH : BLOCK.STONE };
+    if (biome === 'tundra') return { top: roll < .90 ? BLOCK.SNOW : BLOCK.STONE, near: roll < .86 ? BLOCK.SNOW : BLOCK.STONE };
     return { top: beach ? BLOCK.SAND : (roll < .95 ? BLOCK.GRASS : (desert ? BLOCK.SAND : BLOCK.STONE)), near: beach ? BLOCK.SAND : BLOCK.DIRT };
   }
 
@@ -1286,6 +1300,47 @@
     }
   }
 
+  function growPineTree(x, h, z) {
+    const trunk = 4 + Math.floor(seededHash(x + 31, z - 13) * 3);
+    for (let y = 1; y <= trunk; y++) genSetBlock(x, h + y, z, BLOCK.WOOD);
+    const baseY = h + 2;
+    const topY = h + trunk + 2;
+    for (let y = baseY; y <= topY; y++) {
+      const layer = y - baseY;
+      const radius = Math.max(0, 3 - Math.floor(layer * 0.62));
+      for (let dx = -radius; dx <= radius; dx++) {
+        for (let dz = -radius; dz <= radius; dz++) {
+          const edge = Math.abs(dx) + Math.abs(dz);
+          if (edge > radius + 1) continue;
+          if (dx === 0 && dz === 0 && y <= h + trunk) continue;
+          if (seededHash(x + dx * 17 + y, z + dz * 29) > 0.08) genSetBlock(x + dx, y, z + dz, BLOCK.PINE_LEAF);
+        }
+      }
+    }
+    genSetBlock(x, topY + 1, z, BLOCK.PINE_LEAF);
+  }
+
+  function growVoxelCloud(cx, cz) {
+    const anchorX = cx * CHUNK_SIZE + 2 + Math.floor(seededHash(cx * 9.1 + 43, cz * 5.7 - 22) * Math.max(1, CHUNK_SIZE - 6));
+    const anchorZ = cz * CHUNK_SIZE + 2 + Math.floor(seededHash(cx * 7.4 - 18, cz * 8.2 + 31) * Math.max(1, CHUNK_SIZE - 6));
+    const y = MAX_Y + 13 + Math.floor(seededHash(cx * 3.6 + 7, cz * 4.1 - 9) * 8);
+    const lobes = 3 + Math.floor(seededHash(cx * 4.9, cz * 6.2) * 3);
+    for (let i = 0; i < lobes; i++) {
+      const ox = Math.floor((seededHash(cx * 11.3 + i * 5, cz * 2.9) - .5) * 8);
+      const oz = Math.floor((seededHash(cx * 3.3, cz * 12.4 - i * 6) - .5) * 6);
+      const rx = 2 + Math.floor(seededHash(cx + i * 13, cz - i * 7) * 3);
+      const rz = 1 + Math.floor(seededHash(cx - i * 19, cz + i * 11) * 3);
+      for (let dx = -rx; dx <= rx; dx++) {
+        for (let dz = -rz; dz <= rz; dz++) {
+          if (Math.abs(dx) / Math.max(1, rx) + Math.abs(dz) / Math.max(1, rz) > 1.35) continue;
+          const x = anchorX + ox + dx;
+          const z = anchorZ + oz + dz;
+          if (inWorldXZ(x, z) && seededHash(x * 2.7 + y, z * 3.1 - y) > 0.10) genSetBlock(x, y, z, BLOCK.CLOUD);
+        }
+      }
+    }
+  }
+
   function growRockCluster(x, h, z, chanceRoll) {
     const radius = 1 + Math.floor(seededHash(x - 21, z + 32) * 2.2);
     const height = 1 + Math.floor(seededHash(x + 5, z - 17) * 3.3);
@@ -1320,9 +1375,11 @@
           else if (y > h - 4) type = surface.near;
           genSetBlock(x, y, z, type);
         }
-        // Dunes keep the low basins dry so desert islands do not generate lakes.
+        // Dunes keep low basins dry. Tundra freezes low basins into solid ice
+        // so players slide over them instead of clipping through water.
         if (biome !== 'dunes' && h < WATER_LEVEL) {
-          for (let y = h + 1; y <= WATER_LEVEL; y++) genSetBlock(x, y, z, BLOCK.WATER);
+          const fill = biome === 'tundra' ? BLOCK.ICE : BLOCK.WATER;
+          for (let y = h + 1; y <= WATER_LEVEL; y++) genSetBlock(x, y, z, fill);
         }
       }
     }
@@ -1344,6 +1401,8 @@
           growTree(x, h, z, BLOCK.DEAD_WOOD, seededHash(x - 4, z + 8) > .35);
         } else if (biome === 'ashlands' && propRoll > 0.982) {
           growTree(x, h, z, BLOCK.DEAD_WOOD, false);
+        } else if (biome === 'tundra' && propRoll > 0.972) {
+          growPineTree(x, h, z);
         }
       }
     }
@@ -1352,13 +1411,15 @@
         const x = x0 + lx, z = z0 + lz;
         const h = terrainHeight(x, z);
         const rockyShore = biomeUsesRedWater(biome) && h <= WATER_LEVEL + 3;
-        const biomeRocks = (biome === 'rocky' || biome === 'ashlands') && h > WATER_LEVEL + 1;
+        const biomeRocks = (biome === 'rocky' || biome === 'ashlands' || biome === 'tundra') && h > WATER_LEVEL + 1;
         const rockNoise = seededHash(x * 4.13 + 15, z * 6.71 - 8);
-        if ((rockyShore && h > WATER_LEVEL + 1 && rockNoise > 0.935) || (biomeRocks && rockNoise > (biome === 'rocky' ? 0.885 : 0.91))) {
+        const rockThreshold = biome === 'rocky' ? 0.885 : (biome === 'tundra' ? 0.94 : 0.91);
+        if ((rockyShore && h > WATER_LEVEL + 1 && rockNoise > 0.935) || (biomeRocks && rockNoise > rockThreshold)) {
           growRockCluster(x, h, z, rockNoise);
         }
       }
     }
+    if (seededHash(cx * 5.7 + 101, cz * 8.4 - 44) > 0.78) growVoxelCloud(cx, cz);
     if (gunUnlocked() && seededHash(cx * 20.2 + 19, cz * 17.7 - 3) > 1 - MAP_AMMO_PICKUP_CHANCE) {
       const lx = 3 + Math.floor(seededHash(cx + 77, cz - 42) * 10);
       const lz = 3 + Math.floor(seededHash(cx - 14, cz + 91) * 10);
@@ -1392,7 +1453,7 @@
     generateChunk(chunkCoord(x), chunkCoord(z));
     for (let y = MAX_Y + 25; y >= 0; y--) {
       const t = getBlock(x, y, z);
-      if (t && t !== BLOCK.WATER && t !== BLOCK.LEAF) return y;
+      if (t && t !== BLOCK.WATER && t !== BLOCK.LEAF && t !== BLOCK.PINE_LEAF && t !== BLOCK.CLOUD) return y;
     }
     return terrainHeight(x, z);
   }
@@ -1402,6 +1463,12 @@
     const y = topSolidY(gx, gz);
     const type = getBlock(gx, y, gz);
     return (type === BLOCK.SAND || type === BLOCK.MUD) ? 0.85 : 1;
+  }
+
+  function isOnIceSurface() {
+    const gx = Math.floor(player.pos[0]), gz = Math.floor(player.pos[2]);
+    const y = Math.floor(player.pos[1] - 0.08);
+    return getBlock(gx, y, gz) === BLOCK.ICE;
   }
 
   function highestMissionPoint() {
@@ -1436,6 +1503,7 @@
     if (biome === 'swamp') return BLOCK.MUD;
     if (biome === 'ashlands') return BLOCK.ASH;
     if (biome === 'rocky') return BLOCK.STONE;
+    if (biome === 'tundra') return BLOCK.SNOW;
     return BLOCK.GRASS;
   }
 
@@ -1766,8 +1834,8 @@ function playerOnMachinePad() {
     const insertion = mission.insertionActive;
     if (!insertion && (keys.KeyW || keys.ArrowUp)) { mx += forward[0]; mz += forward[2]; }
     if (!insertion && (keys.KeyS || keys.ArrowDown)) { mx -= forward[0]; mz -= forward[2]; }
-    if (!insertion && (keys.KeyD || keys.ArrowRight)) { mx -= right[0]; mz -= right[2]; }
-    if (!insertion && (keys.KeyA || keys.ArrowLeft)) { mx += right[0]; mz += right[2]; }
+    if (!insertion && (keys.KeyD || keys.ArrowRight)) { mx += right[0]; mz += right[2]; }
+    if (!insertion && (keys.KeyA || keys.ArrowLeft)) { mx -= right[0]; mz -= right[2]; }
     if (!insertion && (touchInput.moveY || touchInput.moveX)) {
       mx += forward[0] * touchInput.moveY + right[0] * touchInput.moveX;
       mz += forward[2] * touchInput.moveY + right[2] * touchInput.moveX;
@@ -1777,8 +1845,19 @@ function playerOnMachinePad() {
     const len = Math.hypot(mx, mz) || 1; mx /= len; mz /= len;
     const sprint = keys.ShiftLeft || keys.ShiftRight;
     const speed = 5.35 * currentPlayerSpeedMultiplier() * (sprint ? 1.55 : 1.0) * surfaceMoveMultiplier(player.pos[0], player.pos[2]);
-    player.vel[0] = insertion ? 0 : mx * speed;
-    player.vel[2] = insertion ? 0 : mz * speed;
+    if (insertion) {
+      player.vel[0] = 0;
+      player.vel[2] = 0;
+    } else if (isOnIceSurface()) {
+      const targetX = mx * speed;
+      const targetZ = mz * speed;
+      const slideBlend = movingInput ? 0.075 : 0.022;
+      player.vel[0] += (targetX - player.vel[0]) * slideBlend;
+      player.vel[2] += (targetZ - player.vel[2]) * slideBlend;
+    } else {
+      player.vel[0] = mx * speed;
+      player.vel[2] = mz * speed;
+    }
     player.vel[1] -= (insertion ? 9 : 22) * dt;
     const landingSpeed = Math.max(0, -player.vel[1]);
     if (insertion) player.vel[1] = Math.max(player.vel[1], -INSERTION_FALL_SPEED);

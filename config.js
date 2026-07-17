@@ -17,7 +17,7 @@ window.ZOMVOX_CONFIG = {
     Bump this when you make visible changes so you can tell the browser
     loaded the newest version.
   */
-  buildVersion: '2026.07.16.01',
+  buildVersion: '2026.07.17.01',
 
   /*
     Seed used for deterministic world generation.
@@ -260,6 +260,7 @@ window.ZOMVOX_CONFIG = {
       - 'rocky' = mostly stone with boulders and rare trees
       - 'swamp' = mud/grass mix with sparse wet trees
       - 'ashlands' = ash/stone with dead trees and boulders
+      - 'tundra' = snow, frozen water, pine trees, and sparse rocks
 
       These line up with islandSeeds by position.
     */
@@ -421,7 +422,8 @@ window.ZOMVOX_CONFIG = {
       ambientDunes: 'ambientDunes.mp3',
       ambientRocky: 'ambientRocky.mp3',
       ambientSwamp: 'ambientSwamp.mp3',
-      ambientAshlands: 'ambientAshlands.mp3'
+      ambientAshlands: 'ambientAshlands.mp3',
+      ambientTundra: ''
     }
   }
 };
