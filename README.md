@@ -22,7 +22,7 @@ Desktop play uses mouse and keyboard. Mobile play is designed for landscape orie
 - Branded ZomVox splash screen using `assets/zomvox-splash.png`.
 - Splash screen build label using `BUILD_VERSION` plus the deployed document timestamp.
 - Favicon assets for browser tabs and installed shortcuts.
-- Procedural voxel terrain with mission biomes: forest, dunes, rocky, swamp, and ashlands.
+- Procedural voxel terrain with mission biomes: forest, dunes, rocky, swamp, ashlands, and tundra.
 - Sand and mud surfaces slow players and zombies by 15%.
 - Fixed-size chunk generation so the game area stays bounded and performance remains predictable.
 - Player movement is clamped inside the generated world.
@@ -211,6 +211,7 @@ Biome water notes:
 
 - Dunes are dry and do not fill low terrain with water.
 - Swamps render water as murky green-brown toxic water.
+- Tundra freezes low basins into solid light-blue ice that players can slide across.
 
 `environment.fog` controls distance fog:
 
