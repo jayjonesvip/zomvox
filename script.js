@@ -197,7 +197,7 @@
   const HEALTH_PICKUP_AMOUNT = Math.max(1, configNumber(PICKUP_CONFIG, 'healthAmount', 25));
   const MAP_AMMO_PICKUP_CHANCE = Math.max(0, Math.min(1, configNumber(PICKUP_CONFIG, 'mapAmmoChance', 0.28)));
   const MAP_HEALTH_PICKUP_CHANCE = Math.max(0, Math.min(1, configNumber(PICKUP_CONFIG, 'mapHealthChance', 0.10)));
-  const ENEMY_C4_DROP_CHANCE = Math.max(0, Math.min(1, configNumber(PICKUP_CONFIG, 'enemyC4DropChance', 0.15)));
+  const ENEMY_C4_DROP_CHANCE = Math.max(0, Math.min(1, configNumber(PICKUP_CONFIG, 'enemyC4DropChance', 0.06)));
   const ENEMY_HEALTH_DROP_CHANCE = Math.max(0, Math.min(1, configNumber(PICKUP_CONFIG, 'enemyHealthDropChance', 0.07)));
   const ENEMY_ANY_DROP_CHANCE = Math.max(ENEMY_C4_DROP_CHANCE + ENEMY_HEALTH_DROP_CHANCE, Math.min(1, configNumber(PICKUP_CONFIG, 'enemyAnyDropChance', 0.55)));
   const LONG_RANGE_KILL_DIST = configNumber(WEAPON_CONFIG, 'longRangeKillDistance', 34);
@@ -260,7 +260,7 @@
   const portraitQuery = matchMedia('(orientation: portrait)');
   let keys = Object.create(null);
   const touchInput = { moveX: 0, moveY: 0, jump: false, lookId: null, lookX: 0, lookY: 0, stickId: null };
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.18.02');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.18.03');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -3067,6 +3067,10 @@ function playerOnMachinePad() {
     pushBox(arr, x - .42, y + .04, z + .34, .84, .06, .08, 36);
     pushBox(arr, x - .42, y + .04, z - .34, .08, .06, .68, 36);
     pushBox(arr, x + .34, y + .04, z - .34, .08, .06, .68, 36);
+    pushBox(arr, x - .29, y + .145, z - .32, .18, .035, .08, 13);
+    pushBox(arr, x + .11, y + .145, z - .32, .18, .035, .08, 13);
+    pushBox(arr, x - .29, y + .145, z + .24, .18, .035, .08, 13);
+    pushBox(arr, x + .11, y + .145, z + .24, .18, .035, .08, 13);
     pushBox(arr, x - .10, y + .14, z - .10, .20, .035, .20, 24);
   }
 
