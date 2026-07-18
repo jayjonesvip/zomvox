@@ -161,7 +161,7 @@
   body.story-reviving.story-revive-fade #deathOverlay{ opacity:0; visibility:visible; }
   body.story-reviving .deathCard{ display:none; }
 
-  #menu{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center; padding:22px; background:radial-gradient(circle at 50% 35%, rgba(35,85,110,.45), rgba(2,7,12,.82) 62%, rgba(0,0,0,.93)); z-index:20; }
+  #menu{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center; padding:22px; overflow:hidden; background:radial-gradient(circle at 50% 35%, rgba(35,85,110,.45), rgba(2,7,12,.82) 62%, rgba(0,0,0,.93)); z-index:20; }
   .card{ width:min(760px, 96vw); border:1px solid rgba(255,255,255,.18); background:linear-gradient(180deg, rgba(13,24,35,.88), rgba(5,9,14,.8)); border-radius:26px; padding:28px; box-shadow:0 30px 90px rgba(0,0,0,.55); backdrop-filter:blur(12px); }
   h1{ margin:0 0 8px; font-size:clamp(36px, 6vw, 64px); letter-spacing:0; line-height:.95; }
   h1 b{ color:var(--accent); text-shadow:0 0 22px rgba(145,243,110,.35); }
@@ -177,12 +177,15 @@
   .startBtn{ appearance:none; border:0; border-radius:16px; padding:14px 20px; font-size:18px; font-weight:1000; text-transform:uppercase; cursor:pointer; }
   .primaryStart{ color:#06230e; background:linear-gradient(180deg,#c5ffa8,#72df60); box-shadow:0 14px 40px rgba(105,216,90,.26), inset 0 2px 0 rgba(255,255,255,.45); }
   .secondaryStart{ color:#210606; background:linear-gradient(180deg,#ffe07b,#ff6948); box-shadow:0 14px 40px rgba(255,98,72,.24), inset 0 2px 0 rgba(255,255,255,.36); }
-  .startBtn:hover,.quickBiomeGrid button:hover{ filter:brightness(1.05); }
-  .quickBiomePanel{ margin-top:10px; padding:10px; border:1px solid rgba(255,255,255,.14); border-radius:10px; background:rgba(255,255,255,.055); }
-  .quickBiomePanel[hidden]{ display:none; }
-  .quickBiomeTitle{ color:#d7ffc7; font-size:12px; font-weight:1000; letter-spacing:.14em; text-transform:uppercase; margin-bottom:8px; }
+  .startBtn:hover,.quickBiomeGrid button:hover,.quickBackBtn:hover{ filter:brightness(1.05); }
+  .quickBiomePanel{ width:min(620px, 96vw); text-align:center; }
+  .quickBiomePanel[hidden], #menu.quick-select #mainMenuCard{ display:none; }
+  .quickBiomeTopline{ color:#91f36e; font-size:12px; font-weight:1000; letter-spacing:.2em; text-transform:uppercase; margin-bottom:8px; }
+  .quickBiomeTitle{ color:#f5fff2; font-size:clamp(30px, 5vw, 50px); font-weight:1000; line-height:.9; letter-spacing:0; text-transform:uppercase; margin:0 0 8px; text-shadow:0 3px 0 rgba(0,0,0,.72),0 0 20px rgba(145,243,110,.2); }
+  .quickBiomeCopy{ color:#c1d7e6; font-size:14px; font-weight:800; margin:0 0 16px; }
   .quickBiomeGrid{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:7px; }
-  .quickBiomeGrid button{ appearance:none; border:1px solid rgba(255,255,255,.18); border-radius:8px; padding:9px 6px; color:#edf8ff; font-size:12px; font-weight:1000; text-transform:uppercase; background:rgba(6,12,16,.72); box-shadow:inset 0 1px 0 rgba(255,255,255,.1); cursor:pointer; }
+  .quickBiomeGrid button{ appearance:none; border:1px solid rgba(255,255,255,.18); border-radius:8px; padding:16px 8px; color:#edf8ff; font-size:14px; font-weight:1000; text-transform:uppercase; background:rgba(6,12,16,.72); box-shadow:inset 0 1px 0 rgba(255,255,255,.1); cursor:pointer; }
+  .quickBackBtn{ margin-top:12px; appearance:none; border:1px solid rgba(255,255,255,.22); border-radius:8px; padding:9px 18px; color:#eaf7ff; font-size:12px; font-weight:1000; letter-spacing:.08em; text-transform:uppercase; background:rgba(255,255,255,.08); cursor:pointer; }
   body.quick-mode #missionPanel{ display:none; }
   #splash{ position:fixed; inset:0; z-index:35; overflow:hidden; background:#02070b; transition:opacity .38s ease, visibility .38s ease; }
   #splash.hide{ opacity:0; visibility:hidden; pointer-events:none; }
@@ -247,8 +250,8 @@
   @keyframes phoneRoll{ 0%,100%{ transform:rotate(0deg); } 48%,62%{ transform:rotate(90deg); } }
   @keyframes arcSpin{ 0%,100%{ transform:rotate(-25deg); opacity:.85; } 50%{ transform:rotate(62deg); opacity:1; } }
   @media (max-width: 720px), (pointer: coarse){
-    #menu{ padding:max(4px, env(safe-area-inset-top)) 6px max(4px, env(safe-area-inset-bottom)); align-items:flex-start; }
-    .card{ width:min(98vw, 640px); max-height:calc(100dvh - 12px); overflow:auto; overscroll-behavior:contain; border-radius:14px; padding:10px 12px; }
+    #menu{ padding:max(4px, env(safe-area-inset-top)) 6px max(4px, env(safe-area-inset-bottom)); align-items:center; }
+    .card{ width:min(98vw, 640px); max-height:calc(100dvh - 10px); overflow:hidden; border-radius:14px; padding:10px 12px; }
     h1{ font-size:28px; letter-spacing:0; margin-bottom:4px; }
     .subtitle{ font-size:12px; line-height:1.18; margin-bottom:7px; }
     .grid{ grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; margin:6px 0 8px; }
@@ -261,10 +264,13 @@
     .setting input{ width:16px; height:16px; }
     .startActions{ gap:6px; }
     .startBtn{ border-radius:10px; padding:8px 10px; font-size:14px; }
-    .quickBiomePanel{ margin-top:6px; padding:7px; }
-    .quickBiomeTitle{ font-size:10px; margin-bottom:5px; }
+    .quickBiomePanel{ width:min(98vw, 520px); padding:12px; }
+    .quickBiomeTopline{ font-size:10px; margin-bottom:5px; }
+    .quickBiomeTitle{ font-size:26px; margin-bottom:5px; }
+    .quickBiomeCopy{ font-size:11px; line-height:1.18; margin-bottom:8px; }
     .quickBiomeGrid{ grid-template-columns:repeat(3,minmax(0,1fr)); gap:4px; }
-    .quickBiomeGrid button{ border-radius:7px; padding:6px 4px; font-size:10px; }
+    .quickBiomeGrid button{ border-radius:7px; padding:11px 4px; font-size:10px; min-height:38px; }
+    .quickBackBtn{ margin-top:8px; padding:7px 14px; font-size:10px; }
     .splashLoad{ right:calc(12px + env(safe-area-inset-right)); bottom:calc(12px + env(safe-area-inset-bottom)); width:min(300px, calc(100vw - 24px)); padding:9px; }
     .splashVersion{ font-size:9px; margin-bottom:4px; }
     .splashStatus{ font-size:11px; margin-bottom:6px; }

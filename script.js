@@ -14,9 +14,11 @@
   const bulletRack = $('bulletRack');
   const reserveText = $('reserveText');
   const menu = $('menu');
+  const mainMenuCard = $('mainMenuCard');
   const play = $('play');
   const quickStart = $('quickStart');
   const quickBiomePanel = $('quickBiomePanel');
+  const quickBack = $('quickBack');
   const toast = $('toast');
   const gunSprite = $('gunSprite');
   const damageFlash = $('damageFlash');
@@ -248,12 +250,13 @@
   let pickups = [];
   let particles = [];
   let nextSpawnTimer = 3.5;
+  let ammoMercyTimer = 0;
   let locked = false;
   let touchMode = matchMedia('(pointer: coarse)').matches;
   const portraitQuery = matchMedia('(orientation: portrait)');
   let keys = Object.create(null);
   const touchInput = { moveX: 0, moveY: 0, jump: false, lookId: null, lookX: 0, lookY: 0, stickId: null };
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.17.03');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.18.01');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -1050,6 +1053,10 @@
       if(t < 32.5) return vec3(0.56, 0.82, 0.96); /* frozen water */
       if(t < 33.5) return vec3(0.06, 0.25, 0.13); /* pine needles */
       if(t < 34.5) return vec3(0.94, 0.97, 0.98); /* voxel cloud */
+      if(t < 35.5) return vec3(0.43, 0.47, 0.44); /* grey zombie */
+      if(t < 36.5) return vec3(0.25, 0.28, 0.26); /* dark grey zombie */
+      if(t < 37.5) return vec3(0.16, 0.31, 0.15); /* ammo camo green */
+      if(t < 38.5) return vec3(0.07, 0.16, 0.08); /* ammo camo shadow */
       return vec3(1.0, 0.45, 0.18); /* particles */
     }
     void main(){
@@ -1076,6 +1083,8 @@
       if(vType > 31.5 && vType < 32.5) color += vec3(0.08, 0.16, 0.18) * max(n.y, 0.0);
       if(vType > 32.5 && vType < 33.5) color *= 0.82 + step(0.62, hash(floor(vWorld.xz * 3.2 + vWorld.yy))) * 0.25;
       if(vType > 33.5 && vType < 34.5) color *= 0.88 + max(n.y, 0.0) * 0.16;
+      if(vType > 34.5 && vType < 35.5) color *= 0.82 + step(0.58, hash(floor(vWorld.xz * 3.0 + vWorld.yy))) * 0.24;
+      if(vType > 36.5 && vType < 38.5) color *= 0.82 + step(0.52, hash(floor(vWorld.xz * 7.0 + vWorld.yy))) * 0.30;
       float edge = gridLine(vUv);
       color *= mix(0.58, 1.0, edge);
       float sun = max(dot(n, normalize(uLightDir)), 0.0);
@@ -1253,6 +1262,41 @@
       amount: kind === 'health' ? HEALTH_PICKUP_AMOUNT : AMMO_PICKUP_ROUNDS,
       bob: seededHash(px * 5.1, pz * 9.3) * 10
     });
+  }
+
+  function nearbyAmmoPickup(radius = 20) {
+    return pickups.some(p => !p.collected && p.kind !== 'health' && Math.hypot(p.x - player.pos[0], p.z - player.pos[2]) <= radius);
+  }
+
+  function findMercyAmmoSpot() {
+    for (let i = 0; i < 28; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const radius = 6 + Math.random() * 9;
+      const x = Math.floor(player.pos[0] + Math.cos(angle) * radius);
+      const z = Math.floor(player.pos[2] + Math.sin(angle) * radius);
+      if (!inWorldXZ(x, z)) continue;
+      generateChunk(chunkCoord(x), chunkCoord(z));
+      const y = topSolidY(x, z) + 1;
+      const surface = getBlock(x, y - 1, z);
+      if (surface === BLOCK.WATER || y <= WATER_LEVEL + 1) continue;
+      if (!blocksMovement(getBlock(x, y, z)) && !blocksMovement(getBlock(x, y + 1, z))) return { x, y, z };
+    }
+    return null;
+  }
+
+  function updateAmmoMercyDrops(dt) {
+    if (!gunUnlocked() || player.reserve > 0 || nearbyAmmoPickup()) {
+      ammoMercyTimer = 0;
+      return;
+    }
+    ammoMercyTimer -= dt;
+    if (ammoMercyTimer > 0) return;
+    const spot = findMercyAmmoSpot();
+    ammoMercyTimer = player.mag <= 0 ? 5.5 : 8.5;
+    if (!spot) return;
+    spawnPickupAt(spot.x, spot.y, spot.z, 'ammo');
+    scorePop('AMMO CACHE', 'pickup small');
+    showToast('Mission Command: ammo cache marked nearby.');
   }
 
   function biomeSurfaceTypes(biome, x, z, h, beach, desert, lavaShore) {
@@ -1899,13 +1943,16 @@ function playerOnMachinePad() {
 
   function enemyVariantStats(x, z) {
     const roll = seededHash(x * 12.7 - 4, z * 8.4 + 6);
-    if (roll < 0.70) {
+    if (roll < 0.66) {
       return { kind: 'normal', hp: 48, speed: 2.55, scale: 1, damage: 14, attackCooldown: .9, retreat: .34, bodyType: 10, limbType: 11, eyeType: 12 };
     }
-    if (roll < 0.90) {
+    if (roll < 0.84) {
       return { kind: 'speedy', hp: 28, speed: 3.35, scale: .78, damage: 8, attackCooldown: .68, retreat: .28, bodyType: 18, limbType: 10, eyeType: 12 };
     }
-    return { kind: 'brute', hp: 96, speed: 1.72, scale: 1.24, damage: 24, attackCooldown: 1.25, retreat: .46, bodyType: 19, limbType: 11, eyeType: 20 };
+    if (roll < 0.94) {
+      return { kind: 'brute', hp: 96, speed: 1.72, scale: 1.24, damage: 24, attackCooldown: 1.25, retreat: .46, bodyType: 19, limbType: 11, eyeType: 20 };
+    }
+    return { kind: 'grey', hp: 118, speed: 1.18, scale: 1, damage: 18, attackCooldown: 1.15, retreat: .38, bodyType: 35, limbType: 36, eyeType: 12 };
   }
 
   function spawnEnemy() {
@@ -2152,7 +2199,7 @@ function playerOnMachinePad() {
     menu.style.display = 'flex';
     mission.mode = MODE_STORY;
     mission.quickBiome = 'forest';
-    if (quickBiomePanel) quickBiomePanel.hidden = !showQuickPicker;
+    setQuickBiomeScreen(showQuickPicker);
     document.body.classList.remove('quick-mode');
     generateWorld(MISSION_SEEDS[0] || INITIAL_SEED);
     updateAmbientSound(true);
@@ -2799,6 +2846,7 @@ function playerOnMachinePad() {
     updateLowHealthFeedback(dt);
     updateEnemies(dt);
     updateSupplyCrate();
+    updateAmmoMercyDrops(dt);
     updatePickups(dt);
     updateMachineSmoke(dt);
     updateParticles(dt);
@@ -2854,6 +2902,19 @@ function playerOnMachinePad() {
     pushBox(arr, cx - .05, y - .036, cz - .20, .10, t, .40, red);
   }
 
+  function pushAmmoPickup(arr, p, y) {
+    const x = p.x, z = p.z;
+    pushBox(arr, x - .34, y, z - .34, .68, .38, .68, 37);
+    pushBox(arr, x - .30, y + .38, z - .30, .60, .12, .60, 38);
+    pushBox(arr, x - .36, y + .16, z - .06, .72, .10, .12, 14);
+    pushBox(arr, x - .06, y + .16, z - .36, .12, .10, .72, 14);
+    pushBox(arr, x - .27, y + .08, z - .355, .20, .12, .03, 38);
+    pushBox(arr, x + .08, y + .21, z - .356, .18, .11, .03, 6);
+    pushBox(arr, x - .355, y + .20, z + .06, .03, .10, .22, 38);
+    pushBox(arr, x + .325, y + .06, z - .28, .03, .12, .24, 6);
+    pushBox(arr, x - .18, y + .50, z - .04, .36, .08, .08, 14);
+  }
+
   function buildDynamicMesh(time) {
     const arr = [];
     for (const e of enemies) {
@@ -2884,8 +2945,7 @@ function playerOnMachinePad() {
       if (p.kind === 'health') {
         pushHealthPickup(arr, p, y);
       } else {
-        pushBox(arr, p.x - .32, y, p.z - .32, .64, .38, .64, 13);
-        pushBox(arr, p.x - .22, y + .38, p.z - .22, .44, .12, .44, 14);
+        pushAmmoPickup(arr, p, y);
       }
     }
     if (mission.supplyCrate) {
@@ -3054,6 +3114,7 @@ function currentWaterIsDangerous() {
     enemies = [];
     pickups = [];
     particles = [];
+    ammoMercyTimer = 0;
     player.health = STARTING_HEALTH;
     player.reserve = STARTING_RESERVE;
     setPlayerMagSize(effectiveMagSize(), true);
@@ -3168,6 +3229,7 @@ function currentWaterIsDangerous() {
   function enterGameFromMenu() {
     applySettings();
     if (soundEnabled || ambientEnabled) window.ZomVoxSound?.prime();
+    setQuickBiomeScreen(false);
     menu.style.display = 'none';
     updateAmbientSound(true);
     if (touchMode) requestMobileFullscreen();
@@ -3198,10 +3260,21 @@ function currentWaterIsDangerous() {
     enterGameFromMenu();
   }
 
-  function toggleQuickBiomePanel() {
+  function setQuickBiomeScreen(show) {
     if (!quickBiomePanel) return;
+    if (mainMenuCard) mainMenuCard.hidden = show;
+    quickBiomePanel.hidden = !show;
+    menu.classList.toggle('quick-select', show);
+  }
+
+  function openQuickBiomeScreen() {
     sound('confirm');
-    quickBiomePanel.hidden = !quickBiomePanel.hidden;
+    setQuickBiomeScreen(true);
+  }
+
+  function closeQuickBiomeScreen() {
+    sound('confirm');
+    setQuickBiomeScreen(false);
   }
 
   function startQuickGame(biome) {
@@ -3227,7 +3300,8 @@ function currentWaterIsDangerous() {
     respawn();
   }
   play.addEventListener('click', startStoryGame);
-  if (quickStart) quickStart.addEventListener('click', toggleQuickBiomePanel);
+  if (quickStart) quickStart.addEventListener('click', openQuickBiomeScreen);
+  if (quickBack) quickBack.addEventListener('click', closeQuickBiomeScreen);
   for (const btn of quickBiomeButtons) {
     btn.addEventListener('click', () => startQuickGame(btn.dataset.biome));
   }

@@ -29,9 +29,9 @@ Desktop play uses mouse and keyboard. Mobile play is designed for landscape orie
 - Targeted mesh rebuilding for mission set pieces and world updates.
 - Mission-based opening loop with military-style objective briefings, cinematic insertion drops, a no-gun exploration phase, metal-spire shutdown objective, explosive supply crate reward, delayed zombie threat, drop-beacon extraction, upgrade choices, and escalating redeployment objectives across five seeded islands.
 - Compact ammo HUD on desktop and mobile, plus a six-round blaster magazine with reserve ammo, recoil, and fire-rate cooldown.
-- Ammo pickups that add six rounds at a time.
+- Camo ammo pickups that add six rounds at a time, plus low-ammo mercy caches when reserve ammo hits zero.
 - Zombie spawning, ground-emerge entrances, pursuit steering around water/trees, attack cooldowns, retreat steps after attacks, deaths, score popups, and pickup drops.
-- Weighted zombie variants: normal, speedy one-shot runners, and slower brute attackers.
+- Weighted zombie variants: normal, speedy one-shot runners, slower brute attackers, and rare grey stalkers.
 - Mobile-only landscape gate.
 - Mobile joystick movement plus separate jump and shoot controls.
 - Main menu settings for health HUD, ammo HUD, controls, sound, and fullscreen.
