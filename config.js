@@ -17,7 +17,7 @@ window.ZOMVOX_CONFIG = {
     Bump this when you make visible changes so you can tell the browser
     loaded the newest version.
   */
-  buildVersion: '2026.07.18.01',
+  buildVersion: '2026.07.18.02',
 
   /*
     Seed used for deterministic world generation.
@@ -158,6 +158,13 @@ window.ZOMVOX_CONFIG = {
       This does not include the bullets already loaded in the magazine.
     */
     startingReserve: 12,
+
+    /*
+      C4 charges available when combat begins.
+
+      C4 is placed from the mobile C4 button or desktop C key.
+    */
+    startingC4: 1,
 
     /*
       Minimum reserve ammo after respawn.
@@ -332,17 +339,22 @@ window.ZOMVOX_CONFIG = {
     mapHealthChance: 0.10,
 
     /*
-      Chance that a killed enemy drops health.
+      Chance that a killed enemy drops C4.
 
-      This is checked before regular ammo drops.
+      C4 is a flat proximity charge that detonates when infected touch it.
     */
-    enemyHealthDropChance: 0.12,
+    enemyC4DropChance: 0.15,
+
+    /*
+      Chance that a killed enemy drops health.
+    */
+    enemyHealthDropChance: 0.07,
 
     /*
       Overall chance that a killed enemy drops something.
 
-      If the roll is below enemyHealthDropChance, it drops health.
-      Otherwise, if the roll is below this value, it drops ammo.
+      C4 and health are checked first. If the roll is still below this value,
+      the enemy drops ammo.
     */
     enemyAnyDropChance: 0.55
   },

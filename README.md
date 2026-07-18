@@ -30,10 +30,11 @@ Desktop play uses mouse and keyboard. Mobile play is designed for landscape orie
 - Mission-based opening loop with military-style objective briefings, cinematic insertion drops, a no-gun exploration phase, metal-spire shutdown objective, explosive supply crate reward, delayed zombie threat, drop-beacon extraction, upgrade choices, and escalating redeployment objectives across five seeded islands.
 - Compact ammo HUD on desktop and mobile, plus a six-round blaster magazine with reserve ammo, recoil, and fire-rate cooldown.
 - Camo ammo pickups that add six rounds at a time, plus low-ammo mercy caches when reserve ammo hits zero.
+- Flat silver C4 proximity charges with blinking red dots, one starting charge, and rare zombie drops.
 - Zombie spawning, ground-emerge entrances, pursuit steering around water/trees, attack cooldowns, retreat steps after attacks, deaths, score popups, and pickup drops.
 - Weighted zombie variants: normal, speedy one-shot runners, slower brute attackers, and rare grey stalkers.
 - Mobile-only landscape gate.
-- Mobile joystick movement plus separate jump and shoot controls.
+- Mobile joystick movement plus separate shoot and C4 controls.
 - Main menu settings for health HUD, ammo HUD, controls, sound, and fullscreen.
 - Day/night lighting with code-based mode options.
 - Optional custom sky color through code.
@@ -95,6 +96,7 @@ flowchart TD
 - Left click: shoot
 - Right click or `R`: reload
 - `Space`: jump
+- `C`: place C4 if equipped
 - `Shift`: sprint
 - `N`: redeploy to the next mission island
 
@@ -105,7 +107,7 @@ Mobile is intended for landscape play.
 - Left joystick: move
 - Swipe open play area: aim
 - Shoot button: fire after the gun is awarded
-- Jump button: jump
+- C4 button: place a proximity charge if equipped
 
 The mobile HUD is intentionally minimal. Health sits at the top left, ammo sits at the top right, and the old debug/status panel is removed so it does not block gameplay buttons.
 
@@ -221,11 +223,11 @@ Biome water notes:
 Other sections in `config.js` expose safe defaults for:
 
 - `world`: chunk size, fixed map radius, max terrain height, water level, and terrain roughness/depression tuning.
-- `player`: collision size, one-block terrain auto-step height, camera step smoothing, starting health, starting ammo reserve, respawn reserve floor, and low-health heartbeat threshold.
+- `player`: collision size, one-block terrain auto-step height, camera step smoothing, starting health, starting ammo reserve, starting C4, respawn reserve floor, and low-health heartbeat threshold.
 - `weapon`: magazine size, reload time, fire cooldown, recoil, upgrade multipliers, and long-range kill distance.
 - `enemies`: base enemy cap and horde escalation values.
 - `mission`: five island seeds, per-island biomes, toxin drain, source disable timing, insertion drop tuning, per-island infected objectives, fallback infected objective, and first wave size.
-- `pickups`: ammo/health pickup amounts and drop chances.
+- `pickups`: ammo, health, and C4 pickup amounts/drop chances.
 - `timers`: death overlay delay, world rebuild meter duration, heartbeat interval, and day/night cycle length.
 - `audio`: optional mp3/wav overrides for each sound effect.
 
