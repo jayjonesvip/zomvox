@@ -66,7 +66,7 @@
   const stickBase = $('stickBase');
   const stickKnob = $('stickKnob');
   const touchShoot = $('touchShoot');
-  const touchJump = $('touchJump');
+  const touchC4 = $('touchC4');
   const splash = $('splash');
   const splashStatus = $('splashStatus');
   const splashFill = $('splashFill');
@@ -163,6 +163,7 @@
   const PLAYER_STEP_SMOOTH_SECONDS = Math.max(0.02, configNumber(PLAYER_CONFIG, 'stepSmoothMs', 120) / 1000);
   const STARTING_HEALTH = configNumber(PLAYER_CONFIG, 'startingHealth', 100);
   const STARTING_RESERVE = Math.max(0, Math.floor(configNumber(PLAYER_CONFIG, 'startingReserve', 36)));
+  const STARTING_C4 = Math.max(0, Math.floor(configNumber(PLAYER_CONFIG, 'startingC4', 1)));
   const RESPAWN_RESERVE_FLOOR = Math.max(0, Math.floor(configNumber(PLAYER_CONFIG, 'respawnReserveFloor', 24)));
   const LOW_HEALTH_THRESHOLD = configNumber(PLAYER_CONFIG, 'lowHealthThreshold', 25);
   const MAG_SIZE = Math.max(1, Math.floor(configNumber(WEAPON_CONFIG, 'magSize', 6)));
@@ -196,8 +197,9 @@
   const HEALTH_PICKUP_AMOUNT = Math.max(1, configNumber(PICKUP_CONFIG, 'healthAmount', 25));
   const MAP_AMMO_PICKUP_CHANCE = Math.max(0, Math.min(1, configNumber(PICKUP_CONFIG, 'mapAmmoChance', 0.28)));
   const MAP_HEALTH_PICKUP_CHANCE = Math.max(0, Math.min(1, configNumber(PICKUP_CONFIG, 'mapHealthChance', 0.10)));
-  const ENEMY_HEALTH_DROP_CHANCE = Math.max(0, Math.min(1, configNumber(PICKUP_CONFIG, 'enemyHealthDropChance', 0.12)));
-  const ENEMY_ANY_DROP_CHANCE = Math.max(ENEMY_HEALTH_DROP_CHANCE, Math.min(1, configNumber(PICKUP_CONFIG, 'enemyAnyDropChance', 0.55)));
+  const ENEMY_C4_DROP_CHANCE = Math.max(0, Math.min(1, configNumber(PICKUP_CONFIG, 'enemyC4DropChance', 0.15)));
+  const ENEMY_HEALTH_DROP_CHANCE = Math.max(0, Math.min(1, configNumber(PICKUP_CONFIG, 'enemyHealthDropChance', 0.07)));
+  const ENEMY_ANY_DROP_CHANCE = Math.max(ENEMY_C4_DROP_CHANCE + ENEMY_HEALTH_DROP_CHANCE, Math.min(1, configNumber(PICKUP_CONFIG, 'enemyAnyDropChance', 0.55)));
   const LONG_RANGE_KILL_DIST = configNumber(WEAPON_CONFIG, 'longRangeKillDistance', 34);
   const DEATH_READY_DELAY = Math.max(0.1, configNumber(TIMER_CONFIG, 'deathReadyDelay', 1.85));
   const WORLD_REBUILD_DURATION = Math.max(0.25, configNumber(TIMER_CONFIG, 'worldRebuildDuration', 2.35));
@@ -232,6 +234,7 @@
     magSize: MAG_SIZE,
     mag: MAG_SIZE,
     reserve: STARTING_RESERVE,
+    c4: STARTING_C4,
     reloading: false,
     reloadTimer: 0,
     shotCooldown: 0,
@@ -248,6 +251,7 @@
 
   let enemies = [];
   let pickups = [];
+  let c4Charges = [];
   let particles = [];
   let nextSpawnTimer = 3.5;
   let ammoMercyTimer = 0;
@@ -256,7 +260,7 @@
   const portraitQuery = matchMedia('(orientation: portrait)');
   let keys = Object.create(null);
   const touchInput = { moveX: 0, moveY: 0, jump: false, lookId: null, lookX: 0, lookY: 0, stickId: null };
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.18.01');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.18.02');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -1259,13 +1263,13 @@
       y: py + .35,
       z: pz + .5,
       kind,
-      amount: kind === 'health' ? HEALTH_PICKUP_AMOUNT : AMMO_PICKUP_ROUNDS,
+      amount: kind === 'health' ? HEALTH_PICKUP_AMOUNT : (kind === 'c4' ? 1 : AMMO_PICKUP_ROUNDS),
       bob: seededHash(px * 5.1, pz * 9.3) * 10
     });
   }
 
   function nearbyAmmoPickup(radius = 20) {
-    return pickups.some(p => !p.collected && p.kind !== 'health' && Math.hypot(p.x - player.pos[0], p.z - player.pos[2]) <= radius);
+    return pickups.some(p => !p.collected && p.kind === 'ammo' && Math.hypot(p.x - player.pos[0], p.z - player.pos[2]) <= radius);
   }
 
   function findMercyAmmoSpot() {
@@ -2069,7 +2073,7 @@ function playerOnMachinePad() {
         e.retreat = stats.retreat;
       }
     }
-    enemies = enemies.filter(e => e.hp > 0 && Math.hypot(e.x - player.pos[0], e.z - player.pos[2]) < 130);
+    enemies = enemies.filter(e => !e.dead && e.hp > 0 && Math.hypot(e.x - player.pos[0], e.z - player.pos[2]) < 130);
   }
 
   function damagePlayer(amount, impactSound = null) {
@@ -2252,6 +2256,7 @@ function playerOnMachinePad() {
 
   function entityHitAt(px, py, pz) {
     for (const e of enemies) {
+      if (e.dead || e.hp <= 0) continue;
       const scale = (e.variant && e.variant.scale) || (e.big ? 1.18 : 1);
       const sx = .58 * scale;
       const top = e.y + 2.02 * scale;
@@ -2275,6 +2280,61 @@ function playerOnMachinePad() {
     }
     return { kind: 'miss', point: [e[0] + d[0] * maxDist, e[1] + d[1] * maxDist, e[2] + d[2] * maxDist] };
   }
+
+  function spawnEnemyDrop(enemy) {
+    const dropRoll = Math.random();
+    const x = Math.floor(enemy.x);
+    const y = Math.floor(enemy.y);
+    const z = Math.floor(enemy.z);
+    if (dropRoll < ENEMY_C4_DROP_CHANCE) spawnPickupAt(x, y, z, 'c4');
+    else if (dropRoll < ENEMY_C4_DROP_CHANCE + ENEMY_HEALTH_DROP_CHANCE) spawnPickupAt(x, y, z, 'health');
+    else if (dropRoll < ENEMY_ANY_DROP_CHANCE) spawnPickupAt(x, y, z, 'ammo');
+  }
+
+  function registerEnemyKill(enemy, options = {}) {
+    if (!enemy || enemy.dead) return false;
+    enemy.dead = true;
+    enemy.hp = 0;
+    const dist = options.dist || Math.hypot(enemy.x - player.pos[0], enemy.z - player.pos[2]);
+    player.kills++;
+    player.lifeKills++;
+    player.lifeLongestShot = Math.max(player.lifeLongestShot, dist);
+    if (options.headshot) {
+      player.headshots++;
+      player.lifeHeadshots++;
+    }
+    pulseHitMarker('kill');
+    spawnKillBurst(enemy.x, enemy.y + 1.1, enemy.z, enemy.big);
+    if (options.source === 'c4') {
+      player.score += 125;
+      scorePop('+125 C4 BLAST', 'combo small');
+    } else if (options.headshot) {
+      player.score += 150;
+      scorePop('+150 HEADSHOT KILL', 'head');
+    } else {
+      player.score += 100;
+      scorePop('+100 ENEMY DOWN', 'kill');
+    }
+    if (dist >= LONG_RANGE_KILL_DIST) {
+      player.score += 200;
+      scorePop('+200 LONG RANGE', 'range small');
+    }
+    const now = performance.now() / 1000;
+    killComboCount = now - lastKillTime < 2.0 ? killComboCount + 1 : 1;
+    if (killComboCount === 2) {
+      player.score += 150;
+      scorePop('+150 DOUBLE KILL', 'combo small');
+    } else if (killComboCount === 3) {
+      player.score += 300;
+      scorePop('+300 TRIPLE KILL', 'combo');
+    }
+    lastKillTime = now;
+    sound('kill');
+    checkHordeLevel();
+    spawnEnemyDrop(enemy);
+    return true;
+  }
+
   function shoot() {
     if (deathState.active) return;
     if (!gunUnlocked()) {
@@ -2299,42 +2359,8 @@ function playerOnMachinePad() {
       hit.enemy.hp -= damage;
       spawnParticles(hit.point[0], hit.point[1], hit.point[2], wasHeadshot ? 12 : 8, wasHeadshot ? 12 : 15);
       sound(wasHeadshot ? 'head' : 'hit');
-      if (wasHeadshot) {
-        player.headshots++;
-        player.lifeHeadshots++;
-      }
       if (hit.enemy.hp <= 0) {
-        player.kills++;
-        player.lifeKills++;
-        player.lifeLongestShot = Math.max(player.lifeLongestShot, hit.dist);
-        pulseHitMarker('kill');
-        spawnKillBurst(hit.enemy.x, hit.enemy.y + 1.1, hit.enemy.z, hit.enemy.big);
-        if (wasHeadshot) {
-          player.score += 150;
-          scorePop('+150 HEADSHOT KILL', 'head');
-        } else {
-          player.score += 100;
-          scorePop('+100 ENEMY DOWN', 'kill');
-        }
-        if (hit.dist >= LONG_RANGE_KILL_DIST) {
-          player.score += 200;
-          scorePop('+200 LONG RANGE', 'range small');
-        }
-        const now = performance.now() / 1000;
-        killComboCount = now - lastKillTime < 2.0 ? killComboCount + 1 : 1;
-        if (killComboCount === 2) {
-          player.score += 150;
-          scorePop('+150 DOUBLE KILL', 'combo small');
-        } else if (killComboCount === 3) {
-          player.score += 300;
-          scorePop('+300 TRIPLE KILL', 'combo');
-        }
-        lastKillTime = now;
-        sound('kill');
-        checkHordeLevel();
-        const dropRoll = Math.random();
-        if (dropRoll < ENEMY_HEALTH_DROP_CHANCE) spawnPickupAt(Math.floor(hit.enemy.x), Math.floor(hit.enemy.y), Math.floor(hit.enemy.z), 'health');
-        else if (dropRoll < ENEMY_ANY_DROP_CHANCE) spawnPickupAt(Math.floor(hit.enemy.x), Math.floor(hit.enemy.y), Math.floor(hit.enemy.z));
+        registerEnemyKill(hit.enemy, { headshot: wasHeadshot, dist: hit.dist, source: 'shot' });
         showToast('Enemy down. Kills: ' + player.kills);
         checkMissionCompletion();
       } else {
@@ -2357,6 +2383,107 @@ function playerOnMachinePad() {
       p.life -= dt; p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt; p.vy -= 7 * dt;
     }
     particles = particles.filter(p => p.life > 0);
+  }
+
+  function c4PlacementSpot() {
+    const forward = [Math.sin(player.yaw), Math.cos(player.yaw)];
+    const candidates = [
+      [player.pos[0] + forward[0] * 1.35, player.pos[2] + forward[1] * 1.35],
+      [player.pos[0], player.pos[2]]
+    ];
+    for (const spot of candidates) {
+      const x = Math.floor(Math.max(WORLD_MIN, Math.min(WORLD_MAX, spot[0])));
+      const z = Math.floor(Math.max(WORLD_MIN, Math.min(WORLD_MAX, spot[1])));
+      const y = pickupAirY(x, z);
+      if (y <= WATER_LEVEL + 1) continue;
+      if (blocksMovement(getBlock(x, y, z)) || blocksMovement(getBlock(x, y + 1, z))) continue;
+      return { x: x + .5, y: y + .04, z: z + .5 };
+    }
+    return null;
+  }
+
+  function placeC4() {
+    if (deathState.active || worldRebuildState.active || mission.insertionActive || isBriefingOpen() || isUpgradeOpen()) return;
+    if (!gunUnlocked()) {
+      showToast('C4 locked until combat starts.');
+      sound('empty');
+      return;
+    }
+    if (player.c4 <= 0) {
+      showToast('No C4 equipped.');
+      sound('empty');
+      return;
+    }
+    const spot = c4PlacementSpot();
+    if (!spot) {
+      showToast('No clear ground for C4.');
+      sound('empty');
+      return;
+    }
+    player.c4--;
+    c4Charges.push({
+      x: spot.x,
+      y: spot.y,
+      z: spot.z,
+      armed: .45,
+      phase: Math.random() * Math.PI * 2
+    });
+    showToast('C4 armed. Lure infected into it.');
+    scorePop('C4 ARMED', 'pickup small');
+    sound('pickupAmmo');
+  }
+
+  function detonateC4(charge) {
+    const radius = 5.4;
+    let killed = 0;
+    for (let i = 0; i < 34; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 2.2 + Math.random() * 7.2;
+      particles.push({
+        x: charge.x,
+        y: charge.y + .18,
+        z: charge.z,
+        vx: Math.cos(angle) * speed,
+        vy: 1.4 + Math.random() * 5.2,
+        vz: Math.sin(angle) * speed,
+        life: .36 + Math.random() * .58,
+        type: i % 4 === 0 ? 24 : (i % 3 === 0 ? 14 : 15)
+      });
+    }
+    for (const e of enemies) {
+      if (e.dead || e.hp <= 0) continue;
+      const dist = Math.hypot(e.x - charge.x, e.z - charge.z);
+      if (dist > radius || Math.abs(e.y - charge.y) > 4.2) continue;
+      const damage = 220 * (1 - dist / radius) + 70;
+      e.hp -= damage;
+      spawnParticles(e.x, e.y + 1.0, e.z, 8, 15);
+      if (e.hp <= 0 && registerEnemyKill(e, { source: 'c4', dist })) killed++;
+    }
+    shakeScreen();
+    sound('block');
+    if (killed) {
+      showToast('C4 blast cleared ' + killed + ' infected.');
+      checkMissionCompletion();
+    }
+    enemies = enemies.filter(e => !e.dead && e.hp > 0);
+  }
+
+  function updateC4Charges(dt) {
+    if (!c4Charges.length) return;
+    for (const charge of c4Charges) {
+      charge.armed = Math.max(0, (charge.armed || 0) - dt);
+      if (charge.triggered || charge.armed > 0) continue;
+      for (const e of enemies) {
+        if (e.dead || e.hp <= 0 || (e.emerge || 0) < 1) continue;
+        if (Math.hypot(e.x - charge.x, e.z - charge.z) < .92 && Math.abs(e.y - charge.y) < 2.3) {
+          charge.triggered = true;
+          break;
+        }
+      }
+    }
+    const detonating = c4Charges.filter(c => c.triggered);
+    c4Charges = c4Charges.filter(c => !c.triggered);
+    for (const charge of detonating) detonateC4(charge);
   }
 
   function updatePickups(dt) {
@@ -2388,6 +2515,13 @@ function playerOnMachinePad() {
           scorePop('+' + Math.round(healed) + ' HEALTH', 'pickup');
           sound('pickupHealth');
           spawnParticles(p.x, p.y + .3, p.z, 10, 17);
+        } else if (p.kind === 'c4') {
+          player.c4 += p.amount;
+          p.collected = true;
+          showToast('C4 +' + p.amount);
+          scorePop('+' + p.amount + ' C4', 'pickup');
+          sound('pickupAmmo');
+          spawnParticles(p.x, p.y + .2, p.z, 10, 24);
         } else {
           player.reserve += p.amount;
           p.collected = true;
@@ -2469,6 +2603,15 @@ function playerOnMachinePad() {
     const ready = !mission.insertionActive && unlocked;
     touchShoot.classList.toggle('unavailable', !ready);
     touchShoot.setAttribute('aria-disabled', ready ? 'false' : 'true');
+  }
+
+  function updateC4ButtonState() {
+    if (!touchC4) return;
+    const ready = gunUnlocked() && !mission.insertionActive && player.c4 > 0;
+    touchC4.dataset.count = String(player.c4);
+    touchC4.classList.toggle('unavailable', !ready);
+    touchC4.setAttribute('aria-disabled', ready ? 'false' : 'true');
+    touchC4.setAttribute('aria-label', ready ? 'Place C4 charge' : 'No C4 available');
   }
 
   function beginTouchShoot() {
@@ -2845,6 +2988,7 @@ function playerOnMachinePad() {
     updateWaterHazard(dt);
     updateLowHealthFeedback(dt);
     updateEnemies(dt);
+    updateC4Charges(dt);
     updateSupplyCrate();
     updateAmmoMercyDrops(dt);
     updatePickups(dt);
@@ -2870,6 +3014,7 @@ function playerOnMachinePad() {
     updateAmmoDisplay();
     updateMissionHud();
     updateShootButtonState();
+    updateC4ButtonState();
   }
 
   function bindVoxelMesh(mesh) {
@@ -2915,6 +3060,16 @@ function playerOnMachinePad() {
     pushBox(arr, x - .18, y + .50, z - .04, .36, .08, .08, 14);
   }
 
+  function pushC4Charge(arr, p, y) {
+    const x = p.x, z = p.z;
+    pushBox(arr, x - .38, y, z - .38, .76, .14, .76, 14);
+    pushBox(arr, x - .42, y + .04, z - .42, .84, .06, .08, 36);
+    pushBox(arr, x - .42, y + .04, z + .34, .84, .06, .08, 36);
+    pushBox(arr, x - .42, y + .04, z - .34, .08, .06, .68, 36);
+    pushBox(arr, x + .34, y + .04, z - .34, .08, .06, .68, 36);
+    pushBox(arr, x - .10, y + .14, z - .10, .20, .035, .20, 24);
+  }
+
   function buildDynamicMesh(time) {
     const arr = [];
     for (const e of enemies) {
@@ -2944,9 +3099,14 @@ function playerOnMachinePad() {
       const y = p.y + Math.sin(p.bob) * .16;
       if (p.kind === 'health') {
         pushHealthPickup(arr, p, y);
+      } else if (p.kind === 'c4') {
+        pushC4Charge(arr, p, y);
       } else {
         pushAmmoPickup(arr, p, y);
       }
+    }
+    for (const c of c4Charges) {
+      pushC4Charge(arr, c, c.y);
     }
     if (mission.supplyCrate) {
       const c = mission.supplyCrate;
@@ -3113,10 +3273,12 @@ function currentWaterIsDangerous() {
     loadedChunks = new Set();
     enemies = [];
     pickups = [];
+    c4Charges = [];
     particles = [];
     ammoMercyTimer = 0;
     player.health = STARTING_HEALTH;
     player.reserve = STARTING_RESERVE;
+    player.c4 = STARTING_C4;
     setPlayerMagSize(effectiveMagSize(), true);
     player.kills = 0;
     player.headshots = 0;
@@ -3338,6 +3500,7 @@ function currentWaterIsDangerous() {
     }
     keys[e.code] = true;
     if (e.code === 'KeyR' && !e.repeat) startReload();
+    if (e.code === 'KeyC' && !e.repeat) placeC4();
     if (e.code === 'KeyN' && !e.repeat) {
       beginWorldRebuild(mission.mode === MODE_QUICK ? quickSeedForBiome(mission.quickBiome) : nextMissionSeed());
     }
@@ -3394,7 +3557,7 @@ function currentWaterIsDangerous() {
   bindTouchButton(touchShoot, () => {
     beginTouchShoot();
   }, () => {});
-  bindTouchButton(touchJump, () => { touchInput.jump = true; }, () => { touchInput.jump = false; });
+  bindTouchButton(touchC4, () => { placeC4(); }, () => {});
 
   canvas.addEventListener('pointerdown', (e) => {
     if (!touchMode || e.pointerType === 'mouse' || e.target !== canvas) return;
