@@ -171,7 +171,7 @@
   </div>
 </div>
 <div id="menu">
-  <div class="card">
+  <div id="mainMenuCard" class="card">
     <h1>Zom<b>Vox</b></h1>
     <p class="subtitle">Free browser voxel zombie FPS. Play instantly with no download, shut down the contamination source, unlock perks, and survive infected waves across island biomes.</p>
     <div class="grid">
@@ -194,17 +194,20 @@
       <button id="play" class="startBtn primaryStart" type="button">Story Mode</button>
       <button id="quickStart" class="startBtn secondaryStart" type="button">Quick Hunt</button>
     </div>
-    <div id="quickBiomePanel" class="quickBiomePanel" hidden>
-      <div class="quickBiomeTitle">Choose Drop Zone</div>
-      <div class="quickBiomeGrid">
-        <button type="button" data-biome="forest">Forest</button>
-        <button type="button" data-biome="dunes">Dunes</button>
-        <button type="button" data-biome="rocky">Rocky</button>
-        <button type="button" data-biome="swamp">Swamp</button>
-        <button type="button" data-biome="ashlands">Ashlands</button>
-        <button type="button" data-biome="tundra">Tundra</button>
-      </div>
+  </div>
+  <div id="quickBiomePanel" class="card quickBiomePanel" hidden>
+    <div class="quickBiomeTopline">Quick Hunt</div>
+    <h2 class="quickBiomeTitle">Choose Drop Zone</h2>
+    <p class="quickBiomeCopy">Drop straight into a biome, pick a perk, and hunt until the island takes you.</p>
+    <div class="quickBiomeGrid">
+      <button type="button" data-biome="forest">Forest</button>
+      <button type="button" data-biome="dunes">Dunes</button>
+      <button type="button" data-biome="rocky">Rocky</button>
+      <button type="button" data-biome="swamp">Swamp</button>
+      <button type="button" data-biome="ashlands">Ashlands</button>
+      <button type="button" data-biome="tundra">Tundra</button>
     </div>
+    <button id="quickBack" class="quickBackBtn" type="button">Back</button>
   </div>
 </div>
 <script src="config.js"></script>
