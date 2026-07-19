@@ -3,9 +3,11 @@
 
   const config = window.ZOMVOX_CONFIG || {};
   const soundFiles = (config.audio && config.audio.files) || {};
+  const enemyConfig = config.enemies || {};
   const SILENCE_TRIM_THRESHOLD = 0.003;
   const SILENCE_TRIM_MAX_SECONDS = 0.65;
   const SILENCE_TRIM_PREROLL_SECONDS = 0.006;
+  const ZOMBIE_MOAN_MAX_OVERLAP = Math.max(1, Math.floor(Number(enemyConfig.zombieMoanMaxVoices) || 3));
 
   let sfxEnabled = true;
   let ambientEnabled = true;
@@ -16,7 +18,7 @@
   let activeAmbientName = '';
   let activeOneShots = 0;
   let landSource = null;
-  let zombieMoanSource = null;
+  let zombieMoanSources = [];
 
   // decoded AudioBuffers, not HTMLAudioElement objects
   const bufferCache = new Map();
@@ -287,18 +289,19 @@
     }, name === 'land' ? 120 : 260);
   }
 
-  function playBuffer(buffer, gainValue = 1, trimLeadingSilence = true, name = '') {
+  function playBuffer(buffer, gainValue = 1, trimLeadingSilence = true, name = '', playbackRate = 1) {
     const ctx = getAudio();
     if (!ctx || !buffer) return false;
 
     if (name === 'land' && activeOneShots > 0) return true;
-    if (name === 'zombieMoan' && zombieMoanSource) return true;
+    if (name === 'zombieMoan' && zombieMoanSources.length >= ZOMBIE_MOAN_MAX_OVERLAP) return true;
     if (name !== 'land') stopLand();
 
     const src = ctx.createBufferSource();
     const gain = ctx.createGain();
 
     src.buffer = buffer;
+    src.playbackRate.value = Math.max(0.5, Math.min(1.6, Number(playbackRate) || 1));
     gain.gain.value = gainValue;
 
     src.connect(gain);
@@ -308,16 +311,16 @@
     src.onended = () => {
       activeOneShots = Math.max(0, activeOneShots - 1);
       if (landSource === src) landSource = null;
-      if (zombieMoanSource === src) zombieMoanSource = null;
+      if (name === 'zombieMoan') zombieMoanSources = zombieMoanSources.filter(item => item !== src);
     };
     if (name === 'land') landSource = src;
-    if (name === 'zombieMoan') zombieMoanSource = src;
+    if (name === 'zombieMoan') zombieMoanSources.push(src);
 
     src.start(ctx.currentTime, trimLeadingSilence ? leadInOffset(buffer) : 0);
     return true;
   }
 
-  function playFile(name, fileName, gainValue = 1) {
+  function playFile(name, fileName, gainValue = 1, playbackRate = 1) {
     if (fileName === '') return true;
     if (!fileName) return false;
 
@@ -326,7 +329,7 @@
 
     if (buffer) {
       const baseGain = name === 'land' ? .28 : 1;
-      playBuffer(buffer, baseGain * gainValue, true, name);
+      playBuffer(buffer, baseGain * gainValue, true, name, playbackRate);
       return true;
     }
 
@@ -451,7 +454,7 @@
       }));
     },
 
-    play(name, gainValue = 1) {
+    play(name, gainValue = 1, playbackRate = 1) {
       if (!sfxEnabled) return;
 
       const hasOverride = Object.prototype.hasOwnProperty.call(soundFiles, name);
@@ -464,7 +467,7 @@
       if (name === 'land' && activeOneShots > 0) return;
       if (name !== 'land') stopLand();
 
-      if (playFile(name, fileName, gainValue)) return;
+      if (playFile(name, fileName, gainValue, playbackRate)) return;
 
       trackSynthOneShot(name);
       synth(name);

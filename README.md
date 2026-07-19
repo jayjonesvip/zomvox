@@ -226,7 +226,7 @@ Other sections in `config.js` expose safe defaults for:
 - `world`: chunk size, fixed map radius, max terrain height, water level, and terrain roughness/depression tuning.
 - `player`: collision size, one-block terrain auto-step height, camera step smoothing, starting health, starting ammo reserve, starting C4, respawn reserve floor, and low-health heartbeat threshold.
 - `weapon`: magazine size, reload time, fire cooldown, recoil, upgrade multipliers, and long-range kill distance.
-- `enemies`: base enemy cap and horde escalation values.
+- `enemies`: base enemy cap, horde escalation values, and close-range zombie moan radius/voice/timing controls.
 - `mission`: five island seeds, per-island biomes, toxin drain, source disable timing, insertion drop tuning, per-island infected objectives, fallback infected objective, and first wave size.
 - `pickups`: ammo, health, and C4 pickup amounts/drop chances.
 - `timers`: death overlay delay, world rebuild meter duration, heartbeat interval, and day/night cycle length.
