@@ -19,6 +19,8 @@
   const quickStart = $('quickStart');
   const installApp = $('installApp');
   const installChoice = $('installChoice');
+  const installChoiceBody = $('installChoiceBody');
+  const installChoiceNote = $('installChoiceNote');
   const installChoiceAccept = $('installChoiceAccept');
   const installChoiceSkip = $('installChoiceSkip');
   const quickBiomePanel = $('quickBiomePanel');
@@ -264,7 +266,7 @@
   const portraitQuery = matchMedia('(orientation: portrait)');
   let keys = Object.create(null);
   const touchInput = { moveX: 0, moveY: 0, jump: false, lookId: null, lookX: 0, lookY: 0, stickId: null };
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.19.02');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.19.03');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -960,17 +962,43 @@
       navigator.standalone === true;
   }
 
+  function isMobileLikeDevice() {
+    return touchMode || matchMedia('(pointer: coarse)').matches;
+  }
+
+  function canOfferInstallChoice() {
+    return !isStandaloneApp() && isMobileLikeDevice();
+  }
+
   function updateInstallButton() {
     if (!installApp) return;
-    installApp.hidden = !deferredInstallPrompt || isStandaloneApp();
+    installApp.hidden = !canOfferInstallChoice();
+  }
+
+  function setInstallChoiceCopy(helpMode = false) {
+    if (!installChoiceBody || !installChoiceNote || !installChoiceAccept) return;
+    if (deferredInstallPrompt) {
+      installChoiceBody.textContent = 'Launch in fullscreen landscape mode, keep the game one tap away, and load core files faster.';
+      installChoiceNote.textContent = 'You can install later from the main menu.';
+      installChoiceAccept.textContent = 'Add to Home Screen';
+      return;
+    }
+    installChoiceBody.textContent = helpMode
+      ? 'Chrome has not opened the install prompt yet. Tap the Chrome menu, then choose Install app or Add to Home screen.'
+      : 'Launch in fullscreen landscape mode when available. If Chrome does not show an install prompt yet, you can still play now.';
+    installChoiceNote.textContent = helpMode
+      ? 'Chrome usually enables the native prompt after a reload or a short visit.'
+      : 'The game is fully playable in your browser.';
+    installChoiceAccept.textContent = helpMode ? 'Got It' : 'Install Help';
   }
 
   function updateInstallChoice() {
     if (!installChoice) return;
-    const shouldShow = !!deferredInstallPrompt &&
+    setInstallChoiceCopy();
+    const shouldShow = canOfferInstallChoice() &&
       !installChoiceDismissed &&
-      !isStandaloneApp() &&
       menu.style.display !== 'none' &&
+      !menu.classList.contains('quick-select') &&
       !isBriefingOpen() &&
       !isUpgradeOpen();
     installChoice.hidden = !shouldShow;
@@ -978,7 +1006,8 @@
 
   async function installZomVox() {
     if (!deferredInstallPrompt) {
-      showToast('Use your browser menu to add ZomVox to your home screen.');
+      setInstallChoiceCopy(true);
+      if (installChoice) installChoice.hidden = false;
       return;
     }
     sound('confirm');
