@@ -177,6 +177,8 @@
   .startBtn{ appearance:none; border:0; border-radius:16px; padding:14px 20px; font-size:18px; font-weight:1000; text-transform:uppercase; cursor:pointer; }
   .primaryStart{ color:#06230e; background:linear-gradient(180deg,#c5ffa8,#72df60); box-shadow:0 14px 40px rgba(105,216,90,.26), inset 0 2px 0 rgba(255,255,255,.45); }
   .secondaryStart{ color:#210606; background:linear-gradient(180deg,#ffe07b,#ff6948); box-shadow:0 14px 40px rgba(255,98,72,.24), inset 0 2px 0 rgba(255,255,255,.36); }
+  .installStart{ grid-column:1/-1; color:#071409; background:linear-gradient(180deg,#efffe1,#92f36e); box-shadow:0 14px 40px rgba(145,243,110,.24), inset 0 2px 0 rgba(255,255,255,.44); }
+  .installStart[hidden]{ display:none; }
   .startBtn:hover,.quickBiomeGrid button:hover,.quickBackBtn:hover{ filter:brightness(1.05); }
   .quickBiomePanel{ width:min(620px, 96vw); text-align:center; }
   .quickBiomePanel[hidden], #menu.quick-select #mainMenuCard{ display:none; }
