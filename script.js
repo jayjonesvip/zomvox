@@ -17,6 +17,7 @@
   const mainMenuCard = $('mainMenuCard');
   const play = $('play');
   const quickStart = $('quickStart');
+  const installApp = $('installApp');
   const quickBiomePanel = $('quickBiomePanel');
   const quickBack = $('quickBack');
   const toast = $('toast');
@@ -260,7 +261,7 @@
   const portraitQuery = matchMedia('(orientation: portrait)');
   let keys = Object.create(null);
   const touchInput = { moveX: 0, moveY: 0, jump: false, lookId: null, lookX: 0, lookY: 0, stickId: null };
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.18.05');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.19.01');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -272,6 +273,7 @@
   let soundEnabled = true;
   let ambientEnabled = true;
   let activeAmbientCue = '';
+  let deferredInstallPrompt = null;
   let waterDamageTimer = 0;
   let hordeLevel = 0;
   let heartbeatTimer = 0;
@@ -947,6 +949,51 @@
       else if (canvas.webkitRequestFullscreen) canvas.webkitRequestFullscreen();
     } catch (_) {}
   }
+
+  function isStandaloneApp() {
+    return window.matchMedia('(display-mode: standalone)').matches ||
+      window.matchMedia('(display-mode: fullscreen)').matches ||
+      navigator.standalone === true;
+  }
+
+  function updateInstallButton() {
+    if (!installApp) return;
+    installApp.hidden = !deferredInstallPrompt || isStandaloneApp();
+  }
+
+  async function installZomVox() {
+    if (!deferredInstallPrompt) {
+      showToast('Use your browser menu to add ZomVox to your home screen.');
+      return;
+    }
+    sound('confirm');
+    deferredInstallPrompt.prompt();
+    try {
+      await deferredInstallPrompt.userChoice;
+    } catch (_) {}
+    deferredInstallPrompt = null;
+    updateInstallButton();
+  }
+
+  function registerPwaHooks() {
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(() => {});
+      });
+    }
+    window.addEventListener('beforeinstallprompt', event => {
+      event.preventDefault();
+      deferredInstallPrompt = event;
+      updateInstallButton();
+    });
+    window.addEventListener('appinstalled', () => {
+      deferredInstallPrompt = null;
+      updateInstallButton();
+      showToast('ZomVox installed.');
+    });
+    updateInstallButton();
+  }
+
   function initSettings() {
     settingFullscreen.checked = touchMode;
     [settingHealth, settingAmmo, settingControls, settingSound, settingAmbient].forEach(el => {
@@ -3494,6 +3541,7 @@ function currentWaterIsDangerous() {
   }
   play.addEventListener('click', startStoryGame);
   if (quickStart) quickStart.addEventListener('click', openQuickBiomeScreen);
+  if (installApp) installApp.addEventListener('click', installZomVox);
   if (quickBack) quickBack.addEventListener('click', closeQuickBiomeScreen);
   for (const btn of quickBiomeButtons) {
     btn.addEventListener('click', () => startQuickGame(btn.dataset.biome));
@@ -3618,6 +3666,7 @@ function currentWaterIsDangerous() {
   canvas.addEventListener('pointercancel', clearLook);
 
   initSettings();
+  registerPwaHooks();
   gl.enable(gl.DEPTH_TEST);
   generateWorld(currentSeed);
   runSplash();

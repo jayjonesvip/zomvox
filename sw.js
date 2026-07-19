@@ -1,0 +1,74 @@
+const CACHE_NAME = 'zomvox-pwa-2026-07-19-01';
+
+const APP_SHELL = [
+  './',
+  './index.html',
+  './styles.css',
+  './config.js',
+  './sound.js',
+  './script.js',
+  './manifest.webmanifest',
+  './assets/favicon.ico',
+  './assets/favicon-16.png',
+  './assets/favicon-32.png',
+  './assets/favicon-48.png',
+  './assets/favicon-192.png',
+  './assets/favicon-256.png',
+  './assets/favicon-512.png',
+  './assets/apple-touch-icon.png',
+  './assets/favicon.png',
+  './assets/zomvox-splash.png',
+  './assets/zomvox-gun-spritesheet.png'
+];
+
+self.addEventListener('install', event => {
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then(cache => cache.addAll(APP_SHELL))
+      .then(() => self.skipWaiting())
+  );
+});
+
+self.addEventListener('activate', event => {
+  event.waitUntil(
+    caches.keys()
+      .then(keys => Promise.all(keys
+        .filter(key => key !== CACHE_NAME)
+        .map(key => caches.delete(key))))
+      .then(() => self.clients.claim())
+  );
+});
+
+self.addEventListener('fetch', event => {
+  const request = event.request;
+  if (request.method !== 'GET') return;
+
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin) return;
+
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request)
+        .then(response => {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put('./index.html', copy));
+          return response;
+        })
+        .catch(() => caches.match('./index.html'))
+    );
+    return;
+  }
+
+  event.respondWith(
+    caches.match(request).then(cached => {
+      if (cached) return cached;
+      return fetch(request).then(response => {
+        if (response.ok) {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(request, copy));
+        }
+        return response;
+      });
+    })
+  );
+});

@@ -19,6 +19,7 @@ Desktop play uses mouse and keyboard. Mobile play is designed for landscape orie
 ## Current Features
 
 - Static browser game with split frontend files: `index.html`, `styles.css`, `config.js`, `sound.js`, and `script.js`.
+- Progressive Web App manifest, service worker, install button, and landscape launch request for supported mobile browsers.
 - Branded ZomVox splash screen using `assets/zomvox-splash.png`.
 - Splash screen build label using `BUILD_VERSION` plus the deployed document timestamp.
 - Favicon assets for browser tabs and installed shortcuts.
@@ -259,12 +260,15 @@ audio: {
 |-- README.md
 |-- index.html
 |-- config.js
+|-- manifest.webmanifest
+|-- sw.js
 |-- sound.js
 |-- styles.css
 |-- script.js
 `-- assets/
     |-- favicon.ico
     |-- favicon.png
+    |-- favicon-192.png
     |-- shoot.mp3
     |-- zomvox-gun-spritesheet.png
     `-- zomvox-splash.png
@@ -274,6 +278,8 @@ audio: {
 
 - `index.html`: document structure, menu, settings, overlays, HUD containers, mobile controls, and script/style references.
 - `config.js`: future-dev friendly tuning values for environment, world, player, weapon, enemies, pickups, timers, seed, and build version.
+- `manifest.webmanifest`: install metadata, app icons, fullscreen display, and landscape orientation request.
+- `sw.js`: lightweight service worker for app shell caching and home-screen launch reliability.
 - `sound.js`: configurable audio playback with file overrides and synthesized fallback effects.
 - `styles.css`: visual styling, responsive mobile layout, splash screen, health/ammo HUD, death overlay, world rebuild overlay, and touch controls.
 - `script.js`: WebGL setup, procedural terrain, fixed world chunks, movement, combat, enemy behavior, pickups, world rebuilding, HUD updates, and game loop.

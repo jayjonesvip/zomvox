@@ -20,6 +20,7 @@
 <link rel="canonical" href="https://zomvox.com/" />
 <link rel="sitemap" type="application/xml" href="https://zomvox.com/sitemap.xml" />
 <meta name="theme-color" content="#07120c" />
+<meta name="mobile-web-app-capable" content="yes" />
 <meta name="application-name" content="ZomVox" />
 <meta name="apple-mobile-web-app-title" content="ZomVox" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -37,9 +38,10 @@
 <meta name="twitter:title" content="ZomVox - Free Browser Voxel Zombie FPS" />
 <meta name="twitter:description" content="Play a free no-download voxel zombie FPS with story drops, quick hunts, perks, biomes, ammo, and blocky undead combat." />
 <meta name="twitter:image" content="https://zomvox.com/assets/zomvox-splash.png" />
+<link rel="manifest" href="manifest.webmanifest" />
 <link rel="icon" href="assets/favicon.ico" sizes="16x16 32x32 48x48 256x256" />
 <link rel="icon" type="image/png" href="assets/favicon.png" sizes="512x512" />
-<link rel="apple-touch-icon" href="assets/favicon.png" />
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
 <link rel="preload" as="image" href="assets/zomvox-splash.png" />
 <link rel="stylesheet" href="styles.css" />
 <script type="application/ld+json">
@@ -180,7 +182,7 @@
       <div class="tip desktopTip"><kbd>Space</kbd> jump &nbsp; <kbd>Shift</kbd> sprint</div>
       <div class="tip desktopTip"><kbd>N</kbd> new world &nbsp; <kbd>Shift</kbd> sprint</div>
       <div class="tip mobileTip"><kbd>Stick</kbd> move &nbsp; <kbd>Swipe</kbd> aim</div>
-      <div class="tip mobileTip"><kbd>Yellow block</kbd> disables source &nbsp; <kbd>Jump</kbd> hop</div>
+      <div class="tip mobileTip"><kbd>Yellow block</kbd> disables source &nbsp; <kbd>C4</kbd> trap</div>
     </div>
     <div class="settingsPanel">
       <label class="setting"><input id="settingHealth" type="checkbox" checked />Health</label>
@@ -193,6 +195,7 @@
     <div class="startActions">
       <button id="play" class="startBtn primaryStart" type="button">Story Mode</button>
       <button id="quickStart" class="startBtn secondaryStart" type="button">Quick Hunt</button>
+      <button id="installApp" class="startBtn installStart" type="button" hidden>Install ZomVox</button>
     </div>
   </div>
   <div id="quickBiomePanel" class="card quickBiomePanel" hidden>
