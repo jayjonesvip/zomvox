@@ -255,7 +255,7 @@ window.ZOMVOX_CONFIG = {
       Max voices lets a small pack sound layered without turning into noise.
       Interval values are seconds between moan checks.
     */
-    zombieMoanRadius: 5,
+    zombieMoanRadius: 7,
     zombieMoanMaxVoices: 3,
     zombieMoanIntervalMin: 4,
     zombieMoanIntervalMax: 5
