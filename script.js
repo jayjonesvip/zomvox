@@ -270,7 +270,7 @@
   const portraitQuery = matchMedia('(orientation: portrait)');
   let keys = Object.create(null);
   const touchInput = { moveX: 0, moveY: 0, jump: false, lookId: null, lookX: 0, lookY: 0, stickId: null };
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.19.06');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.19.07');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -1196,6 +1196,8 @@
       if(t < 36.5) return vec3(0.25, 0.28, 0.26); /* dark grey zombie */
       if(t < 37.5) return vec3(0.16, 0.31, 0.15); /* ammo camo green */
       if(t < 38.5) return vec3(0.07, 0.16, 0.08); /* ammo camo shadow */
+      if(t < 39.5) return vec3(0.015, 0.025, 0.014); /* zombie mouth */
+      if(t < 40.5) return vec3(0.82, 0.86, 0.72); /* zombie teeth */
       return vec3(1.0, 0.45, 0.18); /* particles */
     }
     void main(){
@@ -3241,6 +3243,20 @@ function playerOnMachinePad() {
     pushBox(arr, x - .18, y + .50, z - .04, .36, .08, .08, 14);
   }
 
+  function pushC4Pickup(arr, p, y) {
+    const x = p.x, z = p.z;
+    pushBox(arr, x - .34, y, z - .34, .68, .38, .68, 37);
+    pushBox(arr, x - .30, y + .38, z - .30, .60, .12, .60, 38);
+    pushBox(arr, x - .36, y + .16, z - .06, .72, .10, .12, 14);
+    pushBox(arr, x - .06, y + .16, z - .36, .12, .10, .72, 14);
+    pushBox(arr, x - .27, y + .08, z - .355, .20, .12, .03, 13);
+    pushBox(arr, x + .08, y + .21, z - .356, .18, .11, .03, 13);
+    pushBox(arr, x - .355, y + .20, z + .06, .03, .10, .22, 13);
+    pushBox(arr, x + .325, y + .06, z - .28, .03, .12, .24, 13);
+    pushBox(arr, x - .24, y + .50, z - .05, .48, .08, .10, 13);
+    pushBox(arr, x - .05, y + .50, z - .24, .10, .08, .48, 13);
+  }
+
   function pushC4Charge(arr, p, y) {
     const x = p.x, z = p.z;
     pushBox(arr, x - .38, y, z - .38, .76, .14, .76, 14);
@@ -3279,13 +3295,16 @@ function playerOnMachinePad() {
       pushBoxY(arr, x, y, z, -.42*scale, 1.22*scale, -.35*scale, .84*scale, .64*scale, .70*scale, yaw, bodyType);
       pushBoxY(arr, x, y, z, -.22*scale, 1.48*scale, -.39*scale, .12*scale, .12*scale, .06*scale, yaw, eyeType);
       pushBoxY(arr, x, y, z,  .10*scale, 1.48*scale, -.39*scale, .12*scale, .12*scale, .06*scale, yaw, eyeType);
+      pushBoxY(arr, x, y, z, -.13*scale, 1.33*scale, -.392*scale, .26*scale, .18*scale, .055*scale, yaw, 39);
+      pushBoxY(arr, x, y, z, -.12*scale, 1.46*scale, -.405*scale, .07*scale, .06*scale, .04*scale, yaw, 40);
+      pushBoxY(arr, x, y, z,  .05*scale, 1.46*scale, -.405*scale, .07*scale, .06*scale, .04*scale, yaw, 40);
     }
     for (const p of pickups) {
       const y = p.y + Math.sin(p.bob) * .16;
       if (p.kind === 'health') {
         pushHealthPickup(arr, p, y);
       } else if (p.kind === 'c4') {
-        pushC4Charge(arr, p, y);
+        pushC4Pickup(arr, p, y);
       } else {
         pushAmmoPickup(arr, p, y);
       }

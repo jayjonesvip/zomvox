@@ -359,7 +359,7 @@ window.ZOMVOX_CONFIG = {
     /*
       Chance that a killed enemy drops health.
     */
-    enemyHealthDropChance: 0.07,
+    enemyHealthDropChance: 0.04,
 
     /*
       Overall chance that a killed enemy drops something.
