@@ -270,7 +270,7 @@
   const portraitQuery = matchMedia('(orientation: portrait)');
   let keys = Object.create(null);
   const touchInput = { moveX: 0, moveY: 0, jump: false, lookId: null, lookX: 0, lookY: 0, stickId: null };
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.19.06');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.19.07');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -3241,6 +3241,20 @@ function playerOnMachinePad() {
     pushBox(arr, x - .18, y + .50, z - .04, .36, .08, .08, 14);
   }
 
+  function pushC4Pickup(arr, p, y) {
+    const x = p.x, z = p.z;
+    pushBox(arr, x - .34, y, z - .34, .68, .38, .68, 37);
+    pushBox(arr, x - .30, y + .38, z - .30, .60, .12, .60, 38);
+    pushBox(arr, x - .36, y + .16, z - .06, .72, .10, .12, 14);
+    pushBox(arr, x - .06, y + .16, z - .36, .12, .10, .72, 14);
+    pushBox(arr, x - .27, y + .08, z - .355, .20, .12, .03, 13);
+    pushBox(arr, x + .08, y + .21, z - .356, .18, .11, .03, 13);
+    pushBox(arr, x - .355, y + .20, z + .06, .03, .10, .22, 13);
+    pushBox(arr, x + .325, y + .06, z - .28, .03, .12, .24, 13);
+    pushBox(arr, x - .24, y + .50, z - .05, .48, .08, .10, 13);
+    pushBox(arr, x - .05, y + .50, z - .24, .10, .08, .48, 13);
+  }
+
   function pushC4Charge(arr, p, y) {
     const x = p.x, z = p.z;
     pushBox(arr, x - .38, y, z - .38, .76, .14, .76, 14);
@@ -3285,7 +3299,7 @@ function playerOnMachinePad() {
       if (p.kind === 'health') {
         pushHealthPickup(arr, p, y);
       } else if (p.kind === 'c4') {
-        pushC4Charge(arr, p, y);
+        pushC4Pickup(arr, p, y);
       } else {
         pushAmmoPickup(arr, p, y);
       }
