@@ -424,8 +424,8 @@ window.ZOMVOX_CONFIG = {
       confirm: null,
       briefing: null,
       perkEquip: 'pickupAmmo.mp3',
-      explosion: '',
-      zombieMoan: '',
+      explosion: 'explosion.mp3',
+      zombieMoan: 'moan.mp3',
 
       /*
         Ambient loops are file-only. Leave as '' to keep that area silent.
@@ -437,7 +437,7 @@ window.ZOMVOX_CONFIG = {
       ambientRocky: 'ambientRocky.mp3',
       ambientSwamp: 'ambientSwamp.mp3',
       ambientAshlands: 'ambientAshlands.mp3',
-      ambientTundra: ''
+      ambientTundra: 'ambientRocky.mp3'
     }
   }
 };
