@@ -17,7 +17,7 @@ window.ZOMVOX_CONFIG = {
     Bump this when you make visible changes so you can tell the browser
     loaded the newest version.
   */
-  buildVersion: '2026.07.19.05',
+  buildVersion: '2026.07.19.06',
 
   /*
     Seed used for deterministic world generation.
@@ -247,7 +247,18 @@ window.ZOMVOX_CONFIG = {
       Current cap roughly becomes:
       baseCap + hordeLevel * hordeCapBonus
     */
-    hordeCapBonus: 2
+    hordeCapBonus: 2,
+
+    /*
+      Zombie moans only play when zombies are close enough to feel threatening.
+
+      Max voices lets a small pack sound layered without turning into noise.
+      Interval values are seconds between moan checks.
+    */
+    zombieMoanRadius: 5,
+    zombieMoanMaxVoices: 3,
+    zombieMoanIntervalMin: 4,
+    zombieMoanIntervalMax: 5
   },
 
   mission: {

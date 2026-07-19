@@ -183,6 +183,10 @@
   const ENEMY_CAP = Math.max(1, Math.floor(configNumber(ENEMY_CONFIG, 'baseCap', 18)));
   const HORDE_KILLS_PER_LEVEL = Math.max(1, Math.floor(configNumber(ENEMY_CONFIG, 'hordeKillsPerLevel', 5)));
   const HORDE_CAP_BONUS = Math.max(0, Math.floor(configNumber(ENEMY_CONFIG, 'hordeCapBonus', 2)));
+  const ZOMBIE_MOAN_RADIUS = Math.max(1, configNumber(ENEMY_CONFIG, 'zombieMoanRadius', 5));
+  const ZOMBIE_MOAN_MAX_VOICES = Math.max(1, Math.floor(configNumber(ENEMY_CONFIG, 'zombieMoanMaxVoices', 3)));
+  const ZOMBIE_MOAN_INTERVAL_MIN = Math.max(0.5, configNumber(ENEMY_CONFIG, 'zombieMoanIntervalMin', 4));
+  const ZOMBIE_MOAN_INTERVAL_MAX = Math.max(ZOMBIE_MOAN_INTERVAL_MIN, configNumber(ENEMY_CONFIG, 'zombieMoanIntervalMax', 5));
   const TOXIN_DAMAGE_PER_SECOND = Math.max(0, configNumber(MISSION_CONFIG, 'toxinDamagePerSecond', 1.15));
   const MACHINE_DISABLE_SECONDS = Math.max(0.5, configNumber(MISSION_CONFIG, 'disableSeconds', 3));
   const INSERTION_DROP_HEIGHT = Math.max(10, configNumber(MISSION_CONFIG, 'insertionDropHeight', 30));
@@ -266,14 +270,14 @@
   const portraitQuery = matchMedia('(orientation: portrait)');
   let keys = Object.create(null);
   const touchInput = { moveX: 0, moveY: 0, jump: false, lookId: null, lookX: 0, lookY: 0, stickId: null };
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.19.05');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.19.06');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
   let frameCounter = 0;
   let lastKillTime = -999;
   let killComboCount = 0;
-  let zombieMoanTimer = 2.5;
+  let zombieMoanTimer = Math.min(2.5, ZOMBIE_MOAN_INTERVAL_MIN);
   let dayAmount = 1;
   let soundEnabled = true;
   let ambientEnabled = true;
@@ -563,9 +567,9 @@
     }
   }
 
-  function sound(name, gainValue = 1) {
+  function sound(name, gainValue = 1, playbackRate = 1) {
     if (!soundEnabled) return;
-    window.ZomVoxSound?.play(name, gainValue);
+    window.ZomVoxSound?.play(name, gainValue, playbackRate);
   }
 
 
@@ -2167,28 +2171,49 @@ function playerOnMachinePad() {
     e.y += (best.y - e.y) * Math.min(1, dt * 8);
   }
 
+  function nextZombieMoanInterval() {
+    return ZOMBIE_MOAN_INTERVAL_MIN + Math.random() * (ZOMBIE_MOAN_INTERVAL_MAX - ZOMBIE_MOAN_INTERVAL_MIN);
+  }
+
+  function zombieMoanPlaybackRate(enemy) {
+    const kind = enemy.variant?.kind || 'normal';
+    if (kind === 'speedy') return 1.25;
+    if (kind === 'brute' || kind === 'grey') return 0.75;
+    return 1;
+  }
+
+  function canPlayZombieMoan() {
+    return gunUnlocked() && !mission.completed && !deathState.active && !worldRebuildState.active && !isMenuOpen();
+  }
+
   function updateZombieMoans(dt) {
-    if (!gunUnlocked() || mission.completed || deathState.active || worldRebuildState.active || isMenuOpen()) {
+    if (!canPlayZombieMoan()) {
       zombieMoanTimer = Math.max(1.2, zombieMoanTimer);
       return;
     }
     zombieMoanTimer -= dt;
     if (zombieMoanTimer > 0) return;
-    zombieMoanTimer = 4 + Math.random();
+    zombieMoanTimer = nextZombieMoanInterval();
 
-    let closest = null;
-    let closestDist = Infinity;
+    const nearby = [];
     for (const e of enemies) {
       if (e.dead || e.hp <= 0 || (e.emerge || 0) < 1) continue;
       const dist = Math.hypot(e.x - player.pos[0], e.z - player.pos[2]);
-      if (dist < closestDist) {
-        closest = e;
-        closestDist = dist;
-      }
+      if (dist <= ZOMBIE_MOAN_RADIUS) nearby.push({ enemy: e, dist });
     }
-    if (!closest || closestDist > 58) return;
-    const volume = Math.max(0.08, Math.min(0.72, 1 - closestDist / 58));
-    sound('zombieMoan', volume);
+    if (!nearby.length) return;
+
+    nearby.sort((a, b) => a.dist - b.dist);
+    nearby.slice(0, ZOMBIE_MOAN_MAX_VOICES).forEach(({ enemy, dist }, index) => {
+      const closeness = 1 - dist / ZOMBIE_MOAN_RADIUS;
+      const volume = Math.max(0.12, Math.min(0.74, 0.18 + closeness * 0.56));
+      const rate = zombieMoanPlaybackRate(enemy);
+
+      // Stagger nearby voices so a small pack sounds layered instead of clipped.
+      setTimeout(() => {
+        if (!enemy.dead && enemy.hp > 0 && canPlayZombieMoan()) sound('zombieMoan', volume, rate);
+      }, index * 180);
+    });
   }
 
   function updateEnemies(dt) {
@@ -3484,7 +3509,7 @@ function currentWaterIsDangerous() {
     cameraStepOffsetY = 0;
     lastKillTime = -999;
     killComboCount = 0;
-    zombieMoanTimer = 2.5;
+    zombieMoanTimer = Math.min(2.5, ZOMBIE_MOAN_INTERVAL_MIN);
     deathState.active = false;
     deathState.ready = false;
     deathState.timer = 0;
