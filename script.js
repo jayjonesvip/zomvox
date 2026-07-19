@@ -260,13 +260,14 @@
   const portraitQuery = matchMedia('(orientation: portrait)');
   let keys = Object.create(null);
   const touchInput = { moveX: 0, moveY: 0, jump: false, lookId: null, lookX: 0, lookY: 0, stickId: null };
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.18.04');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.18.05');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
   let frameCounter = 0;
   let lastKillTime = -999;
   let killComboCount = 0;
+  let zombieMoanTimer = 2.5;
   let dayAmount = 1;
   let soundEnabled = true;
   let ambientEnabled = true;
@@ -552,9 +553,9 @@
     }
   }
 
-  function sound(name) {
+  function sound(name, gainValue = 1) {
     if (!soundEnabled) return;
-    window.ZomVoxSound?.play(name);
+    window.ZomVoxSound?.play(name, gainValue);
   }
 
 
@@ -2036,6 +2037,30 @@ function playerOnMachinePad() {
     e.y += (best.y - e.y) * Math.min(1, dt * 8);
   }
 
+  function updateZombieMoans(dt) {
+    if (!gunUnlocked() || mission.completed || deathState.active || worldRebuildState.active || isMenuOpen()) {
+      zombieMoanTimer = Math.max(1.2, zombieMoanTimer);
+      return;
+    }
+    zombieMoanTimer -= dt;
+    if (zombieMoanTimer > 0) return;
+    zombieMoanTimer = 4 + Math.random();
+
+    let closest = null;
+    let closestDist = Infinity;
+    for (const e of enemies) {
+      if (e.dead || e.hp <= 0 || (e.emerge || 0) < 1) continue;
+      const dist = Math.hypot(e.x - player.pos[0], e.z - player.pos[2]);
+      if (dist < closestDist) {
+        closest = e;
+        closestDist = dist;
+      }
+    }
+    if (!closest || closestDist > 58) return;
+    const volume = Math.max(0.08, Math.min(0.72, 1 - closestDist / 58));
+    sound('zombieMoan', volume);
+  }
+
   function updateEnemies(dt) {
     if (!gunUnlocked() || mission.completed) return;
     nextSpawnTimer -= dt;
@@ -2460,7 +2485,7 @@ function playerOnMachinePad() {
       if (e.hp <= 0 && registerEnemyKill(e, { source: 'c4', dist })) killed++;
     }
     shakeScreen();
-    sound('block');
+    sound('explosion');
     if (killed) {
       showToast('C4 blast cleared ' + killed + ' infected.');
       checkMissionCompletion();
@@ -2988,6 +3013,7 @@ function playerOnMachinePad() {
     updateWaterHazard(dt);
     updateLowHealthFeedback(dt);
     updateEnemies(dt);
+    updateZombieMoans(dt);
     updateC4Charges(dt);
     updateSupplyCrate();
     updateAmmoMercyDrops(dt);
@@ -3328,6 +3354,7 @@ function currentWaterIsDangerous() {
     cameraStepOffsetY = 0;
     lastKillTime = -999;
     killComboCount = 0;
+    zombieMoanTimer = 2.5;
     deathState.active = false;
     deathState.ready = false;
     deathState.timer = 0;

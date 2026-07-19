@@ -242,9 +242,12 @@ audio: {
     pickupAmmo: 'pickup.mp3',
     pickupHealth: null,
     bite: null,
+    zombieMoan: '',
     toxin: null,
     land: '',
-    objectiveClear: null
+    objectiveClear: null,
+    explosion: '',
+    ambientTundra: ''
   }
 }
 ```
