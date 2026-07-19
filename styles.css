@@ -179,7 +179,16 @@
   .secondaryStart{ color:#210606; background:linear-gradient(180deg,#ffe07b,#ff6948); box-shadow:0 14px 40px rgba(255,98,72,.24), inset 0 2px 0 rgba(255,255,255,.36); }
   .installStart{ grid-column:1/-1; color:#071409; background:linear-gradient(180deg,#efffe1,#92f36e); box-shadow:0 14px 40px rgba(145,243,110,.24), inset 0 2px 0 rgba(255,255,255,.44); }
   .installStart[hidden]{ display:none; }
+  .browserStart{ color:#eaf7ff; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.2); box-shadow:inset 0 2px 0 rgba(255,255,255,.08); }
   .startBtn:hover,.quickBiomeGrid button:hover,.quickBackBtn:hover{ filter:brightness(1.05); }
+  .installChoice{ position:absolute; inset:0; z-index:3; display:flex; align-items:center; justify-content:center; padding:20px; background:radial-gradient(circle at 50% 35%, rgba(145,243,110,.16), rgba(0,0,0,.44) 48%, rgba(0,0,0,.72)); backdrop-filter:blur(5px); }
+  .installChoice[hidden]{ display:none; }
+  .installChoiceCard{ width:min(540px, calc(100vw - 36px)); border:1px solid rgba(145,243,110,.32); border-radius:18px; padding:24px; text-align:center; background:linear-gradient(180deg, rgba(13,25,18,.94), rgba(4,8,8,.9)); box-shadow:0 24px 80px rgba(0,0,0,.58), 0 0 36px rgba(145,243,110,.12); }
+  .installChoiceKicker{ color:#91f36e; font-size:12px; font-weight:1000; letter-spacing:.18em; text-transform:uppercase; margin-bottom:8px; }
+  .installChoice h2{ color:#f5fff2; font-size:clamp(28px, 4.5vw, 42px); font-weight:1000; line-height:.96; letter-spacing:0; text-transform:uppercase; margin:0 0 10px; text-shadow:0 3px 0 rgba(0,0,0,.65),0 0 18px rgba(145,243,110,.24); }
+  .installChoice p{ color:#d3e5e3; font-size:15px; font-weight:800; line-height:1.35; margin:0 0 18px; }
+  .installChoiceActions{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+  .installChoiceNote{ margin-top:10px; color:#9eb4ad; font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.08em; }
   .quickBiomePanel{ width:min(620px, 96vw); text-align:center; }
   .quickBiomePanel[hidden], #menu.quick-select #mainMenuCard{ display:none; }
   .quickBiomeTopline{ color:#91f36e; font-size:12px; font-weight:1000; letter-spacing:.2em; text-transform:uppercase; margin-bottom:8px; }
@@ -269,6 +278,13 @@
     .setting input{ width:16px; height:16px; }
     .startActions{ gap:6px; }
     .startBtn{ border-radius:10px; padding:8px 10px; font-size:14px; }
+    .installChoice{ padding:8px; }
+    .installChoiceCard{ width:min(440px, calc(100vw - 18px)); border-radius:12px; padding:14px; }
+    .installChoiceKicker{ font-size:10px; margin-bottom:5px; }
+    .installChoice h2{ font-size:22px; margin-bottom:7px; }
+    .installChoice p{ font-size:12px; line-height:1.22; margin-bottom:10px; }
+    .installChoiceActions{ gap:6px; }
+    .installChoiceNote{ font-size:9px; margin-top:7px; }
     .quickBiomePanel{ width:min(98vw, 520px); padding:12px; }
     .quickBiomeTopline{ font-size:10px; margin-bottom:5px; }
     .quickBiomeTitle{ font-size:26px; margin-bottom:5px; }

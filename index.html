@@ -195,7 +195,19 @@
     <div class="startActions">
       <button id="play" class="startBtn primaryStart" type="button">Story Mode</button>
       <button id="quickStart" class="startBtn secondaryStart" type="button">Quick Hunt</button>
-      <button id="installApp" class="startBtn installStart" type="button" hidden>Install ZomVox</button>
+      <button id="installApp" class="startBtn installStart" type="button" hidden>Add to Home Screen</button>
+    </div>
+  </div>
+  <div id="installChoice" class="installChoice" role="dialog" aria-modal="true" aria-labelledby="installChoiceTitle" hidden>
+    <div class="installChoiceCard">
+      <div class="installChoiceKicker">ZomVox App Mode</div>
+      <h2 id="installChoiceTitle">Add ZomVox to Your Home Screen</h2>
+      <p>Launch in fullscreen landscape mode, keep the game one tap away, and load core files faster.</p>
+      <div class="installChoiceActions">
+        <button id="installChoiceAccept" class="startBtn installStart" type="button">Add to Home Screen</button>
+        <button id="installChoiceSkip" class="startBtn browserStart" type="button">Play in Browser</button>
+      </div>
+      <div class="installChoiceNote">You can install later from the main menu.</div>
     </div>
   </div>
   <div id="quickBiomePanel" class="card quickBiomePanel" hidden>
