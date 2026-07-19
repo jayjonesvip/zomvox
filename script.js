@@ -18,6 +18,7 @@
   const play = $('play');
   const quickStart = $('quickStart');
   const portraitInstall = $('portraitInstall');
+  const portraitInstallTitle = $('portraitInstallTitle');
   const portraitInstallBody = $('portraitInstallBody');
   const portraitInstallNote = $('portraitInstallNote');
   const portraitInstallAccept = $('portraitInstallAccept');
@@ -265,7 +266,7 @@
   const portraitQuery = matchMedia('(orientation: portrait)');
   let keys = Object.create(null);
   const touchInput = { moveX: 0, moveY: 0, jump: false, lookId: null, lookX: 0, lookY: 0, stickId: null };
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.19.04');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.19.05');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -280,6 +281,7 @@
   let deferredInstallPrompt = null;
   let portraitInstallDismissed = false;
   let portraitInstallHelpVisible = false;
+  const INSTALLED_ONCE_KEY = 'zomvoxInstalledOnce';
   let waterDamageTimer = 0;
   let hordeLevel = 0;
   let heartbeatTimer = 0;
@@ -970,14 +972,37 @@
     return !isStandaloneApp() && isMobileLikeDevice();
   }
 
+  function hasInstalledOnceHint() {
+    try {
+      return localStorage.getItem(INSTALLED_ONCE_KEY) === '1';
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function markInstalledOnce() {
+    try {
+      localStorage.setItem(INSTALLED_ONCE_KEY, '1');
+    } catch (_) {}
+  }
+
   function setPortraitInstallCopy(helpMode = false) {
-    if (!portraitInstallBody || !portraitInstallNote || !portraitInstallAccept) return;
+    if (!portraitInstallTitle || !portraitInstallBody || !portraitInstallNote || !portraitInstallAccept) return;
     if (deferredInstallPrompt) {
+      portraitInstallTitle.textContent = 'Add ZomVox to Home Screen';
       portraitInstallBody.textContent = 'Install for fullscreen landscape play and one-tap zombie hunting.';
       portraitInstallNote.textContent = 'Chrome gives the cleanest install.';
       portraitInstallAccept.textContent = 'Add to Home Screen';
       return;
     }
+    if (hasInstalledOnceHint() && !helpMode) {
+      portraitInstallTitle.textContent = 'Open App Mode';
+      portraitInstallBody.textContent = 'If ZomVox is installed, open it from your home screen for fullscreen landscape play.';
+      portraitInstallNote.textContent = 'You can keep playing in this browser tab too.';
+      portraitInstallAccept.textContent = 'Install Help';
+      return;
+    }
+    portraitInstallTitle.textContent = helpMode ? 'Install Help' : 'Add ZomVox to Home Screen';
     portraitInstallBody.textContent = helpMode
       ? 'In Chrome, tap the menu, then choose Install app or Add to Home screen.'
       : 'Install for fullscreen landscape play when Chrome offers it. You can keep playing in browser.';
@@ -1006,11 +1031,19 @@
     }
     sound('confirm');
     deferredInstallPrompt.prompt();
+    let choice = null;
     try {
-      await deferredInstallPrompt.userChoice;
+      choice = await deferredInstallPrompt.userChoice;
     } catch (_) {}
     deferredInstallPrompt = null;
-    portraitInstallDismissed = true;
+    if (choice && choice.outcome === 'accepted') {
+      markInstalledOnce();
+      portraitInstallDismissed = false;
+      portraitInstallHelpVisible = false;
+      showToast('Installed. Open ZomVox from your home screen for app mode.');
+    } else {
+      portraitInstallDismissed = true;
+    }
     updatePortraitInstall();
   }
 
@@ -1033,11 +1066,14 @@
       updatePortraitInstall();
     });
     window.addEventListener('appinstalled', () => {
+      markInstalledOnce();
       deferredInstallPrompt = null;
-      portraitInstallDismissed = true;
+      portraitInstallDismissed = false;
+      portraitInstallHelpVisible = false;
       updatePortraitInstall();
-      showToast('ZomVox installed.');
+      showToast('Installed. Open ZomVox from your home screen for app mode.');
     });
+    if (isStandaloneApp()) markInstalledOnce();
     updatePortraitInstall();
   }
 
