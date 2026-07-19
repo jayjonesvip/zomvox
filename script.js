@@ -270,7 +270,7 @@
   const portraitQuery = matchMedia('(orientation: portrait)');
   let keys = Object.create(null);
   const touchInput = { moveX: 0, moveY: 0, jump: false, lookId: null, lookX: 0, lookY: 0, stickId: null };
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.19.08');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.19.09');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -2116,6 +2116,7 @@ function playerOnMachinePad() {
       retreat: 0,
       phase: seededHash(p.x, p.z) * 10,
       blinkSeed: seededHash(p.x * 3.7 + 18, p.z * 5.9 - 22),
+      mouthOpenTimer: 0,
       big: variant.kind === 'brute',
       variant,
       face: Math.atan2(dx, -dz),
@@ -2213,7 +2214,10 @@ function playerOnMachinePad() {
 
       // Stagger nearby voices so a small pack sounds layered instead of clipped.
       setTimeout(() => {
-        if (!enemy.dead && enemy.hp > 0 && canPlayZombieMoan()) sound('zombieMoan', volume, rate);
+        if (!enemy.dead && enemy.hp > 0 && canPlayZombieMoan()) {
+          enemy.mouthOpenTimer = Math.max(enemy.mouthOpenTimer || 0, 1.05);
+          sound('zombieMoan', volume, rate);
+        }
       }, index * 180);
     });
   }
@@ -2229,6 +2233,7 @@ function playerOnMachinePad() {
     }
     for (const e of enemies) {
       e.phase += dt;
+      e.mouthOpenTimer = Math.max(0, (e.mouthOpenTimer || 0) - dt);
       if ((e.emerge || 0) < 1) {
         e.emerge = Math.min(1, (e.emerge || 0) + dt * 1.75);
         const eased = 1 - Math.pow(1 - e.emerge, 2);
@@ -3287,7 +3292,7 @@ function playerOnMachinePad() {
       const doubleBlink = (e.blinkSeed || 0) > .68 && blinkPhase > .20 && blinkPhase < .30;
       const blinking = blinkPhase < .10 || doubleBlink;
       const eyeType = blinking ? 21 : (stats.eyeType || 12);
-      const mouthOpen = Math.hypot(e.x - player.pos[0], e.z - player.pos[2]) <= ZOMBIE_MOAN_RADIUS;
+      const mouthOpen = (e.mouthOpenTimer || 0) > 0;
       pushBoxY(arr, x, y, z, -.18*scale, 0, -.18*scale, .22*scale, .45*scale, .22*scale, yaw, limbType);
       pushBoxY(arr, x, y, z,  .02*scale, 0, -.18*scale, .22*scale, .45*scale, .22*scale, yaw, limbType);
       pushBoxY(arr, x, y, z, -.18*scale, 0,  .02*scale, .22*scale, .45*scale, .22*scale, yaw, limbType);
