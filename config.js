@@ -425,7 +425,7 @@ window.ZOMVOX_CONFIG = {
       briefing: null,
       perkEquip: 'pickupAmmo.mp3',
       explosion: 'explosion.mp3',
-      zombieMoan: 'moan.mp3',
+      zombieMoan: '',
 
       /*
         Ambient loops are file-only. Leave as '' to keep that area silent.
