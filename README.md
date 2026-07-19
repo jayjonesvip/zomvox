@@ -30,7 +30,7 @@ Desktop play uses mouse and keyboard. Mobile play is designed for landscape orie
 - Mission-based opening loop with military-style objective briefings, cinematic insertion drops, a no-gun exploration phase, metal-spire shutdown objective, explosive supply crate reward, delayed zombie threat, drop-beacon extraction, upgrade choices, and escalating redeployment objectives across five seeded islands.
 - Compact ammo HUD on desktop and mobile, plus a six-round blaster magazine with reserve ammo, recoil, and fire-rate cooldown.
 - Camo ammo pickups that add six rounds at a time, plus low-ammo mercy caches when reserve ammo hits zero.
-- Flat silver C4 proximity charges with blinking red dots, one starting charge, and rare zombie drops.
+- Flat silver C4 proximity charges with blinking red dots, yellow hazard strips, one starting charge, and rare zombie drops.
 - Zombie spawning, ground-emerge entrances, pursuit steering around water/trees, attack cooldowns, retreat steps after attacks, deaths, score popups, and pickup drops.
 - Weighted zombie variants: normal, speedy one-shot runners, slower brute attackers, and rare grey stalkers.
 - Mobile-only landscape gate.
