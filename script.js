@@ -1196,6 +1196,8 @@
       if(t < 36.5) return vec3(0.25, 0.28, 0.26); /* dark grey zombie */
       if(t < 37.5) return vec3(0.16, 0.31, 0.15); /* ammo camo green */
       if(t < 38.5) return vec3(0.07, 0.16, 0.08); /* ammo camo shadow */
+      if(t < 39.5) return vec3(0.015, 0.025, 0.014); /* zombie mouth */
+      if(t < 40.5) return vec3(0.82, 0.86, 0.72); /* zombie teeth */
       return vec3(1.0, 0.45, 0.18); /* particles */
     }
     void main(){
@@ -3293,6 +3295,9 @@ function playerOnMachinePad() {
       pushBoxY(arr, x, y, z, -.42*scale, 1.22*scale, -.35*scale, .84*scale, .64*scale, .70*scale, yaw, bodyType);
       pushBoxY(arr, x, y, z, -.22*scale, 1.48*scale, -.39*scale, .12*scale, .12*scale, .06*scale, yaw, eyeType);
       pushBoxY(arr, x, y, z,  .10*scale, 1.48*scale, -.39*scale, .12*scale, .12*scale, .06*scale, yaw, eyeType);
+      pushBoxY(arr, x, y, z, -.13*scale, 1.33*scale, -.392*scale, .26*scale, .18*scale, .055*scale, yaw, 39);
+      pushBoxY(arr, x, y, z, -.12*scale, 1.46*scale, -.405*scale, .07*scale, .06*scale, .04*scale, yaw, 40);
+      pushBoxY(arr, x, y, z,  .05*scale, 1.46*scale, -.405*scale, .07*scale, .06*scale, .04*scale, yaw, 40);
     }
     for (const p of pickups) {
       const y = p.y + Math.sin(p.bob) * .16;
