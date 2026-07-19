@@ -161,6 +161,16 @@
     </div>
     <h2>Voxel Zombie FPS</h2>
     <p>ZomVox is a free browser voxel zombie FPS with story missions, quick hunts, island biomes, perks, ammo pickups, and blocky undead combat. No download needed. Rotate to landscape to play.</p>
+    <div id="portraitInstall" class="portraitInstall" hidden>
+      <div class="portraitInstallKicker">App Mode</div>
+      <div class="portraitInstallTitle">Add ZomVox to Home Screen</div>
+      <div class="portraitInstallBody" id="portraitInstallBody">Install for fullscreen landscape play and one-tap zombie hunting.</div>
+      <div class="portraitInstallActions">
+        <button id="portraitInstallAccept" type="button">Add to Home Screen</button>
+        <button id="portraitInstallSkip" type="button">Play in Browser</button>
+      </div>
+      <div class="portraitInstallNote" id="portraitInstallNote">Chrome gives the cleanest install.</div>
+    </div>
     <div class="portraitCallout">Rotate to Landscape</div>
     <div class="portraitPause">Hunt Paused</div>
   </div>
@@ -195,19 +205,6 @@
     <div class="startActions">
       <button id="play" class="startBtn primaryStart" type="button">Story Mode</button>
       <button id="quickStart" class="startBtn secondaryStart" type="button">Quick Hunt</button>
-      <button id="installApp" class="startBtn installStart" type="button" hidden>Add to Home Screen</button>
-    </div>
-  </div>
-  <div id="installChoice" class="installChoice" role="dialog" aria-modal="true" aria-labelledby="installChoiceTitle" hidden>
-    <div class="installChoiceCard">
-      <div class="installChoiceKicker">ZomVox App Mode</div>
-      <h2 id="installChoiceTitle">Add ZomVox to Your Home Screen</h2>
-      <p id="installChoiceBody">Launch in fullscreen landscape mode, keep the game one tap away, and load core files faster.</p>
-      <div class="installChoiceActions">
-        <button id="installChoiceAccept" class="startBtn installStart" type="button">Add to Home Screen</button>
-        <button id="installChoiceSkip" class="startBtn browserStart" type="button">Play in Browser</button>
-      </div>
-      <div class="installChoiceNote" id="installChoiceNote">You can install later from the main menu.</div>
     </div>
   </div>
   <div id="quickBiomePanel" class="card quickBiomePanel" hidden>
