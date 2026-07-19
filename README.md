@@ -19,7 +19,7 @@ Desktop play uses mouse and keyboard. Mobile play is designed for landscape orie
 ## Current Features
 
 - Static browser game with split frontend files: `index.html`, `styles.css`, `config.js`, `sound.js`, and `script.js`.
-- Progressive Web App manifest, service worker, mobile pre-menu install choice, install-help fallback, and landscape launch request for supported mobile browsers.
+- Progressive Web App manifest, service worker, rotate-screen install choice, install-help fallback, and landscape launch request for supported mobile browsers.
 - Branded ZomVox splash screen using `assets/zomvox-splash.png`.
 - Splash screen build label using `BUILD_VERSION` plus the deployed document timestamp.
 - Favicon assets for browser tabs and installed shortcuts.
