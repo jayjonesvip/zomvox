@@ -17,7 +17,7 @@ window.ZOMVOX_CONFIG = {
     Bump this when you make visible changes so you can tell the browser
     loaded the newest version.
   */
-  buildVersion: '2026.07.18.04',
+  buildVersion: '2026.07.18.05',
 
   /*
     Seed used for deterministic world generation.
@@ -424,6 +424,8 @@ window.ZOMVOX_CONFIG = {
       confirm: null,
       briefing: null,
       perkEquip: 'pickupAmmo.mp3',
+      explosion: '',
+      zombieMoan: '',
 
       /*
         Ambient loops are file-only. Leave as '' to keep that area silent.

@@ -16,6 +16,7 @@
   let activeAmbientName = '';
   let activeOneShots = 0;
   let landSource = null;
+  let zombieMoanSource = null;
 
   // decoded AudioBuffers, not HTMLAudioElement objects
   const bufferCache = new Map();
@@ -291,6 +292,7 @@
     if (!ctx || !buffer) return false;
 
     if (name === 'land' && activeOneShots > 0) return true;
+    if (name === 'zombieMoan' && zombieMoanSource) return true;
     if (name !== 'land') stopLand();
 
     const src = ctx.createBufferSource();
@@ -306,14 +308,16 @@
     src.onended = () => {
       activeOneShots = Math.max(0, activeOneShots - 1);
       if (landSource === src) landSource = null;
+      if (zombieMoanSource === src) zombieMoanSource = null;
     };
     if (name === 'land') landSource = src;
+    if (name === 'zombieMoan') zombieMoanSource = src;
 
     src.start(ctx.currentTime, trimLeadingSilence ? leadInOffset(buffer) : 0);
     return true;
   }
 
-  function playFile(name, fileName) {
+  function playFile(name, fileName, gainValue = 1) {
     if (fileName === '') return true;
     if (!fileName) return false;
 
@@ -321,7 +325,8 @@
     const buffer = bufferCache.get(key);
 
     if (buffer) {
-      playBuffer(buffer, name === 'land' ? .28 : 1, true, name);
+      const baseGain = name === 'land' ? .28 : 1;
+      playBuffer(buffer, baseGain * gainValue, true, name);
       return true;
     }
 
@@ -446,7 +451,7 @@
       }));
     },
 
-    play(name) {
+    play(name, gainValue = 1) {
       if (!sfxEnabled) return;
 
       const hasOverride = Object.prototype.hasOwnProperty.call(soundFiles, name);
@@ -459,7 +464,7 @@
       if (name === 'land' && activeOneShots > 0) return;
       if (name !== 'land') stopLand();
 
-      if (playFile(name, fileName)) return;
+      if (playFile(name, fileName, gainValue)) return;
 
       trackSynthOneShot(name);
       synth(name);
