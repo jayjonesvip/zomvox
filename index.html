@@ -84,6 +84,21 @@
 </div>
 <div id="missionPanel">
   <div class="missionLabel">Objective</div>
+  <div class="killHud" id="killHud" hidden>
+    <svg class="killHudIcon" viewBox="0 0 64 64" aria-hidden="true">
+      <rect x="8" y="10" width="48" height="42" rx="4" fill="#315f24"/>
+      <rect x="8" y="10" width="12" height="12" fill="#6aa846"/>
+      <rect x="20" y="10" width="12" height="12" fill="#76b852"/>
+      <rect x="32" y="10" width="12" height="12" fill="#57903a"/>
+      <rect x="44" y="10" width="12" height="12" fill="#3c742c"/>
+      <rect x="12" y="24" width="12" height="12" fill="#ff2424"/>
+      <rect x="40" y="24" width="12" height="12" fill="#ff2424"/>
+      <rect x="22" y="40" width="20" height="8" fill="#071007"/>
+      <rect x="22" y="40" width="5" height="5" fill="#dfe4c9"/>
+      <rect x="37" y="40" width="5" height="5" fill="#dfe4c9"/>
+    </svg>
+    <span id="killHudCount">0</span>
+  </div>
   <div id="objectiveText">Locate the contamination source</div>
   <div id="objectiveMeta">Toxin exposure active</div>
 </div>

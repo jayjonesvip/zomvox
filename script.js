@@ -33,6 +33,8 @@
   const healthBigFill = $('healthBigFill');
   const objectiveText = $('objectiveText');
   const objectiveMeta = $('objectiveMeta');
+  const killHud = $('killHud');
+  const killHudCount = $('killHudCount');
   const commandBanner = $('commandBanner');
   const commandBannerTitle = $('commandBannerTitle');
   const commandBannerBody = $('commandBannerBody');
@@ -272,7 +274,7 @@
   const portraitQuery = matchMedia('(orientation: portrait)');
   let keys = Object.create(null);
   const touchInput = { moveX: 0, moveY: 0, jump: false, lookId: null, lookX: 0, lookY: 0, stickId: null };
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.19.10');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.19.11');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -870,6 +872,15 @@
     }
     if (newlyUnlocked.length) saveQuickProgress();
     return newlyUnlocked;
+  }
+
+  function unlockQuickBiome(biome) {
+    const normalized = normalizeBiome(biome);
+    if (!QUICK_BIOMES.includes(normalized) || isQuickBiomeUnlocked(normalized)) return [];
+    quickProgress.unlockedBiomes.push(normalized);
+    saveQuickProgress();
+    renderQuickBiomeLocks();
+    return [normalized];
   }
 
   function recordQuickHuntRun(run) {
@@ -2986,6 +2997,10 @@ function playerOnMachinePad() {
 
   function completeExtraction() {
     if (mission.extractionCalled) return;
+    const storyUnlocks = mission.mode === MODE_STORY ? unlockQuickBiome(currentBiome()) : [];
+    const unlockText = storyUnlocks.length
+      ? ' Quick Hunt biome unlocked: ' + storyUnlocks.map(quickBiomeLabel).join(' + ') + '.'
+      : '';
     mission.extractionCalled = true;
     mission.extractionProgress = 1;
     mission.commandBannerTimer = 0;
@@ -2997,7 +3012,7 @@ function playerOnMachinePad() {
     openObjectiveBriefing({
       title: 'Island contained',
       meta: currentIslandLabel() + ' // ' + currentBiomeLabel() + ' // Mission Complete',
-      body: 'Mission Command: extraction confirmed. Confirm redeploy and we will drop you onto the next contaminated island.',
+      body: 'Mission Command: extraction confirmed. Confirm redeploy and we will drop you onto the next contaminated island.' + unlockText,
       shareSummary: buildRunSummary('Mission cleared'),
       hudTitle: 'Island breach contained',
       hudMeta: 'Redeploying',
@@ -3007,6 +3022,10 @@ function playerOnMachinePad() {
         body: 'Pick one perk before redeploy.'
       })
     });
+    if (storyUnlocks.length) {
+      showToast('Quick Hunt biome unlocked: ' + storyUnlocks.map(quickBiomeLabel).join(' + '), true);
+      scorePop('BIOME UNLOCKED', 'wave');
+    }
     scorePop('EXTRACTION CONFIRMED', 'wave');
   }
 
@@ -3233,15 +3252,23 @@ function playerOnMachinePad() {
     if (mission.extractionProgress >= 1) completeExtraction();
   }
 
+  function setKillHud(show, count) {
+    if (!killHud || !killHudCount) return;
+    killHud.hidden = !show;
+    if (show) killHudCount.textContent = String(Math.max(0, Math.floor(count)));
+  }
+
   function updateMissionHud() {
     if (!objectiveText || !objectiveMeta) return;
     document.body.classList.toggle('stage-cleared', mission.completed && !mission.extractionCalled);
     document.body.classList.toggle('quick-mode', mission.mode === MODE_QUICK);
     if (mission.mode === MODE_QUICK) {
+      setKillHud(true, player.kills);
       objectiveText.textContent = '[ quick hunt ]';
-      objectiveMeta.textContent = player.kills + ' cleared';
+      objectiveMeta.textContent = 'Kills cleared';
       return;
     }
+    setKillHud(false, 0);
     if (!mission.objectiveAcknowledged) {
       objectiveText.textContent = '[ orders ]';
       objectiveMeta.textContent = currentIslandLabel();
@@ -3259,7 +3286,9 @@ function playerOnMachinePad() {
         objectiveMeta.textContent = mission.extractionCalled ? 'Extraction confirmed' : 'Stage cleared';
         return;
       }
-      objectiveText.textContent = '[ ' + Math.min(player.kills, infectedGoal) + '/' + infectedGoal + ' cleared ]';
+      const remaining = Math.max(0, infectedGoal - player.kills);
+      setKillHud(true, remaining);
+      objectiveText.textContent = '[ infected left ]';
       objectiveMeta.textContent = mission.hudMeta || 'Gun online';
       return;
     }
@@ -3689,6 +3718,7 @@ function currentWaterIsDangerous() {
     document.body.classList.remove('upgrade-open');
     deathStats.textContent = '';
     renderDeathUnlocks(null);
+    setKillHud(false, 0);
     hideDeathShare();
     renderBriefingShare(null);
     deathTitle.textContent = 'YOU DIED!';
