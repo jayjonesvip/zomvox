@@ -354,8 +354,34 @@
     .bullet{ height:19px; border-width:1px; }
     .bullet::before{ width:10px; height:8px; top:-6px; border-width:1px; }
     #gunSprite{ right:calc(12px + env(safe-area-inset-right)); bottom:-38px; width:min(44vw, 260px); }
-    .grid{ grid-template-columns:1fr; }
     #mobileControls{ display:block; }
+  }
+  @media (pointer: coarse) and (orientation: landscape) and (max-height: 430px){
+    #menu{ align-items:flex-start; padding:max(3px, env(safe-area-inset-top)) 6px max(3px, env(safe-area-inset-bottom)); }
+    #mainMenuCard{ width:min(98vw, 690px); max-height:calc(100svh - 6px); padding:7px 10px; border-radius:12px; }
+    h1{ font-size:24px; margin-bottom:2px; line-height:.9; }
+    .subtitle{ font-size:10px; line-height:1.12; margin-bottom:5px; }
+    .grid{ grid-template-columns:repeat(2,minmax(0,1fr)); gap:4px; margin:4px 0 5px; }
+    .tip{ padding:4px 6px; font-size:9px; border-radius:6px; }
+    .tip kbd{ min-width:20px; padding:1px 4px; border-radius:4px; }
+    .settingsPanel{ grid-template-columns:repeat(3,minmax(0,1fr)); gap:4px; margin-bottom:6px; }
+    .setting{ min-height:25px; padding:4px 6px; font-size:9px; gap:5px; border-radius:6px; }
+    .setting input{ width:14px; height:14px; }
+    .startActions{ gap:6px; }
+    .startBtn{ min-height:39px; padding:7px 8px; border-radius:9px; font-size:13px; }
+    .quickBiomePanel{ max-height:calc(100svh - 6px); padding:8px 10px; }
+    .quickBiomeTopline{ font-size:9px; margin-bottom:3px; }
+    .quickBiomeTitle{ font-size:22px; margin-bottom:3px; }
+    .quickBiomeCopy{ font-size:10px; margin-bottom:6px; }
+    .quickBiomeGrid button{ min-height:47px; padding:6px 4px; font-size:9px; }
+    .quickBackBtn{ margin-top:6px; padding:6px 12px; }
+  }
+  @media (pointer: coarse) and (orientation: landscape) and (max-height: 340px){
+    .subtitle{ display:none; }
+    .settingsPanel{ grid-template-columns:repeat(6,minmax(0,1fr)); }
+    .setting{ justify-content:center; padding:4px 3px; font-size:8px; }
+    .setting input{ width:13px; height:13px; }
+    .startBtn{ min-height:36px; }
   }
   @media (pointer: coarse){
     #mobileControls{ display:block; }
