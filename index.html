@@ -75,7 +75,9 @@
 <div id="weaponPanel">
   <div class="label">Block Blaster / 6-Round Mag</div>
   <div id="bulletRack"></div>
-  <div id="reserveText">Reserve 36</div>
+  <div id="ammoReadout" aria-label="Ammo">
+    <span id="clipText">6</span><span class="ammoSlash">/</span><span id="reserveText">36</span>
+  </div>
   <div id="reloadText"></div>
 </div>
 <div id="healthStatus">
@@ -170,22 +172,18 @@
     <div class="portraitGround"></div>
   </div>
   <div class="portraitContent">
-    <div class="zomvoxLogo portraitLogo" aria-label="ZomVox"><span>Zom</span><b>Vox</b></div>
+    <div class="portraitAppIconFrame" aria-hidden="true">
+      <img class="portraitAppIcon" src="assets/zomvox-logo-square.png" alt="" />
+    </div>
     <div class="portraitHeroArt" aria-hidden="true">
-      <div class="portraitBigZombie"><span></span></div>
       <div class="rotateGlyph">
         <div class="phoneShape"></div>
         <div class="rotateArc"></div>
       </div>
     </div>
-    <div class="portraitKicker">Quick Hunt Ready</div>
-    <h2>Turn Sideways. Start Hunting.</h2>
-    <p>Drop onto hostile islands, grab ammo, place C4, unlock perks, and survive the voxel dead.</p>
-    <div class="portraitTags" aria-hidden="true">
-      <span>Story Drops</span>
-      <span>Quick Hunts</span>
-      <span>Unlock Islands</span>
-    </div>
+    <div class="portraitKicker">Landscape Required</div>
+    <h2>Rotate to Play ZomVox</h2>
+    <p>Turn your phone sideways for fullscreen voxel zombie hunting.</p>
     <div id="portraitInstall" class="portraitInstall" hidden>
       <div class="portraitInstallKicker">App Mode</div>
       <div class="portraitInstallTitle" id="portraitInstallTitle">Install ZomVox</div>
@@ -196,7 +194,7 @@
       </div>
       <div class="portraitInstallNote" id="portraitInstallNote">Best in Chrome.</div>
     </div>
-    <div class="portraitCallout">Rotate to Start Hunting</div>
+    <div class="portraitCallout">Story Mode + Quick Hunt Await</div>
     <div class="portraitPause">Hunt Paused</div>
   </div>
 </div>
