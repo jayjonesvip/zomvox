@@ -9,7 +9,6 @@
   }
 
   const $ = (id) => document.getElementById(id);
-  const reloadText = $('reloadText');
   const weaponPanel = $('weaponPanel');
   const bulletRack = $('bulletRack');
   const clipText = $('clipText');
@@ -18,12 +17,7 @@
   const mainMenuCard = $('mainMenuCard');
   const play = $('play');
   const quickStart = $('quickStart');
-  const portraitInstall = $('portraitInstall');
-  const portraitInstallTitle = $('portraitInstallTitle');
-  const portraitInstallBody = $('portraitInstallBody');
-  const portraitInstallNote = $('portraitInstallNote');
-  const portraitInstallAccept = $('portraitInstallAccept');
-  const portraitInstallSkip = $('portraitInstallSkip');
+  const portraitInstallCallout = $('portraitInstallCallout');
   const quickBiomePanel = $('quickBiomePanel');
   const quickBack = $('quickBack');
   const toast = $('toast');
@@ -275,7 +269,7 @@
   const portraitQuery = matchMedia('(orientation: portrait)');
   let keys = Object.create(null);
   const touchInput = { moveX: 0, moveY: 0, jump: false, lookId: null, lookX: 0, lookY: 0, stickId: null };
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.20.01');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.20.02');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -288,8 +282,6 @@
   let ambientEnabled = true;
   let activeAmbientCue = '';
   let deferredInstallPrompt = null;
-  let portraitInstallDismissed = false;
-  let portraitInstallHelpVisible = false;
   const INSTALLED_ONCE_KEY = 'zomvoxInstalledOnce';
   let waterDamageTimer = 0;
   let hordeLevel = 0;
@@ -1114,61 +1106,20 @@
     return !isStandaloneApp() && isMobileLikeDevice();
   }
 
-  function hasInstalledOnceHint() {
-    try {
-      return localStorage.getItem(INSTALLED_ONCE_KEY) === '1';
-    } catch (_) {
-      return false;
-    }
-  }
-
   function markInstalledOnce() {
     try {
       localStorage.setItem(INSTALLED_ONCE_KEY, '1');
     } catch (_) {}
   }
 
-  function setPortraitInstallCopy(helpMode = false) {
-    if (!portraitInstallTitle || !portraitInstallBody || !portraitInstallNote || !portraitInstallAccept) return;
-    if (deferredInstallPrompt) {
-      portraitInstallTitle.textContent = 'Install ZomVox';
-      portraitInstallBody.textContent = 'Launch fullscreen from your home screen and get back to the hunt faster.';
-      portraitInstallNote.textContent = 'Best in Chrome.';
-      portraitInstallAccept.textContent = 'Install Game';
-      return;
-    }
-    if (hasInstalledOnceHint() && !helpMode) {
-      portraitInstallTitle.textContent = 'Open Installed Game';
-      portraitInstallBody.textContent = 'Use the home screen icon for the clean fullscreen hunt.';
-      portraitInstallNote.textContent = 'Browser play still works.';
-      portraitInstallAccept.textContent = 'Install Help';
-      return;
-    }
-    portraitInstallTitle.textContent = helpMode ? 'Install Help' : 'Install ZomVox';
-    portraitInstallBody.textContent = helpMode
-      ? 'In Chrome, tap the menu, then choose Install app or Add to Home screen.'
-      : 'Add the game when Chrome offers it, or keep hunting in browser.';
-    portraitInstallNote.textContent = helpMode
-      ? 'Already installed? Open ZomVox from your home screen.'
-      : 'Best in Chrome.';
-    portraitInstallAccept.textContent = helpMode ? 'Got It' : 'Install Help';
-  }
-
   function updatePortraitInstall() {
-    if (!portraitInstall) return;
-    setPortraitInstallCopy();
-    portraitInstall.hidden = !canOfferInstallChoice() || portraitInstallDismissed;
+    if (!portraitInstallCallout) return;
+    portraitInstallCallout.hidden = !canOfferInstallChoice() || !deferredInstallPrompt;
   }
 
   async function installZomVox() {
     if (!deferredInstallPrompt) {
-      if (portraitInstallHelpVisible) {
-        portraitInstallDismissed = true;
-        updatePortraitInstall();
-        return;
-      }
-      portraitInstallHelpVisible = true;
-      setPortraitInstallCopy(true);
+      showToast('Install from your browser menu when available.');
       return;
     }
     sound('confirm');
@@ -1180,18 +1131,8 @@
     deferredInstallPrompt = null;
     if (choice && choice.outcome === 'accepted') {
       markInstalledOnce();
-      portraitInstallDismissed = false;
-      portraitInstallHelpVisible = false;
       showToast('Installed. Open ZomVox from your home screen for app mode.');
-    } else {
-      portraitInstallDismissed = true;
     }
-    updatePortraitInstall();
-  }
-
-  function continueInBrowser() {
-    portraitInstallDismissed = true;
-    portraitInstallHelpVisible = false;
     updatePortraitInstall();
   }
 
@@ -1204,14 +1145,11 @@
     window.addEventListener('beforeinstallprompt', event => {
       event.preventDefault();
       deferredInstallPrompt = event;
-      portraitInstallHelpVisible = false;
       updatePortraitInstall();
     });
     window.addEventListener('appinstalled', () => {
       markInstalledOnce();
       deferredInstallPrompt = null;
-      portraitInstallDismissed = false;
-      portraitInstallHelpVisible = false;
       updatePortraitInstall();
       showToast('Installed. Open ZomVox from your home screen for app mode.');
     });
@@ -2564,7 +2502,6 @@ function playerOnMachinePad() {
     if (player.reloading || player.mag >= player.magSize || player.reserve <= 0) return;
     player.reloading = true;
     player.reloadTimer = currentReloadTime();
-    reloadText.textContent = 'Reloading...';
     reloadOverlay.classList.add('show');
     reloadOverlayFill.style.width = '0%';
     sound('reloadStart');
@@ -2576,7 +2513,6 @@ function playerOnMachinePad() {
     player.reserve -= take;
     player.reloading = false;
     player.reloadTimer = 0;
-    reloadText.textContent = '';
     reloadOverlay.classList.remove('show');
     reloadOverlayFill.style.width = '0%';
     sound('reloadDone');
@@ -3335,7 +3271,6 @@ function playerOnMachinePad() {
     if (player.shotCooldown > 0) player.shotCooldown -= dt;
     if (player.reloading) {
       player.reloadTimer -= dt;
-      reloadText.textContent = 'Reloading ' + Math.max(0, player.reloadTimer).toFixed(1) + 's';
       reloadOverlayFill.style.width = Math.max(0, Math.min(100, (1 - player.reloadTimer / currentReloadTime()) * 100)) + '%';
       if (player.reloadTimer <= 0) finishReload();
     }
@@ -3861,8 +3796,7 @@ function currentWaterIsDangerous() {
   }
   play.addEventListener('click', startStoryGame);
   if (quickStart) quickStart.addEventListener('click', openQuickBiomeScreen);
-  if (portraitInstallAccept) portraitInstallAccept.addEventListener('click', installZomVox);
-  if (portraitInstallSkip) portraitInstallSkip.addEventListener('click', continueInBrowser);
+  if (portraitInstallCallout) portraitInstallCallout.addEventListener('click', installZomVox);
   if (quickBack) quickBack.addEventListener('click', closeQuickBiomeScreen);
   for (const btn of quickBiomeButtons) {
     btn.addEventListener('click', () => startQuickGame(btn.dataset.biome));
