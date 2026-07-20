@@ -274,7 +274,7 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.20.03');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.20.04');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -2127,8 +2127,8 @@ function playerOnMachinePad() {
     const insertion = mission.insertionActive;
     if (!insertion && (keys.KeyW || keys.ArrowUp)) { mx += forward[0]; mz += forward[2]; }
     if (!insertion && (keys.KeyS || keys.ArrowDown)) { mx -= forward[0]; mz -= forward[2]; }
-    if (!insertion && (keys.KeyD || keys.ArrowRight)) { mx += right[0]; mz += right[2]; }
-    if (!insertion && (keys.KeyA || keys.ArrowLeft)) { mx -= right[0]; mz -= right[2]; }
+    if (!insertion && (keys.KeyD || keys.ArrowRight)) { mx -= right[0]; mz -= right[2]; }
+    if (!insertion && (keys.KeyA || keys.ArrowLeft)) { mx += right[0]; mz += right[2]; }
     if (!insertion && (touchInput.moveY || touchInput.moveX)) {
       mx += forward[0] * touchInput.moveY + right[0] * touchInput.moveX;
       mz += forward[2] * touchInput.moveY + right[2] * touchInput.moveX;
