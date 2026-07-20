@@ -122,6 +122,7 @@
   .runShareStats,.deathStats{ width:min(560px, 86vw); margin:0 auto 10px; display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:7px; }
   .runShareStats span,.deathStats span{ min-height:42px; display:flex; flex-direction:column; justify-content:center; padding:7px 5px; border:1px solid rgba(255,255,255,.18); border-radius:8px; background:rgba(0,0,0,.32); color:#f4f4f4; font-size:10px; line-height:1.25; font-weight:900; text-transform:uppercase; text-shadow:0 2px 0 rgba(0,0,0,.72); overflow:hidden; }
   .runShareStats b,.deathStats b{ color:#ffe66d; font-size:13px; line-height:1.1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .deathUnlocks{ width:min(500px, 78vw); margin:0 auto 10px; padding:8px 10px; border:2px solid rgba(255,230,109,.74); border-radius:8px; background:linear-gradient(180deg, rgba(38,32,9,.82), rgba(7,10,6,.72)); color:#fff1a5; font-size:13px; line-height:1.25; font-weight:1000; letter-spacing:.08em; text-transform:uppercase; text-shadow:0 2px 0 rgba(0,0,0,.78),0 0 22px rgba(255,224,88,.34); box-shadow:0 0 28px rgba(255,210,65,.18), inset 0 1px 0 rgba(255,255,255,.12); }
   .shareRunBtn{ display:inline-block; margin:0 5px 12px; appearance:none; border:1px solid rgba(255,255,255,.24); border-radius:8px; padding:9px 16px; color:#081308; font-size:13px; font-weight:1000; letter-spacing:.07em; text-transform:uppercase; background:linear-gradient(180deg,#d8ff75,#74ef59); box-shadow:0 10px 28px rgba(92,255,85,.18), inset 0 2px 0 rgba(255,255,255,.35); cursor:pointer; }
   .shareRunBtn:hover{ filter:brightness(1.05); }
   #upgradeOverlay{ pointer-events:none; position:fixed; inset:0; display:flex; align-items:center; justify-content:center; padding:22px; z-index:33; opacity:0; visibility:hidden; background:radial-gradient(circle at 50% 45%, rgba(255,220,92,.12), rgba(2,8,9,.78) 58%, rgba(0,0,0,.94)), repeating-linear-gradient(0deg, rgba(255,255,255,.025) 0 1px, transparent 1px 5px); transition:opacity .16s, visibility .16s; }
@@ -184,7 +185,10 @@
   .quickBiomeTitle{ color:#f5fff2; font-size:clamp(30px, 5vw, 50px); font-weight:1000; line-height:.9; letter-spacing:0; text-transform:uppercase; margin:0 0 8px; text-shadow:0 3px 0 rgba(0,0,0,.72),0 0 20px rgba(145,243,110,.2); }
   .quickBiomeCopy{ color:#c1d7e6; font-size:14px; font-weight:800; margin:0 0 16px; }
   .quickBiomeGrid{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:7px; }
-  .quickBiomeGrid button{ appearance:none; border:1px solid rgba(255,255,255,.18); border-radius:8px; padding:16px 8px; color:#edf8ff; font-size:14px; font-weight:1000; text-transform:uppercase; background:rgba(6,12,16,.72); box-shadow:inset 0 1px 0 rgba(255,255,255,.1); cursor:pointer; }
+  .quickBiomeGrid button{ appearance:none; min-height:74px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px; border:1px solid rgba(255,255,255,.18); border-radius:8px; padding:12px 8px; color:#edf8ff; font-size:14px; font-weight:1000; text-transform:uppercase; background:rgba(6,12,16,.72); box-shadow:inset 0 1px 0 rgba(255,255,255,.1); cursor:pointer; }
+  .quickBiomeGrid button small{ display:block; color:#91f36e; font-size:9px; line-height:1.12; font-weight:900; letter-spacing:.04em; text-transform:uppercase; }
+  .quickBiomeGrid button.locked{ color:#8f9da3; border-color:rgba(255,255,255,.10); background:rgba(3,7,9,.58); cursor:not-allowed; filter:saturate(.6); }
+  .quickBiomeGrid button.locked small{ color:#ffc96a; }
   .quickBackBtn{ margin-top:12px; appearance:none; border:1px solid rgba(255,255,255,.22); border-radius:8px; padding:9px 18px; color:#eaf7ff; font-size:12px; font-weight:1000; letter-spacing:.08em; text-transform:uppercase; background:rgba(255,255,255,.08); cursor:pointer; }
   body.quick-mode #missionPanel{ display:none; }
   #splash{ position:fixed; inset:0; z-index:35; overflow:hidden; background:#02070b; transition:opacity .38s ease, visibility .38s ease; }
@@ -282,7 +286,9 @@
     .quickBiomeTitle{ font-size:26px; margin-bottom:5px; }
     .quickBiomeCopy{ font-size:11px; line-height:1.18; margin-bottom:8px; }
     .quickBiomeGrid{ grid-template-columns:repeat(3,minmax(0,1fr)); gap:4px; }
-    .quickBiomeGrid button{ border-radius:7px; padding:11px 4px; font-size:10px; min-height:38px; }
+    .quickBiomeGrid button{ border-radius:7px; padding:8px 4px; font-size:10px; min-height:54px; gap:3px; }
+    .quickBiomeGrid button small{ font-size:7px; line-height:1.05; }
+    .deathUnlocks{ font-size:10px; padding:6px 8px; margin-bottom:7px; }
     .quickBackBtn{ margin-top:8px; padding:7px 14px; font-size:10px; }
     .splashLoad{ right:calc(12px + env(safe-area-inset-right)); bottom:calc(12px + env(safe-area-inset-bottom)); width:min(300px, calc(100vw - 24px)); padding:9px; }
     .splashVersion{ font-size:9px; margin-bottom:4px; }

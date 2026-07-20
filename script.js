@@ -65,6 +65,7 @@
   const deathFill = $('deathFill');
   const deathText = $('deathText');
   const deathStats = $('deathStats');
+  const deathUnlocks = $('deathUnlocks');
   const deathShare = $('deathShare');
   const deathContinue = $('deathContinue');
   const deathGiveUp = $('deathGiveUp');
@@ -254,6 +255,7 @@
     lifeKills: 0,
     lifeHeadshots: 0,
     lifeLongestShot: 0,
+    lifeBestCombo: 0,
     lifeStartedAt: performance.now(),
     score: 0,
     deaths: 0
@@ -270,7 +272,7 @@
   const portraitQuery = matchMedia('(orientation: portrait)');
   let keys = Object.create(null);
   const touchInput = { moveX: 0, moveY: 0, jump: false, lookId: null, lookX: 0, lookY: 0, stickId: null };
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.19.09');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.19.10');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -440,6 +442,7 @@
     player.lifeKills = 0;
     player.lifeHeadshots = 0;
     player.lifeLongestShot = 0;
+    player.lifeBestCombo = 0;
     player.lifeStartedAt = performance.now();
   }
 
@@ -772,6 +775,128 @@
     const biome = currentBiome();
     return biome.charAt(0).toUpperCase() + biome.slice(1);
   }
+
+  const QUICK_PROGRESS_KEY = 'zomvoxQuickHuntProgress';
+  const DEFAULT_QUICK_UNLOCKS = ['forest', 'dunes'];
+  const QUICK_UNLOCK_RULES = {
+    forest: { label: 'Forest', requirement: 'Unlocked' },
+    dunes: { label: 'Dunes', requirement: 'Unlocked' },
+    rocky: { label: 'Rocky', requirement: 'Survive 5:00', test: progress => progress.stats.bestSurvivalSeconds >= 300 },
+    swamp: { label: 'Swamp', requirement: 'Kill 50 in one hunt', test: progress => progress.stats.bestKills >= 50 },
+    ashlands: { label: 'Ashlands', requirement: 'Get a triple kill', test: progress => progress.stats.bestCombo >= 3 },
+    tundra: { label: 'Tundra', requirement: '100 total kills', test: progress => progress.stats.totalKills >= 100 }
+  };
+
+  function defaultQuickProgress() {
+    return {
+      unlockedBiomes: DEFAULT_QUICK_UNLOCKS.slice(),
+      stats: {
+        quickHuntRuns: 0,
+        totalKills: 0,
+        bestKills: 0,
+        bestSurvivalSeconds: 0,
+        bestCombo: 0,
+        tripleKills: 0
+      }
+    };
+  }
+
+  function sanitizeQuickProgress(value) {
+    const base = defaultQuickProgress();
+    const input = value && typeof value === 'object' ? value : {};
+    const stats = input.stats && typeof input.stats === 'object' ? input.stats : {};
+    const unlocked = Array.isArray(input.unlockedBiomes) ? input.unlockedBiomes : [];
+    base.unlockedBiomes = Array.from(new Set(DEFAULT_QUICK_UNLOCKS
+      .concat(unlocked.map(normalizeBiome))
+      .filter(biome => QUICK_BIOMES.includes(biome))));
+    base.stats.quickHuntRuns = Math.max(0, Math.floor(Number(stats.quickHuntRuns) || 0));
+    base.stats.totalKills = Math.max(0, Math.floor(Number(stats.totalKills) || 0));
+    base.stats.bestKills = Math.max(0, Math.floor(Number(stats.bestKills) || 0));
+    base.stats.bestSurvivalSeconds = Math.max(0, Math.floor(Number(stats.bestSurvivalSeconds) || 0));
+    base.stats.bestCombo = Math.max(0, Math.floor(Number(stats.bestCombo) || 0));
+    base.stats.tripleKills = Math.max(0, Math.floor(Number(stats.tripleKills) || 0));
+    return base;
+  }
+
+  function loadQuickProgress() {
+    try {
+      return sanitizeQuickProgress(JSON.parse(localStorage.getItem(QUICK_PROGRESS_KEY) || 'null'));
+    } catch (_) {
+      return defaultQuickProgress();
+    }
+  }
+
+  let quickProgress = loadQuickProgress();
+
+  function saveQuickProgress() {
+    try { localStorage.setItem(QUICK_PROGRESS_KEY, JSON.stringify(quickProgress)); }
+    catch (_) {}
+  }
+
+  function quickBiomeLabel(biome) {
+    return QUICK_UNLOCK_RULES[normalizeBiome(biome)]?.label || currentBiomeLabel();
+  }
+
+  function isQuickBiomeUnlocked(biome) {
+    return quickProgress.unlockedBiomes.includes(normalizeBiome(biome));
+  }
+
+  function renderQuickBiomeLocks() {
+    for (const btn of quickBiomeButtons) {
+      const biome = normalizeBiome(btn.dataset.biome);
+      const rule = QUICK_UNLOCK_RULES[biome] || QUICK_UNLOCK_RULES.forest;
+      const unlocked = isQuickBiomeUnlocked(biome);
+      const name = document.createElement('span');
+      const meta = document.createElement('small');
+      name.textContent = rule.label;
+      meta.textContent = unlocked ? 'Unlocked' : rule.requirement;
+      btn.replaceChildren(name, meta);
+      btn.disabled = !unlocked;
+      btn.classList.toggle('locked', !unlocked);
+      btn.setAttribute('aria-disabled', unlocked ? 'false' : 'true');
+      btn.title = unlocked ? rule.label : 'Locked: ' + rule.requirement;
+    }
+  }
+
+  function applyQuickUnlockRules() {
+    const newlyUnlocked = [];
+    for (const biome of QUICK_BIOMES) {
+      if (isQuickBiomeUnlocked(biome)) continue;
+      const rule = QUICK_UNLOCK_RULES[biome];
+      if (rule && typeof rule.test === 'function' && rule.test(quickProgress)) {
+        quickProgress.unlockedBiomes.push(biome);
+        newlyUnlocked.push(biome);
+      }
+    }
+    if (newlyUnlocked.length) saveQuickProgress();
+    return newlyUnlocked;
+  }
+
+  function recordQuickHuntRun(run) {
+    quickProgress.stats.quickHuntRuns++;
+    quickProgress.stats.totalKills += run.kills;
+    quickProgress.stats.bestKills = Math.max(quickProgress.stats.bestKills, run.kills);
+    quickProgress.stats.bestSurvivalSeconds = Math.max(quickProgress.stats.bestSurvivalSeconds, run.seconds);
+    quickProgress.stats.bestCombo = Math.max(quickProgress.stats.bestCombo, run.bestCombo);
+    if (run.bestCombo >= 3) quickProgress.stats.tripleKills++;
+    saveQuickProgress();
+    const newlyUnlocked = applyQuickUnlockRules();
+    renderQuickBiomeLocks();
+    return newlyUnlocked;
+  }
+
+  function renderDeathUnlocks(unlockedBiomes) {
+    if (!deathUnlocks) return;
+    if (!unlockedBiomes || !unlockedBiomes.length) {
+      deathUnlocks.classList.add('hidden');
+      deathUnlocks.textContent = '';
+      return;
+    }
+    deathUnlocks.textContent = 'Biome unlocked: ' + unlockedBiomes.map(quickBiomeLabel).join(' + ');
+    deathUnlocks.classList.remove('hidden');
+  }
+
+  applyQuickUnlockRules();
 
   // Ambient is a separate looping channel: menu ambience or one loop per biome.
   function ambientCueForBiome(biome = currentBiome()) {
@@ -2292,13 +2417,25 @@ function playerOnMachinePad() {
       deathTitle.textContent = 'MISSION FAILURE';
       deathText.textContent = 'Command uplink searching for revive authorization';
       deathStats.textContent = '';
+      renderDeathUnlocks(null);
       hideDeathShare();
       deathContinue.textContent = 'Continue';
       deathGiveUp.textContent = 'Give Up';
     } else {
+      const run = {
+        kills: player.lifeKills,
+        seconds: runSeconds(),
+        bestCombo: player.lifeBestCombo
+      };
+      const unlockedBiomes = recordQuickHuntRun(run);
       deathTitle.textContent = 'YOU DIED!';
       deathText.textContent = 'Final stats';
       renderDeathStats(buildRunSummary('Quick Hunt run ended'));
+      renderDeathUnlocks(unlockedBiomes);
+      if (unlockedBiomes.length) {
+        sound('objectiveClear');
+        showToast('Biome unlocked: ' + unlockedBiomes.map(quickBiomeLabel).join(' + '), true);
+      }
       deathContinue.textContent = 'Continue Hunt';
       deathGiveUp.textContent = 'Main Menu';
     }
@@ -2344,6 +2481,7 @@ function playerOnMachinePad() {
     }
     deathOverlay.classList.remove('ready');
     deathStats.textContent = '';
+    renderDeathUnlocks(null);
     hideDeathShare();
     deathTitle.textContent = 'YOU DIED!';
     deathText.textContent = 'Respawning...';
@@ -2383,6 +2521,7 @@ function playerOnMachinePad() {
     document.body.classList.remove('dead', 'low-health', 'story-death', 'story-reviving', 'story-revive-fade');
     deathOverlay.classList.remove('show', 'ready');
     deathStats.textContent = '';
+    renderDeathUnlocks(null);
     hideDeathShare();
     deathTitle.textContent = 'YOU DIED!';
     deathText.textContent = 'Respawning...';
@@ -2508,6 +2647,7 @@ function playerOnMachinePad() {
     }
     const now = performance.now() / 1000;
     killComboCount = now - lastKillTime < 2.0 ? killComboCount + 1 : 1;
+    player.lifeBestCombo = Math.max(player.lifeBestCombo, killComboCount);
     if (killComboCount === 2) {
       player.score += 150;
       scorePop('+150 DOUBLE KILL', 'combo small');
@@ -3548,6 +3688,7 @@ function currentWaterIsDangerous() {
     upgradeOverlay.classList.remove('show');
     document.body.classList.remove('upgrade-open');
     deathStats.textContent = '';
+    renderDeathUnlocks(null);
     hideDeathShare();
     renderBriefingShare(null);
     deathTitle.textContent = 'YOU DIED!';
@@ -3639,6 +3780,7 @@ function currentWaterIsDangerous() {
 
   function setQuickBiomeScreen(show) {
     if (!quickBiomePanel) return;
+    if (show) renderQuickBiomeLocks();
     if (mainMenuCard) mainMenuCard.hidden = show;
     quickBiomePanel.hidden = !show;
     menu.classList.toggle('quick-select', show);
@@ -3655,9 +3797,17 @@ function currentWaterIsDangerous() {
   }
 
   function startQuickGame(biome) {
+    const selectedBiome = normalizeBiome(biome);
+    if (!isQuickBiomeUnlocked(selectedBiome)) {
+      const rule = QUICK_UNLOCK_RULES[selectedBiome] || QUICK_UNLOCK_RULES.forest;
+      sound('empty');
+      showToast('Locked: ' + rule.requirement);
+      renderQuickBiomeLocks();
+      return;
+    }
     sound('confirm');
     mission.mode = MODE_QUICK;
-    mission.quickBiome = normalizeBiome(biome);
+    mission.quickBiome = selectedBiome;
     resetActivePerks();
     document.body.classList.add('quick-mode');
     generateWorld(quickSeedForBiome(mission.quickBiome));

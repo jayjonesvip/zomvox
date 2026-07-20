@@ -29,6 +29,7 @@ Desktop play uses mouse and keyboard. Mobile play is designed for landscape orie
 - Player movement is clamped inside the generated world.
 - Targeted mesh rebuilding for mission set pieces and world updates.
 - Mission-based opening loop with military-style objective briefings, cinematic insertion drops, a no-gun exploration phase, metal-spire shutdown objective, explosive supply crate reward, delayed zombie threat, drop-beacon extraction, upgrade choices, and escalating redeployment objectives across five seeded islands.
+- Quick Hunt biome unlocks stored locally per device: Forest and Dunes start open, then Rocky, Swamp, Ashlands, and Tundra unlock through survival, kills, triple-kill, and total-kill challenges.
 - Compact ammo HUD on desktop and mobile, plus a six-round blaster magazine with reserve ammo, recoil, and fire-rate cooldown.
 - Camo ammo pickups that add six rounds at a time, plus low-ammo mercy caches when reserve ammo hits zero.
 - Flat silver C4 proximity charges with blinking red dots, yellow hazard strips, one starting charge, and rare zombie drops.
