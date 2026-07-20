@@ -13,6 +13,8 @@
   const bulletRack = $('bulletRack');
   const clipText = $('clipText');
   const reserveText = $('reserveText');
+  const c4Hud = $('c4Hud');
+  const c4HudCount = $('c4HudCount');
   const menu = $('menu');
   const mainMenuCard = $('mainMenuCard');
   const play = $('play');
@@ -274,7 +276,7 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.20.04');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.20.05');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -2916,12 +2918,18 @@ function playerOnMachinePad() {
   }
 
   function updateC4ButtonState() {
-    if (!touchC4) return;
     const ready = gunUnlocked() && !mission.insertionActive && player.c4 > 0;
-    touchC4.dataset.count = String(player.c4);
-    touchC4.classList.toggle('unavailable', !ready);
-    touchC4.setAttribute('aria-disabled', ready ? 'false' : 'true');
-    touchC4.setAttribute('aria-label', ready ? 'Place C4 charge' : 'No C4 available');
+    if (touchC4) {
+      touchC4.dataset.count = String(player.c4);
+      touchC4.classList.toggle('unavailable', !ready);
+      touchC4.setAttribute('aria-disabled', ready ? 'false' : 'true');
+      touchC4.setAttribute('aria-label', ready ? 'Place C4 charge' : 'No C4 available');
+    }
+    if (c4Hud && c4HudCount) {
+      c4Hud.hidden = !gunUnlocked();
+      c4Hud.classList.toggle('empty', player.c4 <= 0);
+      c4HudCount.textContent = String(player.c4);
+    }
   }
 
   function beginTouchShoot() {
