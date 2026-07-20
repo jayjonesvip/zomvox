@@ -88,9 +88,13 @@
   #healthStatus.danger #healthBigFill{ background:linear-gradient(90deg,#ff3b3b,#ff9b6b); box-shadow:0 0 24px rgba(255,63,63,.55); }
   @keyframes healthPulse{ from{ box-shadow:0 15px 42px rgba(0,0,0,.36),0 0 0 rgba(255,40,40,0); } to{ box-shadow:0 15px 42px rgba(0,0,0,.36),0 0 32px rgba(255,40,40,.35); } }
 
-  #missionPanel{ pointer-events:none; position:fixed; left:50%; top:12px; width:min(210px, calc(100vw - 310px)); transform:translateX(-50%); padding:9px 10px; border-radius:8px; background:rgba(4,10,14,.78); border:1px solid rgba(145,243,110,.24); box-shadow:0 15px 42px rgba(0,0,0,.34); backdrop-filter:blur(10px); z-index:9; text-align:center; }
+  #missionPanel{ pointer-events:none; position:fixed; left:50%; top:12px; width:min(210px, calc(100vw - 310px)); transform:translateX(-50%); padding:8px 10px; border-radius:8px; background:rgba(4,10,14,.78); border:1px solid rgba(145,243,110,.24); box-shadow:0 15px 42px rgba(0,0,0,.34); backdrop-filter:blur(10px); z-index:9; text-align:center; }
   .missionLabel,#objectiveMeta{ display:none; }
   #objectiveText{ color:#f3fff1; font-size:17px; line-height:1; font-weight:1000; text-shadow:0 2px 0 rgba(0,0,0,.6); white-space:nowrap; }
+  .killHud{ display:flex; align-items:center; justify-content:center; gap:7px; margin-bottom:5px; }
+  .killHud[hidden]{ display:none; }
+  .killHudIcon{ width:30px; height:30px; image-rendering:pixelated; filter:drop-shadow(0 0 9px rgba(255,34,34,.28)); flex:0 0 auto; }
+  #killHudCount{ color:#ffe66d; font-size:28px; line-height:.85; font-weight:1000; text-shadow:0 3px 0 rgba(0,0,0,.72),0 0 18px rgba(255,230,109,.25); }
   body.stage-cleared #missionPanel{ border-color:rgba(255,225,87,.7); background:rgba(20,18,5,.86); box-shadow:0 15px 42px rgba(0,0,0,.34),0 0 24px rgba(255,217,74,.2); }
   body.stage-cleared #objectiveText{ color:#ffe66d; text-shadow:0 0 15px rgba(255,216,75,.42),0 2px 0 rgba(0,0,0,.65); }
   #commandBanner{ pointer-events:none; position:fixed; left:50%; top:50%; width:min(430px, 54vh, calc(100vw - 38px)); transform:translate(-50%,-50%) scale(.96); z-index:22; padding:15px 16px 14px; border:2px solid rgba(255,224,88,.82); border-radius:8px; background:linear-gradient(180deg, rgba(19,24,17,.95), rgba(3,8,8,.94)); box-shadow:0 28px 80px rgba(0,0,0,.58), inset 0 0 0 1px rgba(255,255,255,.08),0 0 38px rgba(255,219,76,.2); text-align:center; opacity:0; visibility:hidden; transition:opacity .14s, visibility .14s, transform .14s; }
@@ -190,7 +194,6 @@
   .quickBiomeGrid button.locked{ color:#8f9da3; border-color:rgba(255,255,255,.10); background:rgba(3,7,9,.58); cursor:not-allowed; filter:saturate(.6); }
   .quickBiomeGrid button.locked small{ color:#ffc96a; }
   .quickBackBtn{ margin-top:12px; appearance:none; border:1px solid rgba(255,255,255,.22); border-radius:8px; padding:9px 18px; color:#eaf7ff; font-size:12px; font-weight:1000; letter-spacing:.08em; text-transform:uppercase; background:rgba(255,255,255,.08); cursor:pointer; }
-  body.quick-mode #missionPanel{ display:none; }
   #splash{ position:fixed; inset:0; z-index:35; overflow:hidden; background:#02070b; transition:opacity .38s ease, visibility .38s ease; }
   #splash.hide{ opacity:0; visibility:hidden; pointer-events:none; }
   #splash::before{ content:""; position:absolute; inset:0; background:url("assets/zomvox-splash.png") center/cover no-repeat; filter:saturate(1.06) contrast(1.02); }
@@ -302,8 +305,11 @@
     #healthStatus .healthLabel{ display:none; }
     #healthBigText{ font-size:18px; }
     .bigHealthBar{ height:8px; }
-    #missionPanel{ left:50%; right:auto; top:8px; width:min(170px, calc(100vw - 242px)); transform:translateX(-50%); padding:8px 7px; }
+    #missionPanel{ left:50%; right:auto; top:8px; width:min(170px, calc(100vw - 242px)); transform:translateX(-50%); padding:7px 7px; }
     #objectiveText{ font-size:13px; }
+    .killHud{ gap:5px; margin-bottom:4px; }
+    .killHudIcon{ width:23px; height:23px; }
+    #killHudCount{ font-size:22px; }
     #scoreFeed{ top:31%; width:min(300px, 58vh, calc(100vw - 28px)); gap:4px; }
     .scorePop{ font-size:clamp(12px,2.7vw,18px); line-height:.92; }
     .scorePop.wave{ font-size:clamp(11px,2.4vw,16px); }
