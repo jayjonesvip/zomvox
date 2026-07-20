@@ -4,7 +4,7 @@
   const canvas = document.getElementById('game');
   const gl = canvas.getContext('webgl', { antialias: true, alpha: false, powerPreference: 'high-performance' });
   if (!gl) {
-    document.body.innerHTML = '<div style="padding:30px;font-family:sans-serif">WebGL is not available in this browser.</div>';
+    document.body.innerHTML = '<div style="padding:30px;font-family:Orbitron,sans-serif">WebGL is not available in this browser.</div>';
     return;
   }
 
@@ -276,7 +276,7 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.20.05');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.20.06');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
