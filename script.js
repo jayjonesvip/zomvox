@@ -269,7 +269,12 @@
   const portraitQuery = matchMedia('(orientation: portrait)');
   let keys = Object.create(null);
   const touchInput = { moveX: 0, moveY: 0, jump: false, lookId: null, lookX: 0, lookY: 0, stickId: null };
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.20.02');
+  const HELD_GAMEPLAY_KEYS = new Set([
+    'KeyW', 'KeyA', 'KeyS', 'KeyD',
+    'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
+    'Space', 'ShiftLeft', 'ShiftRight'
+  ]);
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.20.03');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -635,6 +640,35 @@
     return menu.style.display !== 'none' || splash.style.display !== 'none' || isBriefingOpen() || isUpgradeOpen();
   }
 
+  function keyboardControlsActive() {
+    return !touchMode &&
+      locked &&
+      menu.style.display === 'none' &&
+      splash.style.display === 'none' &&
+      !deathState.active &&
+      !worldRebuildState.active &&
+      !isBriefingOpen() &&
+      !isUpgradeOpen();
+  }
+
+  function clearKeyboardState() {
+    keys = Object.create(null);
+  }
+
+  function clearMovementInput(stopVelocity = true) {
+    clearKeyboardState();
+    touchInput.moveX = 0;
+    touchInput.moveY = 0;
+    touchInput.jump = false;
+    touchInput.stickId = null;
+    if (stickKnob) stickKnob.style.transform = 'translate(0, 0)';
+    if (stopVelocity) {
+      player.vel[0] = 0;
+      player.vel[2] = 0;
+    }
+    if (gunSprite) gunSprite.classList.remove('moving');
+  }
+
   function clamp01(value) {
     return Math.max(0, Math.min(1, value));
   }
@@ -731,6 +765,7 @@
   function beginWorldRebuild(seed) {
     if (worldRebuildState.active) return;
     const nextSeed = Number.isFinite(seed) ? seed : Math.floor(Math.random() * 999999);
+    clearMovementInput();
     document.body.classList.add('stage-transition');
     worldRebuildState.active = true;
     worldRebuildState.timer = 0;
@@ -957,14 +992,8 @@
     const paused = shouldPauseForPortrait();
     document.body.classList.toggle('portrait-paused', paused);
     if (paused) {
-      touchInput.moveX = 0;
-      touchInput.moveY = 0;
-      touchInput.jump = false;
+      clearMovementInput();
       touchInput.lookId = null;
-      touchInput.stickId = null;
-      if (stickKnob) stickKnob.style.transform = 'translate(0, 0)';
-      player.vel[0] = 0;
-      player.vel[2] = 0;
     }
     return paused;
   }
@@ -990,6 +1019,7 @@
 
   function openObjectiveBriefing(briefing = mission.pendingBriefing) {
     if (!briefing || !objectiveBriefing) return;
+    clearMovementInput();
     mission.pendingBriefing = null;
     mission.briefingActive = true;
     mission.objectiveAcknowledged = false;
@@ -1027,6 +1057,7 @@
       if (afterChoice) afterChoice();
       return;
     }
+    clearMovementInput();
     mission.upgradeActive = true;
     mission.upgradeAfterChoice = afterChoice || null;
     if (upgradeMeta) upgradeMeta.textContent = options.meta || (currentIslandLabel() + ' // ' + currentBiomeLabel() + ' // Perk Selection');
@@ -2054,6 +2085,7 @@ function playerOnMachinePad() {
   }
 
   function startInsertionDrop() {
+    clearMovementInput();
     document.body.classList.remove('stage-transition');
     const x = Math.floor(player.pos[0]);
     const z = Math.floor(player.pos[2]);
@@ -2351,6 +2383,7 @@ function playerOnMachinePad() {
   }
   function beginDeathSequence() {
     if (deathState.active || worldRebuildState.active) return;
+    clearMovementInput();
     deathState.active = true;
     deathState.timer = 0;
     deathState.ready = false;
@@ -2407,6 +2440,7 @@ function playerOnMachinePad() {
     }
   }
   function respawn() {
+    clearMovementInput();
     deathState.active = false;
     deathState.ready = false;
     deathState.timer = 0;
@@ -3585,6 +3619,7 @@ function currentWaterIsDangerous() {
   }
 
   function generateWorld(seed) {
+    clearMovementInput();
     const activeMode = mission.mode || MODE_STORY;
     const activeQuickBiome = normalizeBiome(mission.quickBiome);
     currentSeed = seed;
@@ -3715,6 +3750,7 @@ function currentWaterIsDangerous() {
   function enterGameFromMenu() {
     applySettings();
     if (soundEnabled || ambientEnabled) window.ZomVoxSound?.prime();
+    clearMovementInput();
     setQuickBiomeScreen(false);
     menu.style.display = 'none';
     updateAmbientSound(true);
@@ -3783,6 +3819,7 @@ function currentWaterIsDangerous() {
   }
 
   function requestPointerLockSafe() {
+    clearKeyboardState();
     if (!canvas.requestPointerLock) return;
     try {
       const result = canvas.requestPointerLock();
@@ -3816,6 +3853,7 @@ function currentWaterIsDangerous() {
   document.addEventListener('pointerlockchange', () => {
     if (touchMode) return;
     locked = document.pointerLockElement === canvas;
+    clearKeyboardState();
     menu.style.display = locked || deathState.active || isBriefingOpen() || isUpgradeOpen() ? 'none' : 'flex';
     updateAmbientSound(true);
   });
@@ -3832,14 +3870,34 @@ function currentWaterIsDangerous() {
       acknowledgeObjectiveBriefing();
       return;
     }
-    keys[e.code] = true;
+    if (!keyboardControlsActive()) {
+      if (HELD_GAMEPLAY_KEYS.has(e.code)) {
+        keys[e.code] = false;
+        e.preventDefault();
+      }
+      return;
+    }
+    if (HELD_GAMEPLAY_KEYS.has(e.code)) {
+      keys[e.code] = true;
+      e.preventDefault();
+    }
     if (e.code === 'KeyR' && !e.repeat) startReload();
     if (e.code === 'KeyC' && !e.repeat) placeC4();
     if (e.code === 'KeyN' && !e.repeat) {
       beginWorldRebuild(mission.mode === MODE_QUICK ? quickSeedForBiome(mission.quickBiome) : nextMissionSeed());
     }
   });
-  document.addEventListener('keyup', (e) => { keys[e.code] = false; });
+  document.addEventListener('keyup', (e) => {
+    if (HELD_GAMEPLAY_KEYS.has(e.code)) {
+      keys[e.code] = false;
+      e.preventDefault();
+    }
+  });
+  window.addEventListener('blur', () => clearMovementInput());
+  window.addEventListener('pagehide', () => clearMovementInput());
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) clearMovementInput();
+  });
   canvas.addEventListener('mousedown', (e) => {
     if (deathState.active) {
       continueFromDeath();
