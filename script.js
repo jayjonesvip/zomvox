@@ -276,7 +276,7 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.20.06');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.20.07');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -574,7 +574,7 @@
 
   function sound(name, gainValue = 1, playbackRate = 1) {
     if (!soundEnabled) return;
-    window.ZomVoxSound?.play(name, gainValue, playbackRate);
+    return window.ZomVoxSound?.play(name, gainValue, playbackRate);
   }
 
 
@@ -2295,6 +2295,26 @@ function playerOnMachinePad() {
     return 1;
   }
 
+  function stopSoundHandle(handle) {
+    if (handle && typeof handle.stop === 'function') handle.stop();
+  }
+
+  function stopEnemySounds(enemy) {
+    if (!enemy) return;
+    stopSoundHandle(enemy.moanHandle);
+    stopSoundHandle(enemy.biteHandle);
+    enemy.moanHandle = null;
+    enemy.biteHandle = null;
+    enemy.mouthOpenTimer = 0;
+  }
+
+  function playEnemyBite(enemy) {
+    if (!enemy) return;
+    stopSoundHandle(enemy.biteHandle);
+    const handle = sound('bite');
+    enemy.biteHandle = handle && typeof handle.stop === 'function' ? handle : null;
+  }
+
   function canPlayZombieMoan() {
     return gunUnlocked() && !mission.completed && !deathState.active && !worldRebuildState.active && !isMenuOpen();
   }
@@ -2325,8 +2345,10 @@ function playerOnMachinePad() {
       // Stagger nearby voices so a small pack sounds layered instead of clipped.
       setTimeout(() => {
         if (!enemy.dead && enemy.hp > 0 && canPlayZombieMoan()) {
+          stopSoundHandle(enemy.moanHandle);
           enemy.mouthOpenTimer = Math.max(enemy.mouthOpenTimer || 0, 1.05);
-          sound('zombieMoan', volume, rate);
+          const handle = sound('zombieMoan', volume, rate);
+          enemy.moanHandle = handle && typeof handle.stop === 'function' ? handle : null;
         }
       }, index * 180);
     });
@@ -2365,16 +2387,27 @@ function playerOnMachinePad() {
       const attackRange = e.big ? 1.82 : (stats.kind === 'speedy' ? 1.42 : 1.58);
       const attackDist = Math.hypot(player.pos[0] - e.x, player.pos[2] - e.z) || 1;
       if (attackDist < attackRange && Math.abs(player.pos[1] - e.y) < 2.25 && e.attack <= 0) {
-        damagePlayer(currentZombieDamage(stats.damage), 'bite');
+        if (canDamagePlayer()) {
+          playEnemyBite(e);
+          damagePlayer(currentZombieDamage(stats.damage));
+        }
         e.attack = stats.attackCooldown;
         e.retreat = stats.retreat;
       }
     }
-    enemies = enemies.filter(e => !e.dead && e.hp > 0 && Math.hypot(e.x - player.pos[0], e.z - player.pos[2]) < 130);
+    enemies = enemies.filter(e => {
+      const keep = !e.dead && e.hp > 0 && Math.hypot(e.x - player.pos[0], e.z - player.pos[2]) < 130;
+      if (!keep) stopEnemySounds(e);
+      return keep;
+    });
+  }
+
+  function canDamagePlayer() {
+    return !(deathState.active || worldRebuildState.active || player.invuln > 0 || isMenuOpen());
   }
 
   function damagePlayer(amount, impactSound = null) {
-    if (deathState.active || worldRebuildState.active || player.invuln > 0 || isMenuOpen()) return;
+    if (!canDamagePlayer()) return false;
     player.health -= amount;
     player.invuln = .45;
     pulseDamage();
@@ -2382,6 +2415,7 @@ function playerOnMachinePad() {
     if (impactSound) sound(impactSound);
     sound('hurt');
     if (player.health <= 0) beginDeathSequence();
+    return true;
   }
   function beginDeathSequence() {
     if (deathState.active || worldRebuildState.active) return;
@@ -2482,7 +2516,11 @@ function playerOnMachinePad() {
     currentChunkX = 999999;
     currentChunkZ = 999999;
     ensureChunks(true);
-    enemies = enemies.filter(e => Math.hypot(e.x - player.pos[0], e.z - player.pos[2]) > 34);
+    enemies = enemies.filter(e => {
+      const keep = Math.hypot(e.x - player.pos[0], e.z - player.pos[2]) > 34;
+      if (!keep) stopEnemySounds(e);
+      return keep;
+    });
     if (mission.mode === MODE_STORY) {
       showToast('Mission Command: remote revive complete.');
       setTimeout(() => {
@@ -2606,6 +2644,7 @@ function playerOnMachinePad() {
     if (!enemy || enemy.dead) return false;
     enemy.dead = true;
     enemy.hp = 0;
+    stopEnemySounds(enemy);
     const dist = options.dist || Math.hypot(enemy.x - player.pos[0], enemy.z - player.pos[2]);
     player.kills++;
     player.lifeKills++;
@@ -2777,7 +2816,11 @@ function playerOnMachinePad() {
       showToast('C4 blast cleared ' + killed + ' infected.');
       checkMissionCompletion();
     }
-    enemies = enemies.filter(e => !e.dead && e.hp > 0);
+    enemies = enemies.filter(e => {
+      const keep = !e.dead && e.hp > 0;
+      if (!keep) stopEnemySounds(e);
+      return keep;
+    });
   }
 
   function updateC4Charges(dt) {
@@ -2951,10 +2994,14 @@ function playerOnMachinePad() {
   function clearRemainingMissionEnemies() {
     const survivors = enemies.filter(e => e.hp > 0);
     if (!survivors.length) {
+      enemies.forEach(stopEnemySounds);
       enemies = [];
       return;
     }
-    for (const e of survivors) spawnKillBurst(e.x, e.y + 1.1, e.z, e.big);
+    for (const e of survivors) {
+      stopEnemySounds(e);
+      spawnKillBurst(e.x, e.y + 1.1, e.z, e.big);
+    }
     enemies = [];
     scorePop('INFECTED PURGED', 'wave small');
   }
