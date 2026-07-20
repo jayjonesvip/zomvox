@@ -12,6 +12,7 @@
   const reloadText = $('reloadText');
   const weaponPanel = $('weaponPanel');
   const bulletRack = $('bulletRack');
+  const clipText = $('clipText');
   const reserveText = $('reserveText');
   const menu = $('menu');
   const mainMenuCard = $('mainMenuCard');
@@ -274,7 +275,7 @@
   const portraitQuery = matchMedia('(orientation: portrait)');
   let keys = Object.create(null);
   const touchInput = { moveX: 0, moveY: 0, jump: false, lookId: null, lookX: 0, lookY: 0, stickId: null };
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.19.13');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.20.01');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -3360,7 +3361,8 @@ function playerOnMachinePad() {
     for (let i = 0; i < player.magSize; i++) {
       bullets[i].classList.toggle('spent', i >= player.mag);
     }
-    reserveText.textContent = player.mag + '/' + player.reserve;
+    if (clipText) clipText.textContent = String(player.mag);
+    if (reserveText) reserveText.textContent = String(player.reserve);
     weaponPanel.classList.toggle('reloading', player.reloading);
   }
 
