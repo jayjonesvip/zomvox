@@ -274,7 +274,7 @@
   const portraitQuery = matchMedia('(orientation: portrait)');
   let keys = Object.create(null);
   const touchInput = { moveX: 0, moveY: 0, jump: false, lookId: null, lookX: 0, lookY: 0, stickId: null };
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.19.11');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.19.12');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -478,7 +478,7 @@
     const stats = [
       ['Kills', player.lifeKills],
       ['Headshots', player.lifeHeadshots],
-      ['Biome', currentBiomeLabel()],
+      ['Island', currentBiomeLabel()],
       ['Perk used', perks.length > 1 ? perks.length + ' perks' : perkText],
       ['Time survived', formatRunTime(seconds)]
     ];
@@ -487,7 +487,7 @@
       title,
       'Kills: ' + player.lifeKills,
       'Headshots: ' + player.lifeHeadshots,
-      'Biome: ' + currentBiomeLabel(),
+      'Island: ' + currentBiomeLabel(),
       'Perk used: ' + perkText,
       'Time survived: ' + formatRunTime(seconds),
       'Play: ' + runShareUrl()
@@ -836,7 +836,8 @@
   }
 
   function quickBiomeLabel(biome) {
-    return QUICK_UNLOCK_RULES[normalizeBiome(biome)]?.label || currentBiomeLabel();
+    const label = QUICK_UNLOCK_RULES[normalizeBiome(biome)]?.label || currentBiomeLabel();
+    return label + ' Island';
   }
 
   function isQuickBiomeUnlocked(biome) {
@@ -850,7 +851,7 @@
       const unlocked = isQuickBiomeUnlocked(biome);
       const name = document.createElement('span');
       const meta = document.createElement('small');
-      name.textContent = rule.label;
+      name.textContent = rule.label + ' Island';
       meta.textContent = unlocked ? 'Unlocked' : rule.requirement;
       btn.replaceChildren(name, meta);
       btn.disabled = !unlocked;
@@ -903,7 +904,7 @@
       deathUnlocks.textContent = '';
       return;
     }
-    deathUnlocks.textContent = 'Biome unlocked: ' + unlockedBiomes.map(quickBiomeLabel).join(' + ');
+    deathUnlocks.textContent = 'Island unlocked: ' + unlockedBiomes.map(quickBiomeLabel).join(' + ');
     deathUnlocks.classList.remove('hidden');
   }
 
@@ -2445,7 +2446,7 @@ function playerOnMachinePad() {
       renderDeathUnlocks(unlockedBiomes);
       if (unlockedBiomes.length) {
         sound('objectiveClear');
-        showToast('Biome unlocked: ' + unlockedBiomes.map(quickBiomeLabel).join(' + '), true);
+        showToast('Island unlocked: ' + unlockedBiomes.map(quickBiomeLabel).join(' + '), true);
       }
       deathContinue.textContent = 'Continue Hunt';
       deathGiveUp.textContent = 'Main Menu';
@@ -2553,7 +2554,7 @@ function playerOnMachinePad() {
       returnToMainMenuFromDeath('Mission abandoned. Awaiting new orders.');
       return;
     }
-    returnToMainMenuFromDeath('Quick Hunt ended. Choose another drop zone.', true);
+    returnToMainMenuFromDeath('Quick Hunt ended. Choose another island.', true);
   }
 
   function startReload() {
@@ -2999,7 +3000,7 @@ function playerOnMachinePad() {
     if (mission.extractionCalled) return;
     const storyUnlocks = mission.mode === MODE_STORY ? unlockQuickBiome(currentBiome()) : [];
     const unlockText = storyUnlocks.length
-      ? ' Quick Hunt biome unlocked: ' + storyUnlocks.map(quickBiomeLabel).join(' + ') + '.'
+      ? ' Quick Hunt island unlocked: ' + storyUnlocks.map(quickBiomeLabel).join(' + ') + '.'
       : '';
     mission.extractionCalled = true;
     mission.extractionProgress = 1;
@@ -3023,8 +3024,8 @@ function playerOnMachinePad() {
       })
     });
     if (storyUnlocks.length) {
-      showToast('Quick Hunt biome unlocked: ' + storyUnlocks.map(quickBiomeLabel).join(' + '), true);
-      scorePop('BIOME UNLOCKED', 'wave');
+      showToast('Quick Hunt island unlocked: ' + storyUnlocks.map(quickBiomeLabel).join(' + '), true);
+      scorePop('ISLAND UNLOCKED', 'wave');
     }
     scorePop('EXTRACTION CONFIRMED', 'wave');
   }
@@ -3264,8 +3265,8 @@ function playerOnMachinePad() {
     document.body.classList.toggle('quick-mode', mission.mode === MODE_QUICK);
     if (mission.mode === MODE_QUICK) {
       setKillHud(true, player.kills);
-      objectiveText.textContent = '[ quick hunt ]';
-      objectiveMeta.textContent = 'Kills cleared';
+      objectiveText.textContent = '';
+      objectiveMeta.textContent = 'Kills';
       return;
     }
     setKillHud(false, 0);
@@ -3288,7 +3289,7 @@ function playerOnMachinePad() {
       }
       const remaining = Math.max(0, infectedGoal - player.kills);
       setKillHud(true, remaining);
-      objectiveText.textContent = '[ infected left ]';
+      objectiveText.textContent = '';
       objectiveMeta.textContent = mission.hudMeta || 'Gun online';
       return;
     }
@@ -3754,10 +3755,10 @@ function currentWaterIsDangerous() {
       openPerkChoice(() => {
         startInsertionDrop();
         spawnInitialWave();
-        showCommandBanner('QUICK HUNT', currentBiomeLabel() + ' drop zone', 2.8);
+        showCommandBanner('QUICK HUNT', currentBiomeLabel() + ' Island', 2.8);
         showToast('Quick Hunt: survive the infected.');
       }, {
-        meta: 'Quick Hunt // ' + currentBiomeLabel() + ' // Perk Selection',
+        meta: 'Quick Hunt // ' + currentBiomeLabel() + ' Island // Perk Selection',
         title: 'Choose Perk',
         body: 'Pick one perk before the drop.'
       });

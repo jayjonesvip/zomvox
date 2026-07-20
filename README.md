@@ -23,13 +23,13 @@ Desktop play uses mouse and keyboard. Mobile play is designed for landscape orie
 - Branded ZomVox splash screen using `assets/zomvox-splash.png`.
 - Splash screen build label using `BUILD_VERSION` plus the deployed document timestamp.
 - Favicon assets for browser tabs and installed shortcuts.
-- Procedural voxel terrain with mission biomes: forest, dunes, rocky, swamp, ashlands, and tundra.
+- Procedural voxel terrain with themed islands: forest, dunes, rocky, swamp, ashlands, and tundra.
 - Sand and mud surfaces slow players and zombies by 15%.
 - Fixed-size chunk generation so the game area stays bounded and performance remains predictable.
 - Player movement is clamped inside the generated world.
 - Targeted mesh rebuilding for mission set pieces and world updates.
 - Mission-based opening loop with military-style objective briefings, cinematic insertion drops, a no-gun exploration phase, metal-spire shutdown objective, explosive supply crate reward, delayed zombie threat, drop-beacon extraction, upgrade choices, and escalating redeployment objectives across five seeded islands.
-- Quick Hunt biome unlocks stored locally per device: Forest and Dunes start open, then Rocky, Swamp, Ashlands, and Tundra unlock through survival, kills, triple-kill, total-kill challenges, or Story Mode island clears.
+- Quick Hunt island unlocks stored locally per device: Forest and Dunes start open, then Rocky, Swamp, Ashlands, and Tundra unlock through survival, kills, triple-kill, total-kill challenges, or Story Mode island clears.
 - Center combat HUD with a voxel zombie head counter: Quick Hunt shows kills, while Story combat counts down infected remaining.
 - Compact ammo HUD on desktop and mobile, plus a six-round blaster magazine with reserve ammo, recoil, and fire-rate cooldown.
 - Camo ammo pickups that add six rounds at a time, plus low-ammo mercy caches when reserve ammo hits zero.
@@ -72,7 +72,7 @@ flowchart TD
     Q --> D
     P -->|No| R[Final mission clear]
 
-    C -->|Quick Hunt| S[Choose biome]
+    C -->|Quick Hunt| S[Choose island]
     S --> T[Choose one perk]
     T --> U[Insertion drop]
     U --> V[Gun unlocked immediately]
