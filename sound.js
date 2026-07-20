@@ -308,16 +308,30 @@
     connectOutput(gain);
 
     activeOneShots++;
-    src.onended = () => {
+    let cleaned = false;
+    function cleanup() {
+      if (cleaned) return;
+      cleaned = true;
       activeOneShots = Math.max(0, activeOneShots - 1);
       if (landSource === src) landSource = null;
       if (name === 'zombieMoan') zombieMoanSources = zombieMoanSources.filter(item => item !== src);
-    };
+    }
+    src.onended = cleanup;
     if (name === 'land') landSource = src;
     if (name === 'zombieMoan') zombieMoanSources.push(src);
 
     src.start(ctx.currentTime, trimLeadingSilence ? leadInOffset(buffer) : 0);
-    return true;
+    if (name !== 'zombieMoan' && name !== 'bite') return true;
+
+    return {
+      stop() {
+        cleanup();
+        src.onended = null;
+        try { src.stop(); } catch (_) {}
+        try { src.disconnect(); } catch (_) {}
+        try { gain.disconnect(); } catch (_) {}
+      }
+    };
   }
 
   function playFile(name, fileName, gainValue = 1, playbackRate = 1) {
@@ -329,8 +343,7 @@
 
     if (buffer) {
       const baseGain = name === 'land' ? .28 : 1;
-      playBuffer(buffer, baseGain * gainValue, true, name, playbackRate);
-      return true;
+      return playBuffer(buffer, baseGain * gainValue, true, name, playbackRate);
     }
 
     // Start loading, but don't block gameplay.
@@ -467,10 +480,12 @@
       if (name === 'land' && activeOneShots > 0) return;
       if (name !== 'land') stopLand();
 
-      if (playFile(name, fileName, gainValue, playbackRate)) return;
+      const handle = playFile(name, fileName, gainValue, playbackRate);
+      if (handle) return handle === true ? undefined : handle;
 
       trackSynthOneShot(name);
       synth(name);
+      return undefined;
     },
 
     playAmbient(name) {

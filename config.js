@@ -17,7 +17,7 @@ window.ZOMVOX_CONFIG = {
     Bump this when you make visible changes so you can tell the browser
     loaded the newest version.
   */
-  buildVersion: '2026.07.20.06',
+  buildVersion: '2026.07.20.07',
 
   /*
     Seed used for deterministic world generation.
@@ -255,10 +255,10 @@ window.ZOMVOX_CONFIG = {
       Max voices lets a small pack sound layered without turning into noise.
       Interval values are seconds between moan checks.
     */
-    zombieMoanRadius: 7,
+    zombieMoanRadius: 10,
     zombieMoanMaxVoices: 3,
-    zombieMoanIntervalMin: 4,
-    zombieMoanIntervalMax: 5
+    zombieMoanIntervalMin: 2.0,
+    zombieMoanIntervalMax: 3.0
   },
 
   mission: {
