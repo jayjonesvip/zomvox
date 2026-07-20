@@ -90,11 +90,11 @@
 
   #missionPanel{ pointer-events:none; position:fixed; left:50%; top:12px; width:min(210px, calc(100vw - 310px)); transform:translateX(-50%); padding:0; border-radius:0; background:transparent; border:0; box-shadow:none; backdrop-filter:none; z-index:9; text-align:center; }
   .missionLabel,#objectiveMeta{ display:none; }
-  #objectiveText{ color:#f3fff1; font-size:17px; line-height:1; font-weight:1000; text-shadow:0 2px 0 rgba(0,0,0,.6); white-space:nowrap; }
-  .killHud{ display:flex; align-items:center; justify-content:center; gap:7px; margin-bottom:4px; }
+  #objectiveText{ color:#f3fff1; font-family:Impact,"Arial Black",system-ui,sans-serif; font-size:18px; line-height:.92; font-weight:1000; letter-spacing:.02em; text-shadow:0 3px 0 rgba(0,0,0,.68),0 0 14px rgba(145,243,110,.18); white-space:nowrap; }
+  .killHud{ display:flex; align-items:center; justify-content:center; gap:9px; margin-bottom:4px; }
   .killHud[hidden]{ display:none; }
-  .killHudIcon{ width:30px; height:30px; image-rendering:pixelated; filter:drop-shadow(0 0 9px rgba(255,34,34,.28)); flex:0 0 auto; }
-  #killHudCount{ color:#ffe66d; font-size:28px; line-height:.85; font-weight:1000; text-shadow:0 3px 0 rgba(0,0,0,.72),0 0 18px rgba(255,230,109,.25); }
+  .killHudIcon{ width:42px; height:42px; image-rendering:pixelated; filter:drop-shadow(0 4px 0 rgba(0,0,0,.7)) drop-shadow(0 0 12px rgba(255,34,34,.36)); flex:0 0 auto; }
+  #killHudCount{ color:#ff3434; font-family:Impact,"Arial Black",system-ui,sans-serif; font-size:39px; line-height:.82; font-weight:1000; letter-spacing:.03em; text-shadow:0 4px 0 rgba(0,0,0,.84),2px 0 0 rgba(0,0,0,.55),-2px 0 0 rgba(0,0,0,.55),0 0 18px rgba(255,28,28,.42); }
   body.stage-cleared #missionPanel{ background:transparent; box-shadow:none; }
   body.stage-cleared #objectiveText{ color:#ffe66d; text-shadow:0 0 15px rgba(255,216,75,.42),0 2px 0 rgba(0,0,0,.65); }
   #commandBanner{ pointer-events:none; position:fixed; left:50%; top:50%; width:min(430px, 54vh, calc(100vw - 38px)); transform:translate(-50%,-50%) scale(.96); z-index:22; padding:15px 16px 14px; border:2px solid rgba(255,224,88,.82); border-radius:8px; background:linear-gradient(180deg, rgba(19,24,17,.95), rgba(3,8,8,.94)); box-shadow:0 28px 80px rgba(0,0,0,.58), inset 0 0 0 1px rgba(255,255,255,.08),0 0 38px rgba(255,219,76,.2); text-align:center; opacity:0; visibility:hidden; transition:opacity .14s, visibility .14s, transform .14s; }
@@ -232,8 +232,8 @@
   #touchC4.unavailable{ opacity:.42; filter:grayscale(.55); }
   #touchC4.unavailable::after{ content:"0"; background:#9aa4a0; color:#17201d; }
   #portraitBlock{ position:fixed; inset:0; display:none; overflow:hidden; align-items:stretch; justify-content:center; text-align:center; padding:0; background:#02070b; color:#eaf7ff; z-index:40; font-weight:1000; letter-spacing:0; }
-  #portraitBlock::before{ content:""; position:absolute; inset:0; background:url("assets/zomvox-splash.png") center/cover no-repeat; filter:saturate(1.1) contrast(1.05) brightness(.58); transform:scale(1.08); }
-  #portraitBlock::after{ content:""; position:absolute; inset:0; background:radial-gradient(circle at 50% 30%, rgba(145,243,110,.16), rgba(0,0,0,.2) 34%, rgba(0,0,0,.88) 80%), linear-gradient(180deg, rgba(0,0,0,.18), rgba(0,0,0,.86)); }
+  #portraitBlock::before{ content:""; position:absolute; inset:0; background:url("assets/zomvox-splash.png") center/cover no-repeat; filter:saturate(1.18) contrast(1.08) brightness(.45); transform:scale(1.1); }
+  #portraitBlock::after{ content:""; position:absolute; inset:0; background:radial-gradient(circle at 50% 25%, rgba(255,42,42,.18), rgba(0,0,0,.22) 34%, rgba(0,0,0,.9) 82%), linear-gradient(180deg, rgba(0,0,0,.24), rgba(0,0,0,.9)); }
   .portraitBackdrop{ position:absolute; inset:0; z-index:1; pointer-events:none; }
   .portraitMoon{ position:absolute; left:9vw; top:8dvh; width:54px; height:54px; transform:rotate(10deg); background:linear-gradient(135deg,#f6fbff,#b9d6f3); box-shadow:0 0 26px rgba(178,220,255,.58); clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%); opacity:.92; }
   .portraitGround{ position:absolute; left:-8vw; right:-8vw; bottom:-3dvh; height:21dvh; background:linear-gradient(180deg, rgba(50,37,22,.12), rgba(16,12,9,.92)), repeating-linear-gradient(90deg, rgba(120,89,45,.55) 0 15px, rgba(70,60,46,.5) 15px 30px); clip-path:polygon(0 28%,9% 20%,17% 34%,28% 25%,38% 38%,51% 22%,62% 34%,72% 24%,82% 36%,92% 22%,100% 30%,100% 100%,0 100%); }
@@ -243,18 +243,26 @@
   .portraitZombie span{ position:absolute; left:22px; top:11px; width:6px; height:6px; background:#f2ff59; box-shadow:13px 0 0 #f2ff59, 0 0 12px rgba(214,255,68,.85), 13px 0 12px rgba(214,255,68,.85); z-index:1; }
   .portraitZombie.z1{ left:7vw; bottom:11dvh; transform:rotate(-7deg) scale(.92); }
   .portraitZombie.z2{ right:6vw; bottom:18dvh; transform:rotate(8deg) scale(.78); opacity:.54; }
-  .portraitContent{ position:relative; z-index:2; width:min(100%, 390px); min-height:100dvh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:calc(28px + env(safe-area-inset-top)) 24px calc(28px + env(safe-area-inset-bottom)); text-shadow:0 3px 0 rgba(0,0,0,.8), 0 0 28px rgba(0,0,0,.55); }
+  .portraitContent{ position:relative; z-index:2; width:min(100%, 390px); min-height:100dvh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:calc(18px + env(safe-area-inset-top)) 24px calc(20px + env(safe-area-inset-bottom)); text-shadow:0 3px 0 rgba(0,0,0,.8), 0 0 28px rgba(0,0,0,.55); }
   .zomvoxLogo{ display:inline-flex; align-items:center; justify-content:center; gap:.08em; padding:.15em .18em .2em; color:#071508; font-weight:1000; line-height:.82; text-transform:uppercase; letter-spacing:0; background:linear-gradient(180deg,#e9ffd6,#91f36e 54%,#38b84f); border:2px solid rgba(255,255,255,.42); border-radius:8px; box-shadow:0 18px 46px rgba(0,0,0,.42), inset 0 2px 0 rgba(255,255,255,.5), inset 0 -7px 0 rgba(0,0,0,.16); text-shadow:0 1px 0 rgba(255,255,255,.35); transform:skew(-4deg); }
   .zomvoxLogo b{ color:#fff4a8; text-shadow:0 2px 0 rgba(0,0,0,.44),0 0 18px rgba(255,230,109,.45); }
-  .portraitLogo{ font-size:clamp(42px, 15vw, 74px); }
-  .rotateGlyph{ position:relative; width:104px; height:104px; margin:26px 0 16px; display:grid; place-items:center; filter:drop-shadow(0 16px 26px rgba(0,0,0,.52)); }
-  .phoneShape{ position:relative; width:48px; height:80px; border:5px solid #eaf7ff; border-radius:12px; background:linear-gradient(180deg, rgba(145,243,110,.24), rgba(0,0,0,.2)); box-shadow:inset 0 0 0 3px rgba(0,0,0,.35), 0 0 24px rgba(145,243,110,.28); animation:phoneRoll 1.8s ease-in-out infinite; }
+  .portraitLogo{ font-size:clamp(42px, 13vw, 68px); }
+  .portraitHeroArt{ position:relative; width:190px; height:134px; margin:12px 0 8px; display:grid; place-items:center; filter:drop-shadow(0 18px 28px rgba(0,0,0,.55)); }
+  .portraitBigZombie{ position:absolute; left:50%; top:4px; width:128px; height:104px; transform:translateX(-50%) rotate(-3deg); background:#335f24; border:5px solid rgba(0,0,0,.62); box-shadow:inset -20px -22px 0 rgba(0,0,0,.18), inset 12px 10px 0 rgba(151,220,92,.18),0 0 32px rgba(255,31,31,.12); }
+  .portraitBigZombie::before{ content:""; position:absolute; left:17px; top:19px; width:25px; height:22px; background:#ff2d2d; box-shadow:67px 0 0 #ff2d2d,0 0 18px rgba(255,45,45,.86),67px 0 18px rgba(255,45,45,.86); }
+  .portraitBigZombie::after{ content:""; position:absolute; left:44px; top:70px; width:43px; height:14px; background:#050b05; box-shadow:inset 8px 0 0 #dfe4c9,inset -8px 0 0 #dfe4c9; }
+  .portraitBigZombie span{ position:absolute; right:-15px; top:-14px; width:34px; height:28px; background:#724420; border:4px solid rgba(0,0,0,.5); transform:rotate(8deg); }
+  .rotateGlyph{ position:absolute; right:8px; bottom:0; width:76px; height:76px; display:grid; place-items:center; filter:drop-shadow(0 12px 18px rgba(0,0,0,.6)); }
+  .phoneShape{ position:relative; width:34px; height:58px; border:4px solid #eaf7ff; border-radius:10px; background:linear-gradient(180deg, rgba(145,243,110,.24), rgba(0,0,0,.2)); box-shadow:inset 0 0 0 3px rgba(0,0,0,.35), 0 0 24px rgba(145,243,110,.28); animation:phoneRoll 1.8s ease-in-out infinite; }
   .phoneShape::after{ content:""; position:absolute; left:50%; bottom:23px; width:8px; height:8px; transform:translateX(-50%); border-radius:50%; background:#eaf7ff; }
-  .rotateArc{ position:absolute; inset:9px; border-radius:50%; border:4px solid transparent; border-top-color:#ffd45d; border-right-color:#ffd45d; animation:arcSpin 1.8s ease-in-out infinite; }
-  .rotateArc::after{ content:""; position:absolute; right:8px; top:5px; width:0; height:0; border-top:8px solid transparent; border-bottom:8px solid transparent; border-left:13px solid #ffd45d; transform:rotate(38deg); }
-  #portraitBlock h2{ margin:0; color:#fff; font-size:clamp(28px, 8.2vw, 40px); line-height:.95; text-transform:uppercase; }
-  #portraitBlock p{ width:min(100%, 330px); margin:12px 0 15px; color:#d8e9ef; font-size:clamp(14px, 4vw, 17px); line-height:1.3; font-weight:800; }
-  .portraitInstall{ width:min(100%, 330px); margin:0 0 13px; padding:12px; border:1px solid rgba(145,243,110,.32); border-radius:10px; background:rgba(3,11,9,.68); box-shadow:0 16px 38px rgba(0,0,0,.38), inset 0 1px 0 rgba(255,255,255,.1); text-shadow:none; backdrop-filter:blur(6px); }
+  .rotateArc{ position:absolute; inset:5px; border-radius:50%; border:4px solid transparent; border-top-color:#ffd45d; border-right-color:#ffd45d; animation:arcSpin 1.8s ease-in-out infinite; }
+  .rotateArc::after{ content:""; position:absolute; right:4px; top:2px; width:0; height:0; border-top:7px solid transparent; border-bottom:7px solid transparent; border-left:11px solid #ffd45d; transform:rotate(38deg); }
+  .portraitKicker{ color:#91f36e; font-size:11px; font-weight:1000; letter-spacing:.2em; text-transform:uppercase; margin:0 0 7px; }
+  #portraitBlock h2{ width:min(100%, 360px); margin:0; color:#fff; font-family:Impact,"Arial Black",system-ui,sans-serif; font-size:clamp(34px, 10vw, 50px); line-height:.9; text-transform:uppercase; letter-spacing:.02em; }
+  #portraitBlock p{ width:min(100%, 330px); margin:10px 0 11px; color:#d8e9ef; font-size:clamp(14px, 4vw, 17px); line-height:1.24; font-weight:800; }
+  .portraitTags{ width:min(100%, 330px); display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; margin:0 0 12px; }
+  .portraitTags span{ min-height:35px; display:grid; place-items:center; padding:5px 4px; border:1px solid rgba(145,243,110,.28); border-radius:6px; background:rgba(3,11,9,.62); color:#d9ffd0; font-size:9px; line-height:1.05; font-weight:1000; text-transform:uppercase; text-shadow:0 2px 0 rgba(0,0,0,.65); box-shadow:inset 0 1px 0 rgba(255,255,255,.08); }
+  .portraitInstall{ width:min(100%, 330px); margin:0 0 12px; padding:11px; border:1px solid rgba(145,243,110,.32); border-radius:10px; background:rgba(3,11,9,.68); box-shadow:0 16px 38px rgba(0,0,0,.38), inset 0 1px 0 rgba(255,255,255,.1); text-shadow:none; backdrop-filter:blur(6px); }
   .portraitInstall[hidden]{ display:none; }
   .portraitInstallKicker{ color:#91f36e; font-size:10px; font-weight:1000; letter-spacing:.18em; text-transform:uppercase; margin-bottom:5px; }
   .portraitInstallTitle{ color:#f6fff0; font-size:18px; line-height:1; font-weight:1000; text-transform:uppercase; text-shadow:0 2px 0 rgba(0,0,0,.65); }
@@ -264,7 +272,7 @@
   #portraitInstallAccept{ color:#071409; background:linear-gradient(180deg,#efffe1,#92f36e); box-shadow:0 10px 26px rgba(145,243,110,.2), inset 0 2px 0 rgba(255,255,255,.42); }
   #portraitInstallSkip{ color:#eaf7ff; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.2); }
   .portraitInstallNote{ color:#aebdb6; font-size:9px; font-weight:900; line-height:1.2; text-transform:uppercase; letter-spacing:.08em; margin-top:7px; }
-  .portraitCallout{ width:min(100%, 300px); color:#160606; background:linear-gradient(180deg,#ffe784,#ff5b42); border:1px solid rgba(255,255,255,.24); border-radius:8px; padding:9px 11px; box-shadow:0 16px 36px rgba(0,0,0,.42), inset 0 2px 0 rgba(255,255,255,.38); font-size:clamp(12px,3.5vw,15px); line-height:1.2; text-shadow:none; text-transform:uppercase; }
+  .portraitCallout{ width:min(100%, 300px); color:#160606; background:linear-gradient(180deg,#ffe784,#ff5b42); border:1px solid rgba(255,255,255,.24); border-radius:8px; padding:10px 11px; box-shadow:0 16px 36px rgba(0,0,0,.42), inset 0 2px 0 rgba(255,255,255,.38); font-size:clamp(13px,3.7vw,16px); line-height:1.12; text-shadow:none; text-transform:uppercase; }
   .portraitPause{ display:none; margin-top:10px; color:#d7ffc7; font-size:12px; letter-spacing:.16em; text-transform:uppercase; }
   body.portrait-paused .portraitPause{ display:block; }
   @keyframes phoneRoll{ 0%,100%{ transform:rotate(0deg); } 48%,62%{ transform:rotate(90deg); } }
@@ -307,9 +315,9 @@
     .bigHealthBar{ height:8px; }
     #missionPanel{ left:50%; right:auto; top:8px; width:min(170px, calc(100vw - 242px)); transform:translateX(-50%); padding:7px 7px; }
     #objectiveText{ font-size:13px; }
-    .killHud{ gap:5px; margin-bottom:4px; }
-    .killHudIcon{ width:23px; height:23px; }
-    #killHudCount{ font-size:22px; }
+    .killHud{ gap:6px; margin-bottom:3px; }
+    .killHudIcon{ width:32px; height:32px; }
+    #killHudCount{ font-size:30px; }
     #scoreFeed{ top:31%; width:min(300px, 58vh, calc(100vw - 28px)); gap:4px; }
     .scorePop{ font-size:clamp(12px,2.7vw,18px); line-height:.92; }
     .scorePop.wave{ font-size:clamp(11px,2.4vw,16px); }
@@ -361,9 +369,18 @@
     #portraitBlock{ display:flex; }
   }
   @media (orientation: portrait) and (max-height: 690px){
-    .portraitContent{ justify-content:flex-start; padding-top:calc(22px + env(safe-area-inset-top)); }
-    .rotateGlyph{ width:92px; height:92px; margin:18px 0 12px; }
-    .phoneShape{ width:38px; height:64px; border-width:4px; border-radius:10px; }
+    .portraitContent{ justify-content:flex-start; padding-top:calc(14px + env(safe-area-inset-top)); }
+    .portraitLogo{ font-size:clamp(38px, 12vw, 58px); }
+    .portraitHeroArt{ width:172px; height:118px; margin:9px 0 6px; }
+    .portraitBigZombie{ width:116px; height:92px; }
+    .portraitBigZombie::before{ left:15px; top:17px; width:22px; height:19px; box-shadow:61px 0 0 #ff2d2d,0 0 16px rgba(255,45,45,.86),61px 0 16px rgba(255,45,45,.86); }
+    .portraitBigZombie::after{ left:40px; top:62px; width:38px; height:12px; }
+    .rotateGlyph{ right:5px; bottom:-2px; width:66px; height:66px; }
+    .phoneShape{ width:30px; height:50px; border-width:4px; border-radius:9px; }
     .phoneShape::after{ bottom:19px; width:6px; height:6px; }
+    #portraitBlock h2{ font-size:clamp(30px, 8.8vw, 43px); }
+    #portraitBlock p{ margin:8px 0 9px; font-size:13px; }
+    .portraitTags{ margin-bottom:9px; }
+    .portraitInstall{ padding:9px; margin-bottom:9px; }
     .portraitCallout{ padding:8px 10px; }
   }

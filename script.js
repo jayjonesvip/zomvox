@@ -274,7 +274,7 @@
   const portraitQuery = matchMedia('(orientation: portrait)');
   let keys = Object.create(null);
   const touchInput = { moveX: 0, moveY: 0, jump: false, lookId: null, lookX: 0, lookY: 0, stickId: null };
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.19.12');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.19.13');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -1130,26 +1130,26 @@
   function setPortraitInstallCopy(helpMode = false) {
     if (!portraitInstallTitle || !portraitInstallBody || !portraitInstallNote || !portraitInstallAccept) return;
     if (deferredInstallPrompt) {
-      portraitInstallTitle.textContent = 'Add ZomVox to Home Screen';
-      portraitInstallBody.textContent = 'Install for fullscreen landscape play and one-tap zombie hunting.';
-      portraitInstallNote.textContent = 'Chrome gives the cleanest install.';
-      portraitInstallAccept.textContent = 'Add to Home Screen';
+      portraitInstallTitle.textContent = 'Install ZomVox';
+      portraitInstallBody.textContent = 'Launch fullscreen from your home screen and get back to the hunt faster.';
+      portraitInstallNote.textContent = 'Best in Chrome.';
+      portraitInstallAccept.textContent = 'Install Game';
       return;
     }
     if (hasInstalledOnceHint() && !helpMode) {
-      portraitInstallTitle.textContent = 'Open App Mode';
-      portraitInstallBody.textContent = 'If ZomVox is installed, open it from your home screen for fullscreen landscape play.';
-      portraitInstallNote.textContent = 'You can keep playing in this browser tab too.';
+      portraitInstallTitle.textContent = 'Open Installed Game';
+      portraitInstallBody.textContent = 'Use the home screen icon for the clean fullscreen hunt.';
+      portraitInstallNote.textContent = 'Browser play still works.';
       portraitInstallAccept.textContent = 'Install Help';
       return;
     }
-    portraitInstallTitle.textContent = helpMode ? 'Install Help' : 'Add ZomVox to Home Screen';
+    portraitInstallTitle.textContent = helpMode ? 'Install Help' : 'Install ZomVox';
     portraitInstallBody.textContent = helpMode
       ? 'In Chrome, tap the menu, then choose Install app or Add to Home screen.'
-      : 'Install for fullscreen landscape play when Chrome offers it. You can keep playing in browser.';
+      : 'Add the game when Chrome offers it, or keep hunting in browser.';
     portraitInstallNote.textContent = helpMode
-      ? 'If you already installed it, open ZomVox from your home screen.'
-      : 'Chrome gives the cleanest install.';
+      ? 'Already installed? Open ZomVox from your home screen.'
+      : 'Best in Chrome.';
     portraitInstallAccept.textContent = helpMode ? 'Got It' : 'Install Help';
   }
 
