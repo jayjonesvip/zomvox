@@ -357,9 +357,10 @@
     .bullet{ height:19px; border-width:1px; }
     .bullet::before{ width:10px; height:8px; top:-6px; border-width:1px; }
     #gunSprite{ right:calc(12px + env(safe-area-inset-right)); bottom:-38px; width:min(44vw, 260px); }
+    .grid{ grid-template-columns:1fr; }
     #mobileControls{ display:block; }
   }
-  @media (pointer: coarse) and (orientation: landscape) and (max-height: 430px){
+  @media (pointer: coarse) and (orientation: landscape) and (max-height: 360px){
     #menu{ align-items:flex-start; padding:max(3px, env(safe-area-inset-top)) 6px max(3px, env(safe-area-inset-bottom)); }
     #mainMenuCard{ width:min(98vw, 690px); max-height:calc(100svh - 6px); padding:7px 10px; border-radius:12px; }
     h1{ font-size:24px; margin-bottom:2px; line-height:.9; }
@@ -379,7 +380,7 @@
     .quickBiomeGrid button{ min-height:47px; padding:6px 4px; font-size:9px; }
     .quickBackBtn{ margin-top:6px; padding:6px 12px; }
   }
-  @media (pointer: coarse) and (orientation: landscape) and (max-height: 340px){
+  @media (pointer: coarse) and (orientation: landscape) and (max-height: 310px){
     .subtitle{ display:none; }
     .settingsPanel{ grid-template-columns:repeat(6,minmax(0,1fr)); }
     .setting{ justify-content:center; padding:4px 3px; font-size:8px; }
