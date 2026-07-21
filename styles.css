@@ -36,7 +36,8 @@
   #reticle.hit::after{ background:#ffed7a; }
   #reticle.kill::before{ border-color:#8cff73; animation:killMarker .26s ease-out; }
   #reticle.kill::after{ background:#8cff73; box-shadow:0 0 16px rgba(140,255,115,.72); }
-  body.dead #reticle{ display:none; }
+  body.dead #reticle,
+  body.dead #muzzleFx{ display:none; }
   @keyframes hitMarker{ 0%{ transform:scale(.75); opacity:.45; } 55%{ transform:scale(1.24); opacity:1; } 100%{ transform:scale(1); opacity:1; } }
   @keyframes killMarker{ 0%{ transform:scale(.65); opacity:.4; } 45%{ transform:scale(1.38); opacity:1; } 100%{ transform:scale(1); opacity:1; } }
   @keyframes heartbeatFlash{ 0%,100%{ opacity:0; } 10%{ opacity:.2; } 18%{ opacity:.06; } 28%{ opacity:.17; } 46%{ opacity:0; } }
@@ -71,6 +72,32 @@
   #gunSprite{ pointer-events:none; position:fixed; right:clamp(22px,4vw,78px); bottom:-16px; width:min(39vw, 400px); aspect-ratio:1/1; z-index:5; background:url("assets/zomvox-gun-spritesheet.png") 0 0 / 300% 100% no-repeat; image-rendering:auto; filter:drop-shadow(0 18px 22px rgba(0,0,0,.55)); transform-origin:72% 78%; transition:transform .08s ease-out; }
   #gunSprite.moving{ background-position:50% 0; transform:translateY(8px) rotate(-2deg); }
   #gunSprite.shooting{ background-position:100% 0; transform:translate(8px,-4px) rotate(1deg); }
+  #muzzleFx{ pointer-events:none; position:fixed; right:clamp(160px, 20vw, 282px); bottom:clamp(88px, 12.5vw, 146px); width:86px; height:62px; z-index:6; opacity:0; transform:rotate(-11deg); transform-origin:85% 60%; }
+  #muzzleFx i{ position:absolute; display:block; opacity:0; image-rendering:pixelated; }
+  .flashBlock{ background:#ffe96b; box-shadow:0 0 16px rgba(255,225,65,.75),0 0 30px rgba(255,98,34,.32); }
+  .fb1{ left:36px; top:19px; width:27px; height:19px; background:#fff4a7; }
+  .fb2{ left:60px; top:13px; width:18px; height:14px; background:#ffcc42; }
+  .fb3{ left:60px; top:35px; width:15px; height:12px; background:#ff7a2c; }
+  .fb4{ left:21px; top:25px; width:18px; height:14px; background:#ffe05a; }
+  .smokeBlock{ background:rgba(190,205,202,.5); border:1px solid rgba(255,255,255,.12); filter:blur(.2px); }
+  .sb1{ left:12px; top:10px; width:20px; height:16px; }
+  .sb2{ left:2px; top:29px; width:15px; height:13px; background:rgba(145,160,156,.42); }
+  .sb3{ left:24px; top:42px; width:13px; height:11px; background:rgba(215,225,220,.38); }
+  #muzzleFx.active{ opacity:1; }
+  #muzzleFx.active .flashBlock{ animation:muzzleFlash .12s steps(2,end) forwards; }
+  #muzzleFx.active .smokeBlock{ animation:muzzleSmoke .44s ease-out forwards; }
+  #muzzleFx.active .sb2{ animation-delay:.04s; }
+  #muzzleFx.active .sb3{ animation-delay:.08s; }
+  @keyframes muzzleFlash{
+    0%{ opacity:0; transform:translateX(-7px) scale(.65); }
+    25%{ opacity:1; transform:translateX(0) scale(1.12); }
+    100%{ opacity:0; transform:translateX(15px) scale(.84); }
+  }
+  @keyframes muzzleSmoke{
+    0%{ opacity:0; transform:translate(10px,3px) scale(.7); }
+    22%{ opacity:.72; }
+    100%{ opacity:0; transform:translate(-23px,-12px) scale(1.35); }
+  }
 
   #scoreFeed{ pointer-events:none; position:fixed; left:50%; top:34%; width:min(430px, 52vh, calc(100vw - 32px)); transform:translateX(-50%); display:flex; flex-direction:column; align-items:center; gap:5px; z-index:6; text-align:center; }
   .scorePop{ max-width:100%; font-size:clamp(15px,2.1vw,24px); font-weight:1000; letter-spacing:.02em; color:#fff; text-shadow:0 2px 0 rgba(0,0,0,.8), 0 0 14px rgba(255,255,255,.3); animation:scoreRise 1.05s ease-out forwards; white-space:normal; overflow-wrap:break-word; line-height:.95; }
@@ -217,6 +244,7 @@
   body.stage-transition #damageFlash,
   body.stage-transition #reticle,
   body.stage-transition #gunSprite,
+  body.stage-transition #muzzleFx,
   body.stage-transition #mobileControls{ opacity:0; visibility:hidden; }
   body.stage-transition #objectiveBriefing,
   body.stage-transition #upgradeOverlay,
@@ -357,6 +385,7 @@
     .bullet{ height:19px; border-width:1px; }
     .bullet::before{ width:10px; height:8px; top:-6px; border-width:1px; }
     #gunSprite{ right:calc(12px + env(safe-area-inset-right)); bottom:-38px; width:min(44vw, 260px); }
+    #muzzleFx{ right:calc(122px + env(safe-area-inset-right)); bottom:54px; width:68px; height:50px; transform:rotate(-11deg) scale(.82); }
     .grid{ grid-template-columns:1fr; }
     #mobileControls{ display:block; }
   }
@@ -394,11 +423,13 @@
   body.hide-ammo #weaponPanel,
   body.hide-ammo #c4Hud,
   body.hide-controls #mobileControls,
-  body.hide-reticle #reticle{ display:none !important; }
+  body.hide-reticle #reticle,
+  body.hide-reticle #muzzleFx{ display:none !important; }
   body.no-gun #weaponPanel,
   body.no-gun #c4Hud,
   body.no-gun #gunSprite,
-  body.no-gun #reticle{ display:none !important; }
+  body.no-gun #reticle,
+  body.no-gun #muzzleFx{ display:none !important; }
   body.action-mode #touchShoot{ color:#05220e; background:rgba(132,245,95,.58); border:1px solid rgba(220,255,200,.48); box-shadow:0 0 0 7px rgba(0,0,0,.18), 0 0 0 12px rgba(52,135,36,.54), 0 8px 26px rgba(0,0,0,.28), inset 0 2px 0 rgba(255,255,255,.28); font-size:11px; }
   body.action-mode #touchShoot.unavailable{ opacity:.42; filter:grayscale(.65); background:rgba(70,88,78,.44); box-shadow:0 0 0 7px rgba(0,0,0,.16), 0 0 0 12px rgba(40,60,45,.46), 0 8px 26px rgba(0,0,0,.24), inset 0 2px 0 rgba(255,255,255,.16); }
   @media (orientation: portrait){

@@ -24,6 +24,7 @@
   const quickBack = $('quickBack');
   const toast = $('toast');
   const gunSprite = $('gunSprite');
+  const muzzleFx = $('muzzleFx');
   const damageFlash = $('damageFlash');
   const healthStatus = $('healthStatus');
   const healthBigText = $('healthBigText');
@@ -276,7 +277,7 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.20.11');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.20.12');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -293,6 +294,7 @@
   let waterDamageTimer = 0;
   let hordeLevel = 0;
   let heartbeatTimer = 0;
+  let muzzleFxTimer = null;
   let cameraStepOffsetY = 0;
   const deathState = { active: false, timer: 0, duration: DEATH_READY_DELAY, ready: false };
   const worldRebuildState = { active: false, timer: 0, startedAt: 0, duration: WORLD_REBUILD_DURATION, seed: null };
@@ -597,6 +599,15 @@
     reticle.classList.add(kind === 'kill' ? 'kill' : 'hit');
     clearTimeout(pulseHitMarker.timer);
     pulseHitMarker.timer = setTimeout(() => reticle.classList.remove('hit', 'kill'), kind === 'kill' ? 260 : 180);
+  }
+
+  function triggerMuzzleFx() {
+    if (!muzzleFx) return;
+    muzzleFx.classList.remove('active');
+    void muzzleFx.offsetWidth;
+    muzzleFx.classList.add('active');
+    clearTimeout(muzzleFxTimer);
+    muzzleFxTimer = setTimeout(() => muzzleFx.classList.remove('active'), 520);
   }
 
   function spawnKillBurst(x, y, z, big = false) {
@@ -2701,6 +2712,7 @@ function playerOnMachinePad() {
     void gunSprite.offsetWidth;
     gunSprite.classList.add('shooting');
     setTimeout(() => gunSprite.classList.remove('shooting'), 120);
+    triggerMuzzleFx();
     sound('shoot');
     const hit = raycastProjectile(58);
     applyShotRecoil();
