@@ -11,9 +11,9 @@
   html,body{ margin:0; height:100%; overflow:hidden; background:#06111c; color:var(--text); font-family:"Orbitron", ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; touch-action:none; }
   #game{ position:fixed; inset:0; width:100vw; height:100vh; display:block; background:linear-gradient(#6fb1ff,#d7f0ff 45%,#8fc171); cursor:crosshair; touch-action:none; will-change:transform; }
   #vignette{ pointer-events:none; position:fixed; inset:0; box-shadow: inset 0 0 160px rgba(0,0,0,.55), inset 0 -95px 135px rgba(0,0,0,.25); mix-blend-mode:multiply; z-index:1; }
-  #damageFlash{ pointer-events:none; position:fixed; inset:0; background:radial-gradient(circle at 50% 50%, rgba(255,0,0,0), rgba(255,0,0,.32)); opacity:0; transition:opacity .22s; z-index:12; }
+  #atmosphereVignette{ pointer-events:none; position:fixed; inset:0; z-index:2; opacity:.34; background:radial-gradient(circle at 50% 45%, rgba(255,255,255,.02) 0 28%, rgba(0,0,0,.12) 58%, rgba(0,0,0,.46) 100%); mix-blend-mode:multiply; }
+  #damageFlash{ pointer-events:none; position:fixed; inset:0; background:radial-gradient(circle at 50% 48%, rgba(255,40,20,0) 0 30%, rgba(110,0,0,.22) 62%, rgba(0,0,0,.64) 100%); opacity:0; transition:opacity .26s; z-index:12; mix-blend-mode:multiply; }
   #damageFlash.hit{ opacity:1; transition:opacity .04s; }
-  body.low-health #damageFlash{ animation:heartbeatFlash .95s ease-in-out infinite; }
   body.dead #game{ filter:grayscale(1) contrast(.82) brightness(.48); transition:filter .18s; }
   body.shaking #game{ animation:screenShake .22s cubic-bezier(.36,.07,.19,.97) both; }
   body.low-health #vignette{ box-shadow: inset 0 0 160px rgba(90,0,0,.72), inset 0 -95px 135px rgba(0,0,0,.3); }
@@ -37,10 +37,14 @@
   #reticle.kill::before{ border-color:#8cff73; animation:killMarker .26s ease-out; }
   #reticle.kill::after{ background:#8cff73; box-shadow:0 0 16px rgba(140,255,115,.72); }
   body.dead #reticle,
-  body.dead #muzzleFx{ display:none; }
+  body.dead #muzzleFx,
+  body.dead #crosshairFlash{ display:none; }
+  #crosshairFlash{ pointer-events:none; position:fixed; left:50%; top:50%; width:96px; height:96px; transform:translate(-50%,-50%) scale(.78); opacity:0; z-index:7; border-radius:50%; background:radial-gradient(circle, rgba(255,246,160,.96) 0 5%, rgba(255,173,42,.62) 13%, rgba(255,99,26,.22) 30%, rgba(255,99,26,0) 62%); transition:opacity .16s ease-out, transform .16s ease-out; mix-blend-mode:screen; }
+  #crosshairFlash.show{ opacity:.9; transform:translate(-50%,-50%) scale(1); transition:opacity .04s ease-out, transform .04s ease-out; }
+  #crosshairFlash.hit{ background:radial-gradient(circle, rgba(255,244,132,.92) 0 4%, rgba(145,255,106,.55) 14%, rgba(145,255,106,.18) 32%, rgba(145,255,106,0) 64%); }
+  #crosshairFlash.kill{ background:radial-gradient(circle, rgba(255,255,255,.96) 0 5%, rgba(255,52,52,.62) 15%, rgba(255,52,52,.24) 34%, rgba(255,52,52,0) 68%); }
   @keyframes hitMarker{ 0%{ transform:scale(.75); opacity:.45; } 55%{ transform:scale(1.24); opacity:1; } 100%{ transform:scale(1); opacity:1; } }
   @keyframes killMarker{ 0%{ transform:scale(.65); opacity:.4; } 45%{ transform:scale(1.38); opacity:1; } 100%{ transform:scale(1); opacity:1; } }
-  @keyframes heartbeatFlash{ 0%,100%{ opacity:0; } 10%{ opacity:.2; } 18%{ opacity:.06; } 28%{ opacity:.17; } 46%{ opacity:0; } }
 
   .pill{ border:1px solid rgba(255,255,255,.15); padding:3px 7px; border-radius:999px; background:rgba(255,255,255,.06); white-space:nowrap; }
   .pill.good{ color:#bfffb1; border-color:rgba(145,243,110,.36); }
@@ -51,7 +55,7 @@
   .fill{ height:100%; width:100%; background:linear-gradient(90deg, #5ded70, #c4ff72); box-shadow:0 0 18px rgba(145,243,110,.28); }
   .fill.ammo{ background:linear-gradient(90deg, #ffe47b, #ffb347); }
 
-  #weaponPanel{ position:fixed; right:14px; top:12px; width:auto; min-width:134px; min-height:62px; padding:10px 16px; display:flex; align-items:center; justify-content:center; border-radius:8px; background:rgba(5,10,15,.78); border:1px solid var(--line); backdrop-filter:blur(10px); box-shadow:0 14px 40px rgba(0,0,0,.32); pointer-events:none; z-index:9; text-align:center; }
+  #weaponPanel{ position:fixed; right:14px; top:12px; width:auto; min-width:134px; min-height:62px; padding:10px 16px; display:flex; align-items:center; justify-content:center; border-radius:8px; background:linear-gradient(180deg, rgba(14,24,31,.88), rgba(3,8,13,.84)); border:1px solid rgba(225,244,255,.2); backdrop-filter:blur(10px); box-shadow:inset 0 2px 0 rgba(255,255,255,.14), inset 0 -5px 12px rgba(0,0,0,.38), inset 0 0 0 1px rgba(0,0,0,.42), 0 16px 40px rgba(0,0,0,.42); pointer-events:none; z-index:9; text-align:center; }
   #weaponPanel .label{ display:none; }
   #bulletRack{ display:none; grid-template-columns:repeat(6, 1fr); gap:6px; margin:8px 0 7px; }
   .bullet{ position:relative; height:24px; border-radius:6px 6px 4px 4px; background:linear-gradient(180deg,#fff4a8 0%,#ffd35b 48%,#b56b24 49%,#7b411c 100%); border:2px solid rgba(0,0,0,.58); box-shadow:inset 0 4px 0 rgba(255,255,255,.28), 0 0 18px rgba(255,210,75,.18); transform-origin:50% 100%; transition:opacity .14s, transform .14s, filter .14s; }
@@ -98,16 +102,19 @@
   .scorePop.small{ font-size:clamp(12px,1.65vw,18px); }
   @keyframes scoreRise{ 0%{ opacity:0; transform:translateY(18px) scale(.88); } 14%{ opacity:1; transform:translateY(0) scale(1.05); } 72%{ opacity:1; } 100%{ opacity:0; transform:translateY(-58px) scale(.98); } }
 
-  #healthStatus{ pointer-events:none; position:fixed; left:14px; top:12px; width:230px; min-height:62px; padding:10px 12px; border-radius:8px; background:rgba(4,10,14,.82); border:1px solid rgba(255,255,255,.18); box-shadow:0 15px 42px rgba(0,0,0,.36); backdrop-filter:blur(10px); z-index:9; }
+  #healthStatus{ pointer-events:none; position:fixed; left:14px; top:12px; width:230px; min-height:62px; padding:10px 12px; border-radius:8px; background:linear-gradient(180deg, rgba(13,25,29,.9), rgba(3,9,12,.86)); border:1px solid rgba(224,248,255,.2); box-shadow:inset 0 2px 0 rgba(255,255,255,.14), inset 0 -5px 12px rgba(0,0,0,.38), inset 0 0 0 1px rgba(0,0,0,.42), 0 16px 40px rgba(0,0,0,.42); backdrop-filter:blur(10px); z-index:9; }
   #healthStatus .healthTop{ display:flex; justify-content:space-between; align-items:baseline; gap:10px; margin-bottom:7px; }
   #healthStatus .healthLabel{ font-size:10px; letter-spacing:.09em; text-transform:uppercase; color:#bad0db; font-weight:900; }
   #healthBigText{ font-size:24px; font-weight:1000; line-height:.9; color:#f8fff5; text-shadow:0 2px 0 rgba(0,0,0,.6); }
   .bigHealthBar{ height:12px; border-radius:999px; border:1px solid rgba(255,255,255,.18); background:rgba(0,0,0,.38); overflow:hidden; box-shadow:inset 0 2px 7px rgba(0,0,0,.45); }
   #healthBigFill{ height:100%; width:100%; background:linear-gradient(90deg,#35e75d,#d8ff70); box-shadow:0 0 18px rgba(103,255,105,.32); transition:width .12s; }
   #healthStatus.warn #healthBigFill{ background:linear-gradient(90deg,#ffd45d,#ff8f46); }
-  #healthStatus.danger{ border-color:rgba(255,80,80,.48); animation:healthPulse .72s ease-in-out infinite alternate; }
+  #healthStatus.danger{ border-color:rgba(255,80,80,.58); animation:healthHudPulse .82s ease-in-out infinite; }
   #healthStatus.danger #healthBigFill{ background:linear-gradient(90deg,#ff3b3b,#ff9b6b); box-shadow:0 0 24px rgba(255,63,63,.55); }
-  @keyframes healthPulse{ from{ box-shadow:0 15px 42px rgba(0,0,0,.36),0 0 0 rgba(255,40,40,0); } to{ box-shadow:0 15px 42px rgba(0,0,0,.36),0 0 32px rgba(255,40,40,.35); } }
+  @keyframes healthHudPulse{
+    0%,100%{ box-shadow:inset 0 2px 0 rgba(255,255,255,.14), inset 0 -5px 12px rgba(0,0,0,.38), inset 0 0 0 1px rgba(0,0,0,.42), 0 16px 40px rgba(0,0,0,.42), 0 0 0 rgba(255,54,54,0); }
+    50%{ box-shadow:inset 0 2px 0 rgba(255,255,255,.2), inset 0 -5px 12px rgba(0,0,0,.38), inset 0 0 0 2px rgba(255,76,76,.58), 0 16px 40px rgba(0,0,0,.42), 0 0 28px rgba(255,54,54,.38); }
+  }
 
   #missionPanel{ pointer-events:none; position:fixed; left:50%; top:12px; width:min(210px, calc(100vw - 310px)); transform:translateX(-50%); padding:0; border-radius:0; background:transparent; border:0; box-shadow:none; backdrop-filter:none; z-index:9; text-align:center; }
   .missionLabel,#objectiveMeta{ display:none; }
@@ -200,9 +207,9 @@
   .setting{ display:flex; align-items:center; gap:8px; border:1px solid rgba(255,255,255,.13); background:rgba(255,255,255,.055); border-radius:8px; padding:9px 10px; color:#dcecf7; font-size:13px; font-weight:800; user-select:none; }
   .setting input{ width:18px; height:18px; accent-color:#86ee66; }
   .startActions{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
-  .startBtn{ appearance:none; border:0; border-radius:16px; padding:14px 20px; font-size:18px; font-weight:1000; text-transform:uppercase; cursor:pointer; }
-  .primaryStart{ color:#06230e; background:linear-gradient(180deg,#c5ffa8,#72df60); box-shadow:0 14px 40px rgba(105,216,90,.26), inset 0 2px 0 rgba(255,255,255,.45); }
-  .secondaryStart{ color:#210606; background:linear-gradient(180deg,#ffe07b,#ff6948); box-shadow:0 14px 40px rgba(255,98,72,.24), inset 0 2px 0 rgba(255,255,255,.36); }
+  .startBtn{ appearance:none; border:0; border-radius:0; padding:14px 20px; font-size:18px; font-weight:1000; text-transform:uppercase; cursor:pointer; clip-path:polygon(0 10px,10px 10px,10px 0,calc(100% - 10px) 0,calc(100% - 10px) 10px,100% 10px,100% calc(100% - 10px),calc(100% - 10px) calc(100% - 10px),calc(100% - 10px) 100%,10px 100%,10px calc(100% - 10px),0 calc(100% - 10px)); }
+  .primaryStart{ color:#06230e; background:linear-gradient(180deg,#d9ffc8 0%,#86ef65 54%,#46b946 100%); box-shadow:0 14px 40px rgba(105,216,90,.26), inset 0 3px 0 rgba(255,255,255,.5), inset 0 -5px 0 rgba(0,0,0,.16); }
+  .secondaryStart{ color:#210606; background:linear-gradient(180deg,#ffe99b 0%,#ff9160 54%,#e94e38 100%); box-shadow:0 14px 40px rgba(255,98,72,.24), inset 0 3px 0 rgba(255,255,255,.38), inset 0 -5px 0 rgba(0,0,0,.16); }
   .startBtn:hover,.quickBiomeGrid button:hover,.quickBackBtn:hover{ filter:brightness(1.05); }
   .quickBiomePanel{ width:min(620px, 96vw); text-align:center; }
   .quickBiomePanel[hidden], #menu.quick-select #mainMenuCard{ display:none; }
@@ -210,28 +217,31 @@
   .quickBiomeTitle{ color:#f5fff2; font-size:clamp(30px, 5vw, 50px); font-weight:1000; line-height:.9; letter-spacing:0; text-transform:uppercase; margin:0 0 8px; text-shadow:0 3px 0 rgba(0,0,0,.72),0 0 20px rgba(145,243,110,.2); }
   .quickBiomeCopy{ color:#c1d7e6; font-size:14px; font-weight:800; margin:0 0 16px; }
   .quickBiomeGrid{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:7px; }
-  .quickBiomeGrid button{ appearance:none; min-height:74px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px; border:1px solid rgba(255,255,255,.18); border-radius:8px; padding:12px 8px; color:#edf8ff; font-size:14px; font-weight:1000; text-transform:uppercase; background:rgba(6,12,16,.72); box-shadow:inset 0 1px 0 rgba(255,255,255,.1); cursor:pointer; }
+  .quickBiomeGrid button{ appearance:none; min-height:74px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px; border:1px solid rgba(255,255,255,.18); border-radius:0; clip-path:polygon(0 7px,7px 7px,7px 0,calc(100% - 7px) 0,calc(100% - 7px) 7px,100% 7px,100% calc(100% - 7px),calc(100% - 7px) calc(100% - 7px),calc(100% - 7px) 100%,7px 100%,7px calc(100% - 7px),0 calc(100% - 7px)); padding:12px 8px; color:#edf8ff; font-size:14px; font-weight:1000; text-transform:uppercase; background:linear-gradient(180deg, rgba(14,26,32,.84), rgba(4,10,14,.76)); box-shadow:inset 0 2px 0 rgba(255,255,255,.12), inset 0 -4px 0 rgba(0,0,0,.24); cursor:pointer; }
   .quickBiomeGrid button small{ display:block; color:#91f36e; font-size:9px; line-height:1.12; font-weight:900; letter-spacing:.04em; text-transform:uppercase; }
   .quickBiomeGrid button.locked{ color:#8f9da3; border-color:rgba(255,255,255,.10); background:rgba(3,7,9,.58); cursor:not-allowed; filter:saturate(.6); }
   .quickBiomeGrid button.locked small{ color:#ffc96a; }
-  .quickBackBtn{ margin-top:12px; appearance:none; border:1px solid rgba(255,255,255,.22); border-radius:8px; padding:9px 18px; color:#eaf7ff; font-size:12px; font-weight:1000; letter-spacing:.08em; text-transform:uppercase; background:rgba(255,255,255,.08); cursor:pointer; }
+  .quickBackBtn{ margin-top:12px; appearance:none; border:1px solid rgba(255,255,255,.22); border-radius:0; clip-path:polygon(0 7px,7px 7px,7px 0,calc(100% - 7px) 0,calc(100% - 7px) 7px,100% 7px,100% calc(100% - 7px),calc(100% - 7px) calc(100% - 7px),calc(100% - 7px) 100%,7px 100%,7px calc(100% - 7px),0 calc(100% - 7px)); padding:9px 18px; color:#eaf7ff; font-size:12px; font-weight:1000; letter-spacing:.08em; text-transform:uppercase; background:rgba(255,255,255,.08); cursor:pointer; }
   #splash{ position:fixed; inset:0; z-index:35; overflow:hidden; background:#02070b; transition:opacity .38s ease, visibility .38s ease; }
   #splash.hide{ opacity:0; visibility:hidden; pointer-events:none; }
-  #splash::before{ content:""; position:absolute; inset:0; background:url("assets/zomvox-splash.png") center/cover no-repeat; filter:saturate(1.06) contrast(1.02); }
+  #splash::before{ content:""; position:absolute; inset:-3%; background:url("assets/zomvox-splash.png") center/cover no-repeat; filter:saturate(1.06) contrast(1.02); transform-origin:58% 46%; animation:splashDrift 8s ease-in-out infinite alternate; will-change:transform; }
   #splash::after{ content:""; position:absolute; inset:0; background:linear-gradient(90deg, rgba(0,0,0,.22), rgba(0,0,0,.02) 46%, rgba(0,0,0,.5)), linear-gradient(0deg, rgba(0,0,0,.28), rgba(0,0,0,0) 44%); }
   .splashLoad{ position:absolute; right:calc(24px + env(safe-area-inset-right)); bottom:calc(24px + env(safe-area-inset-bottom)); width:min(360px, calc(100vw - 48px)); z-index:1; padding:12px; border:1px solid rgba(255,255,255,.2); border-radius:8px; background:rgba(3,8,12,.62); box-shadow:0 18px 48px rgba(0,0,0,.45); backdrop-filter:blur(8px); }
   .splashVersion{ color:#a8becd; font-size:11px; font-weight:900; letter-spacing:.12em; text-transform:uppercase; text-shadow:0 2px 8px rgba(0,0,0,.75); margin-bottom:5px; }
   .splashStatus{ color:#eaf7ff; font-size:13px; font-weight:900; letter-spacing:.04em; text-transform:uppercase; text-shadow:0 2px 8px rgba(0,0,0,.75); margin-bottom:8px; }
   .splashMeter{ height:12px; overflow:hidden; border-radius:999px; border:1px solid rgba(255,255,255,.22); background:rgba(0,0,0,.5); box-shadow:inset 0 2px 8px rgba(0,0,0,.42); }
   #splashFill{ height:100%; width:0%; border-radius:999px; background:linear-gradient(90deg,#6bf45d,#ffe27a,#ff9b3d); box-shadow:0 0 22px rgba(145,243,110,.45); transition:width .12s linear; }
+  @keyframes splashDrift{ from{ transform:scale(1.02) translate3d(-.8%, -.5%, 0); } to{ transform:scale(1.09) translate3d(1.1%, .8%, 0); } }
   #worldOverlay{ pointer-events:none; position:fixed; inset:0; display:flex; align-items:center; justify-content:center; z-index:33; opacity:0; visibility:hidden; background:radial-gradient(circle at 50% 45%, rgba(56,160,60,.18), rgba(0,0,0,.75) 62%, rgba(0,0,0,.92)); transition:opacity .16s, visibility .16s; }
   #worldOverlay.show{ opacity:1; visibility:visible; }
   body.stage-transition #game,
   body.stage-transition #vignette,
+  body.stage-transition #atmosphereVignette,
   body.stage-transition #damageFlash,
   body.stage-transition #reticle,
   body.stage-transition #gunSprite,
   body.stage-transition #muzzleFx,
+  body.stage-transition #crosshairFlash,
   body.stage-transition #mobileControls{ opacity:0; visibility:hidden; }
   body.stage-transition #objectiveBriefing,
   body.stage-transition #upgradeOverlay,
@@ -409,12 +419,14 @@
   body.hide-ammo #c4Hud,
   body.hide-controls #mobileControls,
   body.hide-reticle #reticle,
-  body.hide-reticle #muzzleFx{ display:none !important; }
+  body.hide-reticle #muzzleFx,
+  body.hide-reticle #crosshairFlash{ display:none !important; }
   body.no-gun #weaponPanel,
   body.no-gun #c4Hud,
   body.no-gun #gunSprite,
   body.no-gun #reticle,
-  body.no-gun #muzzleFx{ display:none !important; }
+  body.no-gun #muzzleFx,
+  body.no-gun #crosshairFlash{ display:none !important; }
   body.action-mode #touchShoot{ color:#05220e; background:rgba(132,245,95,.58); border:1px solid rgba(220,255,200,.48); box-shadow:0 0 0 7px rgba(0,0,0,.18), 0 0 0 12px rgba(52,135,36,.54), 0 8px 26px rgba(0,0,0,.28), inset 0 2px 0 rgba(255,255,255,.28); font-size:11px; }
   body.action-mode #touchShoot.unavailable{ opacity:.42; filter:grayscale(.65); background:rgba(70,88,78,.44); box-shadow:0 0 0 7px rgba(0,0,0,.16), 0 0 0 12px rgba(40,60,45,.46), 0 8px 26px rgba(0,0,0,.24), inset 0 2px 0 rgba(255,255,255,.16); }
   @media (orientation: portrait){
