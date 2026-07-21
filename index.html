@@ -191,7 +191,7 @@
     <div class="portraitKicker">Landscape Required</div>
     <h2>Rotate to Play ZomVox</h2>
     <p>Turn your phone sideways for fullscreen voxel zombie hunting.</p>
-    <div class="portraitCallout">Story Mode + Quick Hunt Await</div>
+    <div class="portraitCallout">Story + Survival + Quick Hunt Await</div>
     <div class="portraitPause">Hunt Paused</div>
     <button id="portraitInstallCallout" class="portraitInstallCallout" type="button" hidden>+ Add to Desktop</button>
   </div>
@@ -215,21 +215,14 @@
       <div class="tip mobileTip"><kbd>Stick</kbd> move &nbsp; <kbd>Swipe</kbd> aim</div>
       <div class="tip mobileTip"><kbd>Yellow block</kbd> disables source &nbsp; <kbd>C4</kbd> trap</div>
     </div>
-    <div class="settingsPanel">
-      <label class="setting"><input id="settingHealth" type="checkbox" checked />Health</label>
-      <label class="setting"><input id="settingAmmo" type="checkbox" checked />Ammo</label>
-      <label class="setting"><input id="settingControls" type="checkbox" checked />Controls</label>
-      <label class="setting"><input id="settingSound" type="checkbox" checked />Sounds</label>
-      <label class="setting"><input id="settingAmbient" type="checkbox" checked />Ambient</label>
-      <label class="setting"><input id="settingFullscreen" type="checkbox" checked />Fullscreen</label>
-    </div>
     <div class="startActions">
       <button id="play" class="startBtn primaryStart" type="button">Story Mode</button>
+      <button id="survivalStart" class="startBtn survivalStart" type="button">Survival Mode</button>
       <button id="quickStart" class="startBtn secondaryStart" type="button">Quick Hunt</button>
     </div>
   </div>
   <div id="quickBiomePanel" class="card quickBiomePanel" hidden>
-    <div class="quickBiomeTopline">Quick Hunt</div>
+    <div class="quickBiomeTopline">Survival Mode</div>
     <h2 class="quickBiomeTitle">Choose Island</h2>
     <p class="quickBiomeCopy">Pick an island, choose a perk, and hunt until the island takes you.</p>
     <div class="quickBiomeGrid">
@@ -241,6 +234,22 @@
       <button type="button" data-biome="tundra">Tundra</button>
     </div>
     <button id="quickBack" class="quickBackBtn" type="button">Back</button>
+  </div>
+  <button id="settingsGear" class="settingsGear" type="button" aria-label="Open settings">&#9881;</button>
+  <div id="settingsModal" class="settingsModal" role="dialog" aria-modal="true" aria-label="Settings" hidden>
+    <div class="settingsCard">
+      <div class="settingsTopline">Options</div>
+      <h2>Audio / Visual</h2>
+      <div class="settingsPanel">
+        <label class="setting"><input id="settingHealth" type="checkbox" checked />Health</label>
+        <label class="setting"><input id="settingAmmo" type="checkbox" checked />Ammo</label>
+        <label class="setting"><input id="settingControls" type="checkbox" checked />Controls</label>
+        <label class="setting"><input id="settingSound" type="checkbox" checked />Sounds</label>
+        <label class="setting"><input id="settingAmbient" type="checkbox" checked />Ambient</label>
+        <label class="setting"><input id="settingFullscreen" type="checkbox" checked />Fullscreen</label>
+      </div>
+      <button id="settingsClose" class="quickBackBtn" type="button">Done</button>
+    </div>
   </div>
 </div>
 <script src="config.js"></script>

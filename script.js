@@ -19,6 +19,10 @@
   const mainMenuCard = $('mainMenuCard');
   const play = $('play');
   const quickStart = $('quickStart');
+  const survivalStart = $('survivalStart');
+  const settingsGear = $('settingsGear');
+  const settingsModal = $('settingsModal');
+  const settingsClose = $('settingsClose');
   const portraitInstallCallout = $('portraitInstallCallout');
   const quickBiomePanel = $('quickBiomePanel');
   const quickBack = $('quickBack');
@@ -279,7 +283,7 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.21.01');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.21.02');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -302,6 +306,8 @@
   const mission = {
     mode: MODE_STORY,
     quickBiome: 'forest',
+    quickVariant: 'survival',
+    quickGoal: 0,
     phase: PHASE_DROP,
     machine: null,
     supplyCrate: null,
@@ -523,7 +529,7 @@
     button.classList.remove('hidden');
   }
 
-  function renderDeathStats(summary = buildRunSummary('Quick Hunt run ended')) {
+  function renderDeathStats(summary = buildRunSummary('Run ended')) {
     renderRunStats(deathStats, summary);
     setShareButton(deathShare, summary);
   }
@@ -939,7 +945,7 @@
   }
 
   const QUICK_PROGRESS_KEY = 'zomvoxQuickHuntProgress';
-  const DEFAULT_QUICK_UNLOCKS = ['forest', 'dunes'];
+  const DEFAULT_QUICK_UNLOCKS = QUICK_BIOMES.slice();
   const QUICK_UNLOCK_RULES = {
     forest: { label: 'Forest', requirement: 'Unlocked' },
     dunes: { label: 'Dunes', requirement: 'Unlocked' },
@@ -1091,6 +1097,9 @@
   }
 
   function currentInfectedGoal() {
+    if (mission.mode === MODE_QUICK && mission.quickVariant === 'hunt') {
+      return Math.max(1, Math.floor(mission.quickGoal || 30));
+    }
     return MISSION_INFECTED_GOALS[mission.islandIndex] || MISSION_INFECTED_GOALS[MISSION_INFECTED_GOALS.length - 1] || FALLBACK_INFECTED_GOAL;
   }
 
@@ -1161,6 +1170,7 @@
     briefingMeta.textContent = briefing.meta || currentIslandLabel();
     briefingObjective.textContent = briefing.title;
     briefingBody.textContent = briefing.body;
+    if (briefingOk) briefingOk.textContent = briefing.buttonText || 'OK';
     renderBriefingShare(briefing.shareSummary || null);
     objectiveBriefing.classList.add('show');
     document.body.classList.add('briefing-open');
@@ -1175,6 +1185,7 @@
     mission.briefingActive = false;
     objectiveBriefing.classList.remove('show');
     document.body.classList.remove('briefing-open');
+    if (briefingOk) briefingOk.textContent = 'OK';
     renderBriefingShare(null);
     setHudObjective(mission.nextHudTitle || '', mission.nextHudMeta || '');
     const afterOk = mission.briefingAfterOk;
@@ -2237,7 +2248,7 @@ function playerOnMachinePad() {
     player.pos[1] = Math.min(MAX_Y + INSERTION_DROP_HEIGHT, groundY + INSERTION_DROP_HEIGHT);
     scorePop('DROP INBOUND', 'small');
     showToast(mission.mode === MODE_QUICK
-      ? 'Quick Hunt: drop started. Look around. Movement unlocks on touchdown.'
+      ? (mission.quickVariant === 'hunt' ? 'Quick Hunt' : 'Survival Mode') + ': drop started. Look around. Movement unlocks on touchdown.'
       : 'Mission Command: insertion started. Look around. Movement unlocks on touchdown.');
   }
 
@@ -2583,13 +2594,13 @@ function playerOnMachinePad() {
       const unlockedBiomes = recordQuickHuntRun(run);
       deathTitle.textContent = 'YOU DIED!';
       deathText.textContent = 'Final stats';
-      renderDeathStats(buildRunSummary('Quick Hunt run ended'));
+      renderDeathStats(buildRunSummary(mission.quickVariant === 'hunt' ? 'Quick Hunt failed' : 'Survival run ended'));
       renderDeathUnlocks(unlockedBiomes);
       if (unlockedBiomes.length) {
         sound('objectiveClear');
         showToast('Island unlocked: ' + unlockedBiomes.map(quickBiomeLabel).join(' + '), true);
       }
-      deathContinue.textContent = 'Continue Hunt';
+      deathContinue.textContent = mission.quickVariant === 'hunt' ? 'Retry Hunt' : 'Continue Hunt';
       deathGiveUp.textContent = 'Main Menu';
     }
     deathFill.style.width = '0%';
@@ -2669,6 +2680,34 @@ function playerOnMachinePad() {
     }
   }
 
+  function returnToMainMenu(message = 'Awaiting orders.') {
+    clearMovementInput();
+    deathState.active = false;
+    deathState.ready = false;
+    deathState.timer = 0;
+    locked = false;
+    if (document.pointerLockElement === canvas && document.exitPointerLock) document.exitPointerLock();
+    document.body.classList.remove('dead', 'low-health', 'story-death', 'story-reviving', 'story-revive-fade', 'stage-cleared', 'quick-mode');
+    deathOverlay.classList.remove('show', 'ready');
+    objectiveBriefing.classList.remove('show');
+    document.body.classList.remove('briefing-open');
+    deathStats.textContent = '';
+    renderDeathUnlocks(null);
+    hideDeathShare();
+    deathTitle.textContent = 'YOU DIED!';
+    deathText.textContent = 'Respawning...';
+    deathFill.style.width = '0%';
+    menu.style.display = 'flex';
+    mission.mode = MODE_STORY;
+    mission.quickBiome = 'forest';
+    mission.quickVariant = 'survival';
+    mission.quickGoal = 0;
+    setQuickBiomeScreen(false);
+    generateWorld(MISSION_SEEDS[0] || INITIAL_SEED);
+    updateAmbientSound(true);
+    showToast(message);
+  }
+
   function returnToMainMenuFromDeath(message, showQuickPicker = false) {
     sound('confirm');
     deathState.active = false;
@@ -2687,6 +2726,8 @@ function playerOnMachinePad() {
     menu.style.display = 'flex';
     mission.mode = MODE_STORY;
     mission.quickBiome = 'forest';
+    mission.quickVariant = 'survival';
+    mission.quickGoal = 0;
     setQuickBiomeScreen(showQuickPicker);
     document.body.classList.remove('quick-mode');
     generateWorld(MISSION_SEEDS[0] || INITIAL_SEED);
@@ -2700,7 +2741,7 @@ function playerOnMachinePad() {
       returnToMainMenuFromDeath('Mission abandoned. Awaiting new orders.');
       return;
     }
-    returnToMainMenuFromDeath('Quick Hunt ended. Choose another island.', true);
+    returnToMainMenuFromDeath(mission.quickVariant === 'hunt' ? 'Quick Hunt ended. Awaiting next run.' : 'Survival ended. Choose another island.', mission.quickVariant !== 'hunt');
   }
 
   function startReload() {
@@ -3209,9 +3250,36 @@ function playerOnMachinePad() {
     scorePop('EXTRACTION CONFIRMED', 'wave');
   }
 
+  function completeQuickHunt() {
+    if (mission.completed) return;
+    mission.completed = true;
+    nextSpawnTimer = 999;
+    clearRemainingMissionEnemies();
+    const run = {
+      kills: player.lifeKills,
+      seconds: runSeconds(),
+      bestCombo: player.lifeBestCombo
+    };
+    recordQuickHuntRun(run);
+    sound('objectiveClear');
+    showCommandBanner('HUNT COMPLETE', currentBiomeLabel() + ' Island cleared', 4.2);
+    scorePop('HUNT COMPLETE', 'wave');
+    openObjectiveBriefing({
+      title: 'Hunt complete',
+      meta: 'Quick Hunt // ' + currentBiomeLabel() + ' Island',
+      body: 'Command confirms the island is clear. Take the win and return to the main menu.',
+      buttonText: 'Continue',
+      shareSummary: buildRunSummary('Quick Hunt complete'),
+      hudTitle: 'Hunt complete',
+      hudMeta: 'Returning to menu',
+      afterOk: () => returnToMainMenu('Hunt complete. Choose your next run.')
+    });
+  }
+
   function checkMissionCompletion() {
-    if (mission.mode !== MODE_STORY) return;
-    if (mission.phase === PHASE_ZOMBIE_THREAT && player.kills >= currentInfectedGoal()) completeMissionIsland();
+    if (mission.phase !== PHASE_ZOMBIE_THREAT) return;
+    if (mission.mode === MODE_STORY && player.kills >= currentInfectedGoal()) completeMissionIsland();
+    else if (mission.mode === MODE_QUICK && mission.quickVariant === 'hunt' && player.kills >= currentInfectedGoal()) completeQuickHunt();
   }
 
   function spawnSupplyCrate() {
@@ -3444,9 +3512,12 @@ function playerOnMachinePad() {
     document.body.classList.toggle('stage-cleared', mission.completed && !mission.extractionCalled);
     document.body.classList.toggle('quick-mode', mission.mode === MODE_QUICK);
     if (mission.mode === MODE_QUICK) {
-      setKillHud(true, player.kills);
+      const count = mission.quickVariant === 'hunt'
+        ? Math.max(0, currentInfectedGoal() - player.kills)
+        : player.kills;
+      setKillHud(true, count);
       objectiveText.textContent = '';
-      objectiveMeta.textContent = 'Kills';
+      objectiveMeta.textContent = mission.quickVariant === 'hunt' ? 'Remaining' : 'Kills';
       return;
     }
     setKillHud(false, 0);
@@ -3830,6 +3901,8 @@ function currentWaterIsDangerous() {
     clearMovementInput();
     const activeMode = mission.mode || MODE_STORY;
     const activeQuickBiome = normalizeBiome(mission.quickBiome);
+    const activeQuickVariant = mission.quickVariant || 'survival';
+    const activeQuickGoal = Math.max(0, Math.floor(mission.quickGoal || 0));
     currentSeed = seed;
     mission.islandIndex = missionSeedIndex(seed);
     world = new Map();
@@ -3853,6 +3926,8 @@ function currentWaterIsDangerous() {
     player.shotCooldown = 0;
     mission.mode = activeMode;
     mission.quickBiome = activeQuickBiome;
+    mission.quickVariant = activeQuickVariant;
+    mission.quickGoal = activeQuickGoal;
     mission.phase = PHASE_DROP;
     mission.machine = null;
     mission.supplyCrate = null;
@@ -3928,17 +4003,26 @@ function currentWaterIsDangerous() {
     if (mission.mode === MODE_QUICK) {
       mission.phase = PHASE_ZOMBIE_THREAT;
       mission.objectiveAcknowledged = true;
-      mission.hudTitle = 'Quick Hunt';
-      mission.hudMeta = currentBiomeLabel();
+      mission.hudTitle = mission.quickVariant === 'hunt' ? 'Quick Hunt' : 'Survival Mode';
+      mission.hudMeta = mission.quickVariant === 'hunt'
+        ? currentBiomeLabel() + ' // Clear ' + currentInfectedGoal()
+        : currentBiomeLabel();
       setWeaponUnlocked(true);
       nextSpawnTimer = 1.6;
+      if (mission.quickVariant === 'hunt') {
+        startInsertionDrop();
+        spawnInitialWave();
+        showCommandBanner('QUICK HUNT', currentBiomeLabel() + ' Island // Clear ' + currentInfectedGoal(), 3.0);
+        showToast('Quick Hunt: clear ' + currentInfectedGoal() + ' infected.');
+        return;
+      }
       openPerkChoice(() => {
         startInsertionDrop();
         spawnInitialWave();
-        showCommandBanner('QUICK HUNT', currentBiomeLabel() + ' Island', 2.8);
-        showToast('Quick Hunt: survive the infected.');
+        showCommandBanner('SURVIVAL MODE', currentBiomeLabel() + ' Island', 2.8);
+        showToast('Survival Mode: survive the infected.');
       }, {
-        meta: 'Quick Hunt // ' + currentBiomeLabel() + ' Island // Perk Selection',
+        meta: 'Survival Mode // ' + currentBiomeLabel() + ' Island // Perk Selection',
         title: 'Choose Perk',
         body: 'Pick one perk before the drop.'
       });
@@ -3957,6 +4041,7 @@ function currentWaterIsDangerous() {
 
   function enterGameFromMenu() {
     applySettings();
+    if (settingsModal) settingsModal.hidden = true;
     if (soundEnabled || ambientEnabled) window.ZomVoxSound?.prime();
     clearMovementInput();
     setQuickBiomeScreen(false);
@@ -3984,6 +4069,8 @@ function currentWaterIsDangerous() {
     if (mission.mode !== MODE_STORY || !mission.pendingBriefing) {
       mission.mode = MODE_STORY;
       mission.quickBiome = 'forest';
+      mission.quickVariant = 'survival';
+      mission.quickGoal = 0;
       document.body.classList.remove('quick-mode');
       generateWorld(MISSION_SEEDS[0] || INITIAL_SEED);
     }
@@ -3992,6 +4079,7 @@ function currentWaterIsDangerous() {
 
   function setQuickBiomeScreen(show) {
     if (!quickBiomePanel) return;
+    if (settingsModal) settingsModal.hidden = true;
     if (show) renderQuickBiomeLocks();
     if (mainMenuCard) mainMenuCard.hidden = show;
     quickBiomePanel.hidden = !show;
@@ -4008,7 +4096,7 @@ function currentWaterIsDangerous() {
     setQuickBiomeScreen(false);
   }
 
-  function startQuickGame(biome) {
+  function startSurvivalGame(biome) {
     const selectedBiome = normalizeBiome(biome);
     if (!isQuickBiomeUnlocked(selectedBiome)) {
       const rule = QUICK_UNLOCK_RULES[selectedBiome] || QUICK_UNLOCK_RULES.forest;
@@ -4020,10 +4108,36 @@ function currentWaterIsDangerous() {
     sound('confirm');
     mission.mode = MODE_QUICK;
     mission.quickBiome = selectedBiome;
+    mission.quickVariant = 'survival';
+    mission.quickGoal = 0;
     resetActivePerks();
     document.body.classList.add('quick-mode');
     generateWorld(quickSeedForBiome(mission.quickBiome));
     enterGameFromMenu();
+  }
+
+  function startRandomQuickHunt() {
+    sound('confirm');
+    const biome = QUICK_BIOMES[Math.floor(Math.random() * QUICK_BIOMES.length)] || 'forest';
+    mission.mode = MODE_QUICK;
+    mission.quickBiome = biome;
+    mission.quickVariant = 'hunt';
+    mission.quickGoal = 20 + Math.floor(Math.random() * 21);
+    resetActivePerks();
+    document.body.classList.add('quick-mode');
+    generateWorld(Math.floor(100000 + Math.random() * 900000));
+    enterGameFromMenu();
+  }
+
+  function openSettingsModal() {
+    sound('confirm');
+    if (settingsModal) settingsModal.hidden = false;
+  }
+
+  function closeSettingsModal() {
+    sound('confirm');
+    if (settingsModal) settingsModal.hidden = true;
+    applySettings();
   }
 
   function requestPointerLockSafe() {
@@ -4040,11 +4154,17 @@ function currentWaterIsDangerous() {
     respawn();
   }
   play.addEventListener('click', startStoryGame);
-  if (quickStart) quickStart.addEventListener('click', openQuickBiomeScreen);
+  if (survivalStart) survivalStart.addEventListener('click', openQuickBiomeScreen);
+  if (quickStart) quickStart.addEventListener('click', startRandomQuickHunt);
+  if (settingsGear) settingsGear.addEventListener('click', openSettingsModal);
+  if (settingsClose) settingsClose.addEventListener('click', closeSettingsModal);
+  if (settingsModal) settingsModal.addEventListener('click', event => {
+    if (event.target === settingsModal) closeSettingsModal();
+  });
   if (portraitInstallCallout) portraitInstallCallout.addEventListener('click', installZomVox);
   if (quickBack) quickBack.addEventListener('click', closeQuickBiomeScreen);
   for (const btn of quickBiomeButtons) {
-    btn.addEventListener('click', () => startQuickGame(btn.dataset.biome));
+    btn.addEventListener('click', () => startSurvivalGame(btn.dataset.biome));
   }
   briefingOk.addEventListener('click', acknowledgeObjectiveBriefing);
   if (briefingShareButton) briefingShareButton.addEventListener('click', () => shareRunFromButton(briefingShareButton));
