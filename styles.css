@@ -206,11 +206,19 @@
   .settingsPanel{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin:0 0 18px; }
   .setting{ display:flex; align-items:center; gap:8px; border:1px solid rgba(255,255,255,.13); background:rgba(255,255,255,.055); border-radius:8px; padding:9px 10px; color:#dcecf7; font-size:13px; font-weight:800; user-select:none; }
   .setting input{ width:18px; height:18px; accent-color:#86ee66; }
-  .startActions{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
-  .startBtn{ appearance:none; border:0; border-radius:0; padding:14px 20px; font-size:18px; font-weight:1000; text-transform:uppercase; cursor:pointer; clip-path:polygon(0 10px,10px 10px,10px 0,calc(100% - 10px) 0,calc(100% - 10px) 10px,100% 10px,100% calc(100% - 10px),calc(100% - 10px) calc(100% - 10px),calc(100% - 10px) 100%,10px 100%,10px calc(100% - 10px),0 calc(100% - 10px)); }
+  .startActions{ width:70%; margin:0 auto; display:grid; grid-template-columns:1fr; gap:12px; }
+  .startBtn{ appearance:none; width:100%; min-height:58px; border:0; border-radius:0; padding:14px 20px; font-size:18px; font-weight:1000; text-transform:uppercase; cursor:pointer; clip-path:polygon(0 10px,10px 10px,10px 0,calc(100% - 10px) 0,calc(100% - 10px) 10px,100% 10px,100% calc(100% - 10px),calc(100% - 10px) calc(100% - 10px),calc(100% - 10px) 100%,10px 100%,10px calc(100% - 10px),0 calc(100% - 10px)); }
   .primaryStart{ color:#06230e; background:linear-gradient(180deg,#d9ffc8 0%,#86ef65 54%,#46b946 100%); box-shadow:0 14px 40px rgba(105,216,90,.26), inset 0 3px 0 rgba(255,255,255,.5), inset 0 -5px 0 rgba(0,0,0,.16); }
+  .survivalStart{ color:#061923; background:linear-gradient(180deg,#c9f3ff 0%,#71c9ef 54%,#3583b8 100%); box-shadow:0 14px 40px rgba(83,189,255,.2), inset 0 3px 0 rgba(255,255,255,.42), inset 0 -5px 0 rgba(0,0,0,.18); }
   .secondaryStart{ color:#210606; background:linear-gradient(180deg,#ffe99b 0%,#ff9160 54%,#e94e38 100%); box-shadow:0 14px 40px rgba(255,98,72,.24), inset 0 3px 0 rgba(255,255,255,.38), inset 0 -5px 0 rgba(0,0,0,.16); }
-  .startBtn:hover,.quickBiomeGrid button:hover,.quickBackBtn:hover{ filter:brightness(1.05); }
+  .startBtn:hover,.quickBiomeGrid button:hover,.quickBackBtn:hover,.settingsGear:hover{ filter:brightness(1.05); }
+  .settingsGear{ position:absolute; right:calc(22px + env(safe-area-inset-right)); bottom:calc(22px + env(safe-area-inset-bottom)); width:52px; height:52px; display:grid; place-items:center; border:1px solid rgba(255,255,255,.18); border-radius:0; clip-path:polygon(0 8px,8px 8px,8px 0,calc(100% - 8px) 0,calc(100% - 8px) 8px,100% 8px,100% calc(100% - 8px),calc(100% - 8px) calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,8px calc(100% - 8px),0 calc(100% - 8px)); color:#d9ffd0; background:rgba(5,12,15,.72); box-shadow:inset 0 2px 0 rgba(255,255,255,.12), inset 0 -4px 0 rgba(0,0,0,.28), 0 14px 36px rgba(0,0,0,.36); font-size:28px; line-height:1; cursor:pointer; z-index:2; }
+  .settingsModal{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; padding:18px; background:radial-gradient(circle at 50% 45%, rgba(145,243,110,.12), rgba(0,0,0,.68) 62%, rgba(0,0,0,.88)); z-index:3; }
+  .settingsModal[hidden]{ display:none; }
+  .settingsCard{ width:min(430px, calc(100vw - 34px)); padding:18px; border:1px solid rgba(145,243,110,.38); border-radius:8px; background:linear-gradient(180deg, rgba(13,24,22,.96), rgba(4,8,10,.96)); box-shadow:0 28px 80px rgba(0,0,0,.58), inset 0 2px 0 rgba(255,255,255,.09); text-align:center; }
+  .settingsTopline{ color:#91f36e; font-size:11px; font-weight:1000; letter-spacing:.2em; text-transform:uppercase; margin-bottom:6px; }
+  .settingsCard h2{ margin:0 0 14px; color:#f5fff2; font-size:30px; line-height:.95; text-transform:uppercase; }
+  .settingsCard .settingsPanel{ margin-bottom:12px; }
   .quickBiomePanel{ width:min(620px, 96vw); text-align:center; }
   .quickBiomePanel[hidden], #menu.quick-select #mainMenuCard{ display:none; }
   .quickBiomeTopline{ color:#91f36e; font-size:12px; font-weight:1000; letter-spacing:.2em; text-transform:uppercase; margin-bottom:8px; }
@@ -317,8 +325,11 @@
     .settingsPanel{ grid-template-columns:repeat(2,minmax(0,1fr)); gap:5px; margin-bottom:8px; }
     .setting{ padding:5px 7px; font-size:11px; }
     .setting input{ width:16px; height:16px; }
-    .startActions{ gap:6px; }
-    .startBtn{ border-radius:10px; padding:8px 10px; font-size:14px; }
+    .startActions{ width:76%; gap:6px; }
+    .startBtn{ min-height:39px; padding:8px 10px; font-size:14px; }
+    .settingsGear{ width:42px; height:42px; right:calc(10px + env(safe-area-inset-right)); bottom:calc(10px + env(safe-area-inset-bottom)); font-size:23px; }
+    .settingsCard{ width:min(390px, calc(100vw - 24px)); padding:13px; }
+    .settingsCard h2{ font-size:23px; margin-bottom:10px; }
     .quickBiomePanel{ width:min(98vw, 520px); padding:12px; }
     .quickBiomeTopline{ font-size:10px; margin-bottom:5px; }
     .quickBiomeTitle{ font-size:26px; margin-bottom:5px; }
@@ -395,8 +406,8 @@
     .settingsPanel{ grid-template-columns:repeat(3,minmax(0,1fr)); gap:4px; margin-bottom:6px; }
     .setting{ min-height:25px; padding:4px 6px; font-size:9px; gap:5px; border-radius:6px; }
     .setting input{ width:14px; height:14px; }
-    .startActions{ gap:6px; }
-    .startBtn{ min-height:39px; padding:7px 8px; border-radius:9px; font-size:13px; }
+    .startActions{ width:70%; gap:5px; }
+    .startBtn{ min-height:36px; padding:7px 8px; font-size:13px; }
     .quickBiomePanel{ max-height:calc(100svh - 6px); padding:8px 10px; }
     .quickBiomeTopline{ font-size:9px; margin-bottom:3px; }
     .quickBiomeTitle{ font-size:22px; margin-bottom:3px; }
@@ -409,7 +420,7 @@
     .settingsPanel{ grid-template-columns:repeat(6,minmax(0,1fr)); }
     .setting{ justify-content:center; padding:4px 3px; font-size:8px; }
     .setting input{ width:13px; height:13px; }
-    .startBtn{ min-height:36px; }
+    .startBtn{ min-height:33px; }
   }
   @media (pointer: coarse){
     #mobileControls{ display:block; }
