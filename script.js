@@ -277,7 +277,7 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.20.14');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.20.15');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -1643,8 +1643,8 @@
     return { top: beach ? BLOCK.SAND : (roll < .95 ? BLOCK.GRASS : (desert ? BLOCK.SAND : BLOCK.STONE)), near: beach ? BLOCK.SAND : BLOCK.DIRT };
   }
 
-  function growTree(x, h, z, trunkType = BLOCK.WOOD, withLeaves = true) {
-    const trunk = 4 + Math.floor(seededHash(x + 11.2, z - 4.1) * 3);
+  function growTree(x, h, z, trunkType = BLOCK.WOOD, withLeaves = true, trunkBase = 4, trunkRange = 3) {
+    const trunk = trunkBase + Math.floor(seededHash(x + 11.2, z - 4.1) * trunkRange);
     for (let y = 1; y <= trunk; y++) genSetBlock(x, h + y, z, trunkType);
     if (!withLeaves) {
       const armY = h + Math.max(2, trunk - 1);
@@ -1767,8 +1767,8 @@
         const h = terrainHeight(x, z);
         if (h <= WATER_LEVEL + 1) continue;
         const propRoll = seededHash(x * 8.31, z * 3.77);
-        if (biome === 'forest' && propRoll > 0.965) {
-          growTree(x, h, z);
+        if (biome === 'forest' && propRoll > 0.982) {
+          growTree(x, h, z, BLOCK.WOOD, true, 6, 3);
         } else if (biome === 'dunes' && propRoll > 0.972) {
           growSaguaro(x, h, z);
         } else if (biome === 'rocky' && propRoll > 0.992) {
@@ -2820,21 +2820,23 @@ function playerOnMachinePad() {
     particles = particles.filter(p => p.life > 0);
   }
 
-  function c4PlacementSpot() {
-    const forward = [Math.sin(player.yaw), Math.cos(player.yaw)];
-    const candidates = [
-      [player.pos[0] + forward[0] * 1.35, player.pos[2] + forward[1] * 1.35],
-      [player.pos[0], player.pos[2]]
-    ];
-    for (const spot of candidates) {
-      const x = Math.floor(Math.max(WORLD_MIN, Math.min(WORLD_MAX, spot[0])));
-      const z = Math.floor(Math.max(WORLD_MIN, Math.min(WORLD_MAX, spot[1])));
-      const y = pickupAirY(x, z);
-      if (y <= WATER_LEVEL + 1) continue;
-      if (blocksMovement(getBlock(x, y, z)) || blocksMovement(getBlock(x, y + 1, z))) continue;
-      return { x: x + .5, y: y + .04, z: z + .5 };
+  function landC4Charge(charge) {
+    const x = Math.floor(Math.max(WORLD_MIN, Math.min(WORLD_MAX, charge.x)));
+    const z = Math.floor(Math.max(WORLD_MIN, Math.min(WORLD_MAX, charge.z)));
+    const y = pickupAirY(x, z);
+    if (y <= WATER_LEVEL + 1 || blocksMovement(getBlock(x, y, z)) || blocksMovement(getBlock(x, y + 1, z))) {
+      charge.triggered = true;
+      return false;
     }
-    return null;
+    charge.x = x + .5;
+    charge.y = y + .04;
+    charge.z = z + .5;
+    charge.vx = 0;
+    charge.vy = 0;
+    charge.vz = 0;
+    charge.airborne = false;
+    charge.armed = .28;
+    return true;
   }
 
   function placeC4() {
@@ -2849,22 +2851,21 @@ function playerOnMachinePad() {
       sound('empty');
       return;
     }
-    const spot = c4PlacementSpot();
-    if (!spot) {
-      showToast('No clear ground for C4.');
-      sound('empty');
-      return;
-    }
+    const forward = [Math.sin(player.yaw), Math.cos(player.yaw)];
     player.c4--;
     c4Charges.push({
-      x: spot.x,
-      y: spot.y,
-      z: spot.z,
-      armed: .45,
+      x: player.pos[0] + forward[0] * .45,
+      y: player.pos[1] + 1.25,
+      z: player.pos[2] + forward[1] * .45,
+      vx: forward[0] * 5.8,
+      vy: 4.2,
+      vz: forward[1] * 5.8,
+      airborne: true,
+      armed: 999,
       phase: Math.random() * Math.PI * 2
     });
-    showToast('C4 armed. Lure infected into it.');
-    scorePop('C4 ARMED', 'pickup small');
+    showToast('C4 tossed. Lure infected into it.');
+    scorePop('C4 TOSSED', 'pickup small');
     sound('pickupAmmo');
   }
 
@@ -2910,6 +2911,23 @@ function playerOnMachinePad() {
   function updateC4Charges(dt) {
     if (!c4Charges.length) return;
     for (const charge of c4Charges) {
+      if (charge.airborne) {
+        charge.x += (charge.vx || 0) * dt;
+        charge.y += (charge.vy || 0) * dt;
+        charge.z += (charge.vz || 0) * dt;
+        charge.vy = (charge.vy || 0) - 10.5 * dt;
+        charge.vx = (charge.vx || 0) * Math.max(0, 1 - dt * .45);
+        charge.vz = (charge.vz || 0) * Math.max(0, 1 - dt * .45);
+
+        const x = Math.floor(Math.max(WORLD_MIN, Math.min(WORLD_MAX, charge.x)));
+        const z = Math.floor(Math.max(WORLD_MIN, Math.min(WORLD_MAX, charge.z)));
+        const floorY = pickupAirY(x, z) + .04;
+        const blocked = blocksMovement(getBlock(x, Math.floor(charge.y), z));
+        if (charge.x <= WORLD_MIN || charge.x >= WORLD_MAX || charge.z <= WORLD_MIN || charge.z >= WORLD_MAX || charge.y <= floorY || blocked) {
+          landC4Charge(charge);
+        }
+        if (charge.airborne) continue;
+      }
       charge.armed = Math.max(0, (charge.armed || 0) - dt);
       if (charge.triggered || charge.armed > 0) continue;
       for (const e of enemies) {
