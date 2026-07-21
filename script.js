@@ -277,7 +277,7 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.20.13');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.20.14');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -612,6 +612,8 @@
     particle.style.setProperty('--life', options.life.toFixed(3) + 's');
     particle.style.setProperty('--start', options.start.toFixed(2));
     particle.style.setProperty('--end', options.end.toFixed(2));
+    particle.style.setProperty('--spin', (options.spin || 0).toFixed(1) + 'deg');
+    particle.style.setProperty('--spinEnd', (options.spinEnd || 0).toFixed(1) + 'deg');
     particle.style.setProperty('--color', options.color);
     if (options.halo) particle.style.setProperty('--halo', options.halo);
     if (options.glow) particle.style.setProperty('--glow', options.glow.toFixed(1) + 'px');
@@ -628,44 +630,54 @@
 
     // Screen-space voxel particles keep the muzzle flash glued to the weapon
     // sprite while still giving every shot a slightly different burst.
-    const muzzleX = rect.left + rect.width * .23 + (Math.random() - .5) * 8;
-    const muzzleY = rect.top + rect.height * .54 + (Math.random() - .5) * 8;
+    const rand = (min, max) => min + Math.random() * (max - min);
+    const burstType = Math.floor(Math.random() * 4);
+    const fanCenter = Math.PI + rand(-.18, .18);
+    const fanSpread = [.62, 1.05, 1.35, .78][burstType];
+    const rangeBoost = [1.0, 1.34, .82, 1.12][burstType];
+    const muzzleX = rect.left + rect.width * rand(.185, .255);
+    const muzzleY = rect.top + rect.height * rand(.49, .58);
     const flashColors = ['#fff7b0', '#ffe15a', '#ffb236', '#ff7a21'];
-    const flashCount = 8 + Math.floor(Math.random() * 5);
+    const flashCount = 10 + Math.floor(Math.random() * 8);
     for (let i = 0; i < flashCount; i++) {
-      const angle = Math.PI + (Math.random() - .5) * .78;
-      const distance = 14 + Math.random() * 42;
-      const size = 5 + Math.random() * 11;
+      const isCore = i < 2 && burstType !== 2;
+      const angle = fanCenter + rand(-fanSpread, fanSpread) * (isCore ? .28 : 1);
+      const distance = (isCore ? rand(8, 28) : rand(20, 72)) * rangeBoost;
+      const size = isCore ? rand(13, 22) : rand(4, 14);
       muzzleParticle({
-        x: muzzleX - size / 2,
-        y: muzzleY - size / 2,
+        x: muzzleX - size / 2 + rand(-10, 10),
+        y: muzzleY - size / 2 + rand(-12, 12),
         dx: Math.cos(angle) * distance,
-        dy: Math.sin(angle) * distance + (Math.random() - .5) * 10,
+        dy: Math.sin(angle) * distance + rand(-26, 26),
         size,
-        life: .08 + Math.random() * .11,
-        start: .55 + Math.random() * .65,
-        end: .25 + Math.random() * .45,
+        life: isCore ? rand(.12, .2) : rand(.11, .24),
+        start: isCore ? rand(.9, 1.35) : rand(.55, 1.15),
+        end: rand(.18, .58),
+        spin: rand(-10, 10),
+        spinEnd: rand(-55, 55),
         color: flashColors[Math.floor(Math.random() * flashColors.length)],
         halo: 'rgba(255,188,38,.5)',
-        glow: 10 + Math.random() * 16
+        glow: isCore ? rand(18, 34) : rand(8, 24)
       });
     }
-    const smokeCount = 2 + Math.floor(Math.random() * 3);
+    const smokeCount = 2 + Math.floor(Math.random() * 4);
     for (let i = 0; i < smokeCount; i++) {
-      const angle = Math.PI + (Math.random() - .5) * .9;
-      const distance = 18 + Math.random() * 34;
-      const size = 8 + Math.random() * 13;
+      const angle = fanCenter + rand(-.7, .7);
+      const distance = rand(20, 58);
+      const size = rand(8, 22);
       muzzleParticle({
         smoke: true,
-        x: muzzleX - size / 2 + Math.random() * 10,
-        y: muzzleY - size / 2 + Math.random() * 8,
+        x: muzzleX - size / 2 + rand(-8, 16),
+        y: muzzleY - size / 2 + rand(-8, 12),
         dx: Math.cos(angle) * distance,
-        dy: Math.sin(angle) * distance - 8 - Math.random() * 16,
+        dy: Math.sin(angle) * distance - rand(12, 34),
         size,
-        life: .34 + Math.random() * .24,
+        life: rand(.38, .68),
         start: .55,
-        end: 1.15 + Math.random() * .7,
-        color: 'rgba(' + Math.floor(140 + Math.random() * 72) + ',' + Math.floor(148 + Math.random() * 68) + ',' + Math.floor(142 + Math.random() * 66) + ',.48)'
+        end: rand(1.15, 2.0),
+        spin: rand(-8, 8),
+        spinEnd: rand(-35, 35),
+        color: 'rgba(' + Math.floor(rand(140, 212)) + ',' + Math.floor(rand(148, 216)) + ',' + Math.floor(rand(142, 208)) + ',.48)'
       });
     }
   }
