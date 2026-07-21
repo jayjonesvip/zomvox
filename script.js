@@ -25,6 +25,7 @@
   const toast = $('toast');
   const gunSprite = $('gunSprite');
   const muzzleFx = $('muzzleFx');
+  const crosshairFlash = $('crosshairFlash');
   const damageFlash = $('damageFlash');
   const healthStatus = $('healthStatus');
   const healthBigText = $('healthBigText');
@@ -148,7 +149,8 @@
     SNOW: 31,
     ICE: 32,
     PINE_LEAF: 33,
-    CLOUD: 34
+    CLOUD: 34,
+    SPIRE_METAL: 41
   };
 
   const CHUNK_SIZE = Math.max(4, Math.floor(configNumber(WORLD_CONFIG, 'chunkSize', 16)));
@@ -277,7 +279,7 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.20.15');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.21.01');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -598,6 +600,17 @@
     reticle.classList.add(kind === 'kill' ? 'kill' : 'hit');
     clearTimeout(pulseHitMarker.timer);
     pulseHitMarker.timer = setTimeout(() => reticle.classList.remove('hit', 'kill'), kind === 'kill' ? 260 : 180);
+    triggerCrosshairFlash(kind === 'kill' ? 'kill' : 'hit');
+  }
+
+  function triggerCrosshairFlash(kind = 'shot') {
+    if (!crosshairFlash) return;
+    crosshairFlash.classList.remove('show', 'hit', 'kill');
+    void crosshairFlash.offsetWidth;
+    if (kind === 'hit' || kind === 'kill') crosshairFlash.classList.add(kind);
+    crosshairFlash.classList.add('show');
+    clearTimeout(triggerCrosshairFlash.timer);
+    triggerCrosshairFlash.timer = setTimeout(() => crosshairFlash.classList.remove('show'), kind === 'shot' ? 70 : 120);
   }
 
   function muzzleParticle(options) {
@@ -771,6 +784,40 @@
       }
     }
     return fallback;
+  }
+
+  function mixSkyColor(a, b, t) {
+    return [
+      a[0] + (b[0] - a[0]) * t,
+      a[1] + (b[1] - a[1]) * t,
+      a[2] + (b[2] - a[2]) * t
+    ];
+  }
+
+  function clearSkyGradient(sky) {
+    const horizon = [
+      clamp01(sky[0] * 1.18 + 0.08),
+      clamp01(sky[1] * 1.14 + 0.07),
+      clamp01(sky[2] * 1.08 + 0.04)
+    ];
+    const zenith = [
+      clamp01(sky[0] * 0.54),
+      clamp01(sky[1] * 0.62),
+      clamp01(sky[2] * 0.78)
+    ];
+    const bands = 12;
+    gl.enable(gl.SCISSOR_TEST);
+    for (let i = 0; i < bands; i++) {
+      const y0 = Math.floor(canvas.height * i / bands);
+      const y1 = Math.floor(canvas.height * (i + 1) / bands);
+      const t = i / Math.max(1, bands - 1);
+      const color = mixSkyColor(horizon, zenith, t);
+      gl.scissor(0, y0, canvas.width, Math.max(1, y1 - y0));
+      gl.clearColor(color[0], color[1], color[2], 1);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+    }
+    gl.disable(gl.SCISSOR_TEST);
+    gl.clear(gl.DEPTH_BUFFER_BIT);
   }
 
   function buildVersionText() {
@@ -1373,13 +1420,13 @@
       if(t < 21.5) return vec3(0.025, 0.055, 0.025); /* closed eyes */
       if(t < 22.5) return vec3(0.30, 0.32, 0.31); /* cracked stone */
       if(t < 23.5) return vec3(0.38, 0.95, 0.24); /* toxin smoke */
-      if(t < 24.5) return vec3(0.90, 0.02, 0.015) * (0.35 + step(0.45, sin(uTime * 6.0)) * 0.75); /* red beacon */
+      if(t < 24.5) return vec3(0.90, 0.02, 0.015) * (0.42 + (sin(uTime * 5.8) * 0.5 + 0.5) * 0.78); /* red beacon */
       if(t < 25.5) return vec3(0.15, 0.50, 0.18); /* cactus */
       if(t < 26.5) return vec3(0.22, 0.18, 0.12); /* swamp mud */
       if(t < 27.5) return vec3(0.12, 0.13, 0.13); /* ash */
       if(t < 28.5) return vec3(0.18, 0.13, 0.09); /* dead wood */
       if(t < 29.5) return vec3(0.20, 0.015, 0.012); /* dead beacon */
-      if(t < 30.5) return vec3(1.0, 0.86, 0.16) * (0.58 + step(0.45, sin(uTime * 7.0)) * 0.38); /* shutdown pad */
+      if(t < 30.5) return vec3(1.0, 0.86, 0.16) * (0.62 + (sin(uTime * 6.8) * 0.5 + 0.5) * 0.42); /* shutdown pad */
       if(t < 31.5) return vec3(0.86, 0.91, 0.92); /* snow */
       if(t < 32.5) return vec3(0.56, 0.82, 0.96); /* frozen water */
       if(t < 33.5) return vec3(0.06, 0.25, 0.13); /* pine needles */
@@ -1390,6 +1437,7 @@
       if(t < 38.5) return vec3(0.07, 0.16, 0.08); /* ammo camo shadow */
       if(t < 39.5) return vec3(0.015, 0.025, 0.014); /* zombie mouth */
       if(t < 40.5) return vec3(0.82, 0.86, 0.72); /* zombie teeth */
+      if(t < 41.5) return vec3(0.68, 0.74, 0.76) * (0.78 + (sin(uTime * 2.4) * 0.5 + 0.5) * 0.20); /* active spire metal */
       return vec3(1.0, 0.45, 0.18); /* particles */
     }
     void main(){
@@ -1408,10 +1456,11 @@
       if(vType > 16.5 && vType < 17.5) color += vec3(0.35, 0.0, 0.0);
       if(vType > 19.5 && vType < 20.5) color += vec3(0.55, 0.35, 0.0);
       if(vType > 21.5 && vType < 22.5) color *= 0.70 + step(0.58, hash(floor(vWorld.xz * 3.0 + vWorld.yy))) * 0.42;
-      if(vType > 23.5 && vType < 24.5) color += vec3(0.70, 0.0, 0.0) * step(0.45, sin(uTime * 6.0));
+      if(vType > 23.5 && vType < 24.5) color += vec3(0.70, 0.0, 0.0) * (sin(uTime * 5.8) * 0.5 + 0.5);
       if(vType > 24.5 && vType < 25.5) color += vec3(0.02, 0.08, 0.02);
       if(vType > 26.5 && vType < 27.5) color *= 0.78 + step(0.62, hash(floor(vWorld.xz * 2.6 + vWorld.yy))) * 0.35;
-      if(vType > 29.5 && vType < 30.5) color += vec3(0.45, 0.32, 0.02) * step(0.45, sin(uTime * 7.0));
+      if(vType > 29.5 && vType < 30.5) color += vec3(0.45, 0.32, 0.02) * (sin(uTime * 6.8) * 0.5 + 0.5);
+      if(vType > 40.5 && vType < 41.5) color += vec3(0.07, 0.12, 0.10) * (sin(uTime * 2.4) * 0.5 + 0.5);
       if(vType > 30.5 && vType < 31.5) color += vec3(0.05, 0.06, 0.07) * max(n.y, 0.0);
       if(vType > 31.5 && vType < 32.5) color += vec3(0.08, 0.16, 0.18) * max(n.y, 0.0);
       if(vType > 32.5 && vType < 33.5) color *= 0.82 + step(0.62, hash(floor(vWorld.xz * 3.2 + vWorld.yy))) * 0.25;
@@ -1428,6 +1477,7 @@
       if(vType > 19.5 && vType < 20.5) light += 0.75;
       if(vType > 23.5 && vType < 24.5) light += 1.05;
       if(vType > 29.5 && vType < 30.5) light += 0.55;
+      if(vType > 40.5 && vType < 41.5) light += 0.14 * (sin(uTime * 2.4) * 0.5 + 0.5);
       if(vType > 12.5) light += 0.22;
       color *= light;
       if(uFog > 0.5){
@@ -1916,7 +1966,7 @@
       for (let dx = -1; dx <= 1; dx++) {
         for (let dz = -1; dz <= 1; dz++) {
           const blocks = y < 14 ? towerBlocks : beaconBlocks;
-          setMachineBlock(x + dx, baseY + y, z + dz, y < 14 ? BLOCK.METAL : BLOCK.RED_LIGHT, blocks);
+          setMachineBlock(x + dx, baseY + y, z + dz, y < 14 ? BLOCK.SPIRE_METAL : BLOCK.RED_LIGHT, blocks);
         }
       }
     }
@@ -2265,7 +2315,7 @@ function playerOnMachinePad() {
       const y = topSolidY(x, z) + 1;
       const surface = getBlock(x, y - 1, z);
       const propSurface = surface === BLOCK.WOOD || surface === BLOCK.CACTUS || surface === BLOCK.DEAD_WOOD ||
-        surface === BLOCK.METAL || surface === BLOCK.RED_LIGHT || surface === BLOCK.DARK_RED ||
+        surface === BLOCK.METAL || surface === BLOCK.SPIRE_METAL || surface === BLOCK.RED_LIGHT || surface === BLOCK.DARK_RED ||
         surface === BLOCK.SHUTDOWN_PAD || surface === BLOCK.BRICK || surface === BLOCK.LAMP;
       if (!propSurface && surface !== BLOCK.WATER && getBlock(x, y, z) !== BLOCK.WATER &&
         !blocksMovement(getBlock(x, y, z)) && !blocksMovement(getBlock(x, y + 1, z))) {
@@ -2785,6 +2835,7 @@ function playerOnMachinePad() {
     gunSprite.classList.add('shooting');
     setTimeout(() => gunSprite.classList.remove('shooting'), 120);
     triggerMuzzleFx();
+    triggerCrosshairFlash('shot');
     sound('shoot');
     const hit = raycastProjectile(58);
     applyShotRecoil();
@@ -3248,6 +3299,7 @@ function playerOnMachinePad() {
     // reveals a supply crate, the beacon dies down, and zombie spawning begins.
     explodeShutdownPad();
     for (const b of mission.machine.padBlocks || []) setBlock(b[0], b[1], b[2], 0, true);
+    for (const b of mission.machine.towerBlocks || []) setBlock(b[0], b[1], b[2], BLOCK.METAL, true);
     for (const b of mission.machine.beaconBlocks || []) setBlock(b[0], b[1], b[2], BLOCK.DARK_RED, true);
     queueRebuild();
     spawnSupplyCrate();
@@ -3681,8 +3733,7 @@ function currentWaterIsDangerous() {
       0.16 + dayAmount * 0.72
     ];
     sky = skyOptionColor(sky);
-    gl.clearColor(sky[0], sky[1], sky[2], 1);
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    clearSkyGradient(sky);
     gl.enable(gl.DEPTH_TEST);
     gl.disable(gl.CULL_FACE);
 
