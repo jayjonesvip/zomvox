@@ -72,31 +72,18 @@
   #gunSprite{ pointer-events:none; position:fixed; right:clamp(22px,4vw,78px); bottom:-16px; width:min(39vw, 400px); aspect-ratio:1/1; z-index:5; background:url("assets/zomvox-gun-spritesheet.png") 0 0 / 300% 100% no-repeat; image-rendering:auto; filter:drop-shadow(0 18px 22px rgba(0,0,0,.55)); transform-origin:72% 78%; transition:transform .08s ease-out; }
   #gunSprite.moving{ background-position:50% 0; transform:translateY(8px) rotate(-2deg); }
   #gunSprite.shooting{ background-position:100% 0; transform:translate(8px,-4px) rotate(1deg); }
-  #muzzleFx{ pointer-events:none; position:fixed; right:clamp(160px, 20vw, 282px); bottom:clamp(88px, 12.5vw, 146px); width:86px; height:62px; z-index:6; opacity:0; transform:rotate(-11deg); transform-origin:85% 60%; }
-  #muzzleFx i{ position:absolute; display:block; opacity:0; image-rendering:pixelated; }
-  .flashBlock{ background:#ffe96b; box-shadow:0 0 16px rgba(255,225,65,.75),0 0 30px rgba(255,98,34,.32); }
-  .fb1{ left:36px; top:19px; width:27px; height:19px; background:#fff4a7; }
-  .fb2{ left:60px; top:13px; width:18px; height:14px; background:#ffcc42; }
-  .fb3{ left:60px; top:35px; width:15px; height:12px; background:#ff7a2c; }
-  .fb4{ left:21px; top:25px; width:18px; height:14px; background:#ffe05a; }
-  .smokeBlock{ background:rgba(190,205,202,.5); border:1px solid rgba(255,255,255,.12); filter:blur(.2px); }
-  .sb1{ left:12px; top:10px; width:20px; height:16px; }
-  .sb2{ left:2px; top:29px; width:15px; height:13px; background:rgba(145,160,156,.42); }
-  .sb3{ left:24px; top:42px; width:13px; height:11px; background:rgba(215,225,220,.38); }
-  #muzzleFx.active{ opacity:1; }
-  #muzzleFx.active .flashBlock{ animation:muzzleFlash .12s steps(2,end) forwards; }
-  #muzzleFx.active .smokeBlock{ animation:muzzleSmoke .44s ease-out forwards; }
-  #muzzleFx.active .sb2{ animation-delay:.04s; }
-  #muzzleFx.active .sb3{ animation-delay:.08s; }
-  @keyframes muzzleFlash{
-    0%{ opacity:0; transform:translateX(-7px) scale(.65); }
-    25%{ opacity:1; transform:translateX(0) scale(1.12); }
-    100%{ opacity:0; transform:translateX(15px) scale(.84); }
+  #muzzleFx{ pointer-events:none; position:fixed; inset:0; z-index:6; overflow:hidden; contain:layout paint; }
+  .muzzleParticle{ position:fixed; left:0; top:0; width:var(--size,8px); height:var(--size,8px); transform:translate3d(var(--x,0),var(--y,0),0) scale(var(--start,.7)); opacity:0; image-rendering:pixelated; background:var(--color,#ffd84d); border:1px solid rgba(0,0,0,.22); box-shadow:0 0 var(--glow,14px) var(--halo,rgba(255,211,58,.45)); animation:muzzleParticle var(--life,.16s) steps(3,end) forwards; }
+  .muzzleParticle.smoke{ border-color:rgba(255,255,255,.08); box-shadow:none; filter:blur(.2px); animation-name:muzzleSmokeParticle; }
+  @keyframes muzzleParticle{
+    0%{ opacity:0; transform:translate3d(var(--x,0),var(--y,0),0) scale(var(--start,.7)); }
+    16%{ opacity:1; }
+    100%{ opacity:0; transform:translate3d(calc(var(--x,0) + var(--dx,0px)),calc(var(--y,0) + var(--dy,0px)),0) scale(var(--end,.45)); }
   }
-  @keyframes muzzleSmoke{
-    0%{ opacity:0; transform:translate(10px,3px) scale(.7); }
-    22%{ opacity:.72; }
-    100%{ opacity:0; transform:translate(-23px,-12px) scale(1.35); }
+  @keyframes muzzleSmokeParticle{
+    0%{ opacity:0; transform:translate3d(var(--x,0),var(--y,0),0) scale(.55); }
+    22%{ opacity:.62; }
+    100%{ opacity:0; transform:translate3d(calc(var(--x,0) + var(--dx,0px)),calc(var(--y,0) + var(--dy,0px)),0) scale(var(--end,1.45)); }
   }
 
   #scoreFeed{ pointer-events:none; position:fixed; left:50%; top:34%; width:min(430px, 52vh, calc(100vw - 32px)); transform:translateX(-50%); display:flex; flex-direction:column; align-items:center; gap:5px; z-index:6; text-align:center; }
@@ -385,7 +372,6 @@
     .bullet{ height:19px; border-width:1px; }
     .bullet::before{ width:10px; height:8px; top:-6px; border-width:1px; }
     #gunSprite{ right:calc(12px + env(safe-area-inset-right)); bottom:-38px; width:min(44vw, 260px); }
-    #muzzleFx{ right:calc(122px + env(safe-area-inset-right)); bottom:54px; width:68px; height:50px; transform:rotate(-11deg) scale(.82); }
     .grid{ grid-template-columns:1fr; }
     #mobileControls{ display:block; }
   }

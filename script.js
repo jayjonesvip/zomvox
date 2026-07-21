@@ -277,7 +277,7 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.20.12');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.20.13');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -294,7 +294,6 @@
   let waterDamageTimer = 0;
   let hordeLevel = 0;
   let heartbeatTimer = 0;
-  let muzzleFxTimer = null;
   let cameraStepOffsetY = 0;
   const deathState = { active: false, timer: 0, duration: DEATH_READY_DELAY, ready: false };
   const worldRebuildState = { active: false, timer: 0, startedAt: 0, duration: WORLD_REBUILD_DURATION, seed: null };
@@ -601,13 +600,74 @@
     pulseHitMarker.timer = setTimeout(() => reticle.classList.remove('hit', 'kill'), kind === 'kill' ? 260 : 180);
   }
 
-  function triggerMuzzleFx() {
+  function muzzleParticle(options) {
     if (!muzzleFx) return;
-    muzzleFx.classList.remove('active');
-    void muzzleFx.offsetWidth;
-    muzzleFx.classList.add('active');
-    clearTimeout(muzzleFxTimer);
-    muzzleFxTimer = setTimeout(() => muzzleFx.classList.remove('active'), 520);
+    const particle = document.createElement('i');
+    particle.className = 'muzzleParticle' + (options.smoke ? ' smoke' : '');
+    particle.style.setProperty('--x', options.x.toFixed(1) + 'px');
+    particle.style.setProperty('--y', options.y.toFixed(1) + 'px');
+    particle.style.setProperty('--dx', options.dx.toFixed(1) + 'px');
+    particle.style.setProperty('--dy', options.dy.toFixed(1) + 'px');
+    particle.style.setProperty('--size', options.size.toFixed(1) + 'px');
+    particle.style.setProperty('--life', options.life.toFixed(3) + 's');
+    particle.style.setProperty('--start', options.start.toFixed(2));
+    particle.style.setProperty('--end', options.end.toFixed(2));
+    particle.style.setProperty('--color', options.color);
+    if (options.halo) particle.style.setProperty('--halo', options.halo);
+    if (options.glow) particle.style.setProperty('--glow', options.glow.toFixed(1) + 'px');
+    muzzleFx.appendChild(particle);
+    particle.addEventListener('animationend', () => particle.remove(), { once: true });
+    setTimeout(() => particle.remove(), Math.ceil(options.life * 1200));
+  }
+
+  function triggerMuzzleFx() {
+    if (!muzzleFx || !gunSprite) return;
+    while (muzzleFx.childElementCount > 70) muzzleFx.firstElementChild?.remove();
+    const rect = gunSprite.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return;
+
+    // Screen-space voxel particles keep the muzzle flash glued to the weapon
+    // sprite while still giving every shot a slightly different burst.
+    const muzzleX = rect.left + rect.width * .23 + (Math.random() - .5) * 8;
+    const muzzleY = rect.top + rect.height * .54 + (Math.random() - .5) * 8;
+    const flashColors = ['#fff7b0', '#ffe15a', '#ffb236', '#ff7a21'];
+    const flashCount = 8 + Math.floor(Math.random() * 5);
+    for (let i = 0; i < flashCount; i++) {
+      const angle = Math.PI + (Math.random() - .5) * .78;
+      const distance = 14 + Math.random() * 42;
+      const size = 5 + Math.random() * 11;
+      muzzleParticle({
+        x: muzzleX - size / 2,
+        y: muzzleY - size / 2,
+        dx: Math.cos(angle) * distance,
+        dy: Math.sin(angle) * distance + (Math.random() - .5) * 10,
+        size,
+        life: .08 + Math.random() * .11,
+        start: .55 + Math.random() * .65,
+        end: .25 + Math.random() * .45,
+        color: flashColors[Math.floor(Math.random() * flashColors.length)],
+        halo: 'rgba(255,188,38,.5)',
+        glow: 10 + Math.random() * 16
+      });
+    }
+    const smokeCount = 2 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < smokeCount; i++) {
+      const angle = Math.PI + (Math.random() - .5) * .9;
+      const distance = 18 + Math.random() * 34;
+      const size = 8 + Math.random() * 13;
+      muzzleParticle({
+        smoke: true,
+        x: muzzleX - size / 2 + Math.random() * 10,
+        y: muzzleY - size / 2 + Math.random() * 8,
+        dx: Math.cos(angle) * distance,
+        dy: Math.sin(angle) * distance - 8 - Math.random() * 16,
+        size,
+        life: .34 + Math.random() * .24,
+        start: .55,
+        end: 1.15 + Math.random() * .7,
+        color: 'rgba(' + Math.floor(140 + Math.random() * 72) + ',' + Math.floor(148 + Math.random() * 68) + ',' + Math.floor(142 + Math.random() * 66) + ',.48)'
+      });
+    }
   }
 
   function spawnKillBurst(x, y, z, big = false) {
