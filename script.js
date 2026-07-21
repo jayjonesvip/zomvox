@@ -20,6 +20,9 @@
   const play = $('play');
   const quickStart = $('quickStart');
   const survivalStart = $('survivalStart');
+  const controlsButton = $('controlsButton');
+  const controlsModal = $('controlsModal');
+  const controlsClose = $('controlsClose');
   const settingsGear = $('settingsGear');
   const settingsModal = $('settingsModal');
   const settingsClose = $('settingsClose');
@@ -283,7 +286,7 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.21.02');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.21.03');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -4041,6 +4044,7 @@ function currentWaterIsDangerous() {
 
   function enterGameFromMenu() {
     applySettings();
+    if (controlsModal) controlsModal.hidden = true;
     if (settingsModal) settingsModal.hidden = true;
     if (soundEnabled || ambientEnabled) window.ZomVoxSound?.prime();
     clearMovementInput();
@@ -4079,6 +4083,7 @@ function currentWaterIsDangerous() {
 
   function setQuickBiomeScreen(show) {
     if (!quickBiomePanel) return;
+    if (controlsModal) controlsModal.hidden = true;
     if (settingsModal) settingsModal.hidden = true;
     if (show) renderQuickBiomeLocks();
     if (mainMenuCard) mainMenuCard.hidden = show;
@@ -4131,6 +4136,7 @@ function currentWaterIsDangerous() {
 
   function openSettingsModal() {
     sound('confirm');
+    if (controlsModal) controlsModal.hidden = true;
     if (settingsModal) settingsModal.hidden = false;
   }
 
@@ -4138,6 +4144,17 @@ function currentWaterIsDangerous() {
     sound('confirm');
     if (settingsModal) settingsModal.hidden = true;
     applySettings();
+  }
+
+  function openControlsModal() {
+    sound('confirm');
+    if (settingsModal) settingsModal.hidden = true;
+    if (controlsModal) controlsModal.hidden = false;
+  }
+
+  function closeControlsModal() {
+    sound('confirm');
+    if (controlsModal) controlsModal.hidden = true;
   }
 
   function requestPointerLockSafe() {
@@ -4156,6 +4173,11 @@ function currentWaterIsDangerous() {
   play.addEventListener('click', startStoryGame);
   if (survivalStart) survivalStart.addEventListener('click', openQuickBiomeScreen);
   if (quickStart) quickStart.addEventListener('click', startRandomQuickHunt);
+  if (controlsButton) controlsButton.addEventListener('click', openControlsModal);
+  if (controlsClose) controlsClose.addEventListener('click', closeControlsModal);
+  if (controlsModal) controlsModal.addEventListener('click', event => {
+    if (event.target === controlsModal) closeControlsModal();
+  });
   if (settingsGear) settingsGear.addEventListener('click', openSettingsModal);
   if (settingsClose) settingsClose.addEventListener('click', closeSettingsModal);
   if (settingsModal) settingsModal.addEventListener('click', event => {

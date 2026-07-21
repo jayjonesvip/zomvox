@@ -206,15 +206,6 @@
 <div id="menu">
   <div id="mainMenuCard" class="card">
     <h1>Zom<b>Vox</b></h1>
-    <p class="subtitle">Free browser voxel zombie FPS. Play instantly with no download, shut down the contamination source, unlock perks, and survive infected waves across hostile islands.</p>
-    <div class="grid">
-      <div class="tip desktopTip"><kbd>WASD</kbd> move &nbsp; <kbd>Mouse</kbd> aim</div>
-      <div class="tip desktopTip"><kbd>Yellow block</kbd> disables source &nbsp; <kbd>Left</kbd> shoot</div>
-      <div class="tip desktopTip"><kbd>Space</kbd> jump &nbsp; <kbd>Shift</kbd> sprint</div>
-      <div class="tip desktopTip"><kbd>N</kbd> new world &nbsp; <kbd>Shift</kbd> sprint</div>
-      <div class="tip mobileTip"><kbd>Stick</kbd> move &nbsp; <kbd>Swipe</kbd> aim</div>
-      <div class="tip mobileTip"><kbd>Yellow block</kbd> disables source &nbsp; <kbd>C4</kbd> trap</div>
-    </div>
     <div class="startActions">
       <button id="play" class="startBtn primaryStart" type="button">Story Mode</button>
       <button id="survivalStart" class="startBtn survivalStart" type="button">Survival Mode</button>
@@ -235,7 +226,31 @@
     </div>
     <button id="quickBack" class="quickBackBtn" type="button">Back</button>
   </div>
+  <button id="controlsButton" class="controlsButton" type="button" aria-label="Open controls">&#9000;</button>
   <button id="settingsGear" class="settingsGear" type="button" aria-label="Open settings">&#9881;</button>
+  <div id="controlsModal" class="controlsModal" role="dialog" aria-modal="true" aria-label="Controls" hidden>
+    <div class="controlsCard">
+      <div class="settingsTopline">Controls</div>
+      <h2>Field Manual</h2>
+      <div class="controlsGrid desktopControls">
+        <div class="tip"><kbd>WASD</kbd> move</div>
+        <div class="tip"><kbd>Mouse</kbd> aim</div>
+        <div class="tip"><kbd>Left</kbd> shoot</div>
+        <div class="tip"><kbd>C</kbd> C4</div>
+        <div class="tip"><kbd>Space</kbd> jump</div>
+        <div class="tip"><kbd>R</kbd> reload</div>
+      </div>
+      <div class="controlsGrid mobileControlsList">
+        <div class="tip"><kbd>Stick</kbd> move</div>
+        <div class="tip"><kbd>Swipe</kbd> aim</div>
+        <div class="tip"><kbd>Red</kbd> shoot</div>
+        <div class="tip"><kbd>C4</kbd> trap</div>
+        <div class="tip"><kbd>Yellow block</kbd> disables source</div>
+        <div class="tip"><kbd>Rotate</kbd> landscape</div>
+      </div>
+      <button id="controlsClose" class="quickBackBtn" type="button">Done</button>
+    </div>
+  </div>
   <div id="settingsModal" class="settingsModal" role="dialog" aria-modal="true" aria-label="Settings" hidden>
     <div class="settingsCard">
       <div class="settingsTopline">Options</div>
