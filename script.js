@@ -166,6 +166,8 @@
   const WORLD_MAX = (WORLD_CHUNK_RADIUS + 1) * CHUNK_SIZE - 1;
   const MAX_Y = Math.max(16, Math.floor(configNumber(WORLD_CONFIG, 'maxY', 46)));
   const WATER_LEVEL = Math.max(1, Math.floor(configNumber(WORLD_CONFIG, 'waterLevel', 8)));
+  const OCEAN_ENABLED = configBoolean(WORLD_CONFIG, 'ocean', true);
+  const OCEAN_PADDING = Math.max(0, configNumber(WORLD_CONFIG, 'oceanPadding', 96));
   const TERRAIN_BASE_HEIGHT = configNumber(WORLD_CONFIG, 'terrainBaseHeight', 4);
   const TERRAIN_DETAIL_AMOUNT = configNumber(WORLD_CONFIG, 'terrainDetailAmount', 12);
   const TERRAIN_BROAD_AMOUNT = configNumber(WORLD_CONFIG, 'terrainBroadAmount', 10);
@@ -237,7 +239,7 @@
   let loadedChunks = new Set();
   let currentChunkX = 999999;
   let currentChunkZ = 999999;
-  let meshes = { opaque: null, water: null, dynamic: null };
+  let meshes = { opaque: null, water: null, ocean: null, dynamic: null };
   let chunkMeshes = new Map();
   let dirtyChunks = new Set();
   let rebuildQueued = false;
@@ -286,7 +288,7 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.21.03');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.21.04');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -2068,6 +2070,19 @@ function playerOnMachinePad() {
     for (const f of boxFaces) pushFace(arr, x, y, z, f, type);
   }
 
+  function pushFlatPlane(arr, x0, y, z0, x1, z1, type) {
+    // Visual-only ocean: two triangles, no block collision or terrain lookup.
+    const verts = [
+      [x0, y, z1, 0, 1, 0, 0, 0, type],
+      [x1, y, z1, 0, 1, 0, 1, 0, type],
+      [x1, y, z0, 0, 1, 0, 1, 1, type],
+      [x0, y, z1, 0, 1, 0, 0, 0, type],
+      [x1, y, z0, 0, 1, 0, 1, 1, type],
+      [x0, y, z0, 0, 1, 0, 0, 1, type]
+    ];
+    for (const v of verts) arr.push(...v);
+  }
+
   function pushBoxY(arr, cx, y, cz, x0, y0, z0, w, h, d, yaw, type) {
     const c = Math.cos(yaw), s = Math.sin(yaw);
     const x1 = x0 + w, y1 = y0 + h, z1 = z0 + d;
@@ -2096,6 +2111,15 @@ function playerOnMachinePad() {
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), gl.STATIC_DRAW);
     return { buffer, count: data.length / 9 };
+  }
+  function buildOceanMesh() {
+    const ocean = [];
+    if (OCEAN_ENABLED && OCEAN_PADDING > 0) {
+      const min = WORLD_MIN - OCEAN_PADDING;
+      const max = WORLD_MAX + 1 + OCEAN_PADDING;
+      pushFlatPlane(ocean, min, WATER_LEVEL + 0.96, min, max, max, BLOCK.WATER);
+    }
+    return makeMesh(ocean);
   }
   function disposeMesh(mesh) {
     if (mesh && mesh.buffer) gl.deleteBuffer(mesh.buffer);
@@ -2133,8 +2157,10 @@ function playerOnMachinePad() {
     // Keep empty global meshes for compatibility; terrain is drawn per chunk.
     disposeMesh(meshes.opaque);
     disposeMesh(meshes.water);
+    disposeMesh(meshes.ocean);
     meshes.opaque = makeMesh(opaque);
     meshes.water = makeMesh(water);
+    meshes.ocean = buildOceanMesh();
     loadedChunks.forEach(k => {
       const parts = k.split(',');
       buildChunkMesh(+parts[0], +parts[1]);
@@ -3096,8 +3122,16 @@ function playerOnMachinePad() {
   const legY = Math.floor(player.pos[1] + 0.45);
 
   return getBlock(x, footY, z) === BLOCK.WATER ||
-         getBlock(x, legY, z) === BLOCK.WATER;
+         getBlock(x, legY, z) === BLOCK.WATER ||
+         playerIsInVisualOcean();
 }
+
+  function playerIsInVisualOcean() {
+    if (!OCEAN_ENABLED) return false;
+    const outsideIsland = player.pos[0] < WORLD_MIN || player.pos[0] > WORLD_MAX + 1 ||
+      player.pos[2] < WORLD_MIN || player.pos[2] > WORLD_MAX + 1;
+    return outsideIsland && player.pos[1] <= WATER_LEVEL + 1.15;
+  }
 
   function updateWaterHazard(dt) {
     if (
@@ -3837,6 +3871,7 @@ function currentWaterIsDangerous() {
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.depthMask(false);
+    drawMesh(meshes.ocean);
     drawWorldMeshes('water');
     gl.depthMask(true);
     gl.disable(gl.BLEND);

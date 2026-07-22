@@ -17,7 +17,7 @@ window.ZOMVOX_CONFIG = {
     Bump this when you make visible changes so you can tell the browser
     loaded the newest version.
   */
-  buildVersion: '2026.07.21.03',
+  buildVersion: '2026.07.21.04',
 
   /*
     Seed used for deterministic world generation.
@@ -98,6 +98,15 @@ window.ZOMVOX_CONFIG = {
       Lower value = drier world.
     */
     waterLevel: 5,
+
+    /*
+      Draws one visual-only ocean plane around the island.
+
+      This is not generated as blocks, so it should be much cheaper than
+      filling the outer edge with water cubes.
+    */
+    ocean: true,
+    oceanPadding: 96,
 
     /*
       Terrain height tuning.
