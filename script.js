@@ -288,7 +288,7 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.21.04');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.24.02');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -1465,6 +1465,14 @@
         float ripple = sin((vWorld.x * 2.4 + vWorld.z * 2.1 + uTime * 2.6)) * 0.04;
         vec3 waterShade = uWaterStyle > 1.5 ? vec3(0.05, 0.08, 0.01) : mix(vec3(0.03, 0.12, 0.18), vec3(0.22, 0.03, 0.0), uWaterStyle);
         color += waterShade + ripple;
+      }
+      if(vType < 1.5 && n.y > 0.55){
+        float tuft = step(0.60, hash(floor(vWorld.xz * 4.0)));
+        float fleck = step(0.74, hash(floor(vWorld.xz * 11.0 + vec2(5.0, 13.0))));
+        float blade = step(0.82, hash(floor(vec2(vWorld.x * 18.0, vWorld.z * 7.0))));
+        color = mix(color, color * vec3(0.72, 0.92, 0.66), tuft * 0.36);
+        color += vec3(0.04, 0.10, 0.015) * fleck;
+        color -= vec3(0.025, 0.055, 0.01) * blade;
       }
       if(vType > 8.5 && vType < 9.5) color += vec3(0.55, 0.38, 0.05);
       if(vType > 11.5 && vType < 12.5) color += vec3(0.70, 0.02, 0.0);

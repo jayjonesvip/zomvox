@@ -16,6 +16,10 @@ Open `index.html` in a modern browser with WebGL enabled.
 
 Desktop play uses mouse and keyboard. Mobile play is designed for landscape orientation and uses touch controls. The mobile menu requests fullscreen when the Fullscreen setting is enabled and the player presses Play.
 
+## Discovery
+
+ZomVox is listed on [IGDB](https://www.igdb.com/) and [DEAD.ARMY](https://dead.army/). The canonical playable version remains [zomvox.com](https://zomvox.com/), so discovery pages and social posts should point players back to the official browser build.
+
 ## Current Features
 
 - Static browser game with split frontend files: `index.html`, `styles.css`, `config.js`, `sound.js`, and `script.js`.
@@ -24,6 +28,8 @@ Desktop play uses mouse and keyboard. Mobile play is designed for landscape orie
 - Splash screen build label using `BUILD_VERSION` plus the deployed document timestamp.
 - Favicon assets for browser tabs and installed shortcuts.
 - Procedural voxel terrain with themed islands: forest, dunes, rocky, swamp, ashlands, and tundra.
+- Procedural shader detail on grass block tops so grassy terrain reads as grass while dirt sides stay blocky.
+- Visual-only ocean plane around each island so the world reads as an island without generating thousands of extra water blocks.
 - Sand and mud surfaces slow players and zombies by 15%.
 - Fixed-size chunk generation so the game area stays bounded and performance remains predictable.
 - Player movement is clamped inside the generated world.
@@ -151,6 +157,8 @@ window.ZOMVOX_CONFIG = {
     chunkRadius: 4,
     maxY: 38,
     waterLevel: 7,
+    ocean: true,
+    oceanPadding: 96,
     terrainBaseHeight: 4,
     terrainDetailAmount: 12,
     terrainBroadAmount: 10,
