@@ -28,7 +28,7 @@ ZomVox is listed on [IGDB](https://www.igdb.com/) and [DEAD.ARMY](https://dead.a
 - Splash screen build label using `BUILD_VERSION` plus the deployed document timestamp.
 - Favicon assets for browser tabs and installed shortcuts.
 - Procedural voxel terrain with themed islands: forest, dunes, rocky, swamp, ashlands, and tundra.
-- Procedural shader detail on grass block tops so grassy terrain reads as grass while dirt sides stay blocky.
+- Procedural shader detail on grass block tops, thicker grassy side bands, and textured dirt faces.
 - Visual-only ocean plane around each island so the world reads as an island without generating thousands of extra water blocks.
 - Sand and mud surfaces slow players and zombies by 15%.
 - Fixed-size chunk generation so the game area stays bounded and performance remains predictable.

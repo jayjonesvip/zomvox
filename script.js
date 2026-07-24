@@ -288,7 +288,7 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.24.02');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.24.04');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -1474,6 +1474,22 @@
         color += vec3(0.04, 0.10, 0.015) * fleck;
         color -= vec3(0.025, 0.055, 0.01) * blade;
       }
+      if((vType < 1.5 && n.y <= 0.55) || (vType > 1.5 && vType < 2.5)){
+        float dirtDark = step(0.68, hash(floor(vWorld.xy * 5.0 + vWorld.zz)));
+        float dirtWarm = step(0.76, hash(floor(vec2(vWorld.x * 7.0 - vWorld.y, vWorld.z * 6.0 + 9.0))));
+        float dirtStone = step(0.86, hash(floor(vWorld.zy * 8.0 + vec2(11.0, 3.0))));
+        color -= vec3(0.08, 0.045, 0.025) * dirtDark;
+        color += vec3(0.10, 0.055, 0.020) * dirtWarm;
+        color += vec3(0.045, 0.050, 0.055) * dirtStone;
+      }
+      if(vType < 1.5 && abs(n.y) < 0.25){
+        float sidePatch = hash(floor(vec2(vWorld.x * 2.0 + vWorld.z * 2.4, vWorld.y * 3.0)));
+        float drip = step(0.74, hash(floor(vec2(vWorld.x * 5.5 - vWorld.z, vWorld.z * 5.5 + 4.0))));
+        float grassEdge = 0.66 + sidePatch * 0.10 - drip * 0.17;
+        float sideGrass = step(grassEdge, vUv.y);
+        vec3 sideGrassColor = vec3(0.15, 0.49, 0.16) * (0.86 + sidePatch * 0.28);
+        color = mix(color, sideGrassColor, sideGrass * 0.90);
+      }
       if(vType > 8.5 && vType < 9.5) color += vec3(0.55, 0.38, 0.05);
       if(vType > 11.5 && vType < 12.5) color += vec3(0.70, 0.02, 0.0);
       if(vType > 14.5 && vType < 15.5) color += vec3(0.50, 0.15, 0.04);
@@ -1719,14 +1735,15 @@
 
   function growTree(x, h, z, trunkType = BLOCK.WOOD, withLeaves = true, trunkBase = 4, trunkRange = 3) {
     const trunk = trunkBase + Math.floor(seededHash(x + 11.2, z - 4.1) * trunkRange);
-    for (let y = 1; y <= trunk; y++) genSetBlock(x, h + y, z, trunkType);
+    const canopyY = h + Math.max(trunk, 6);
+    for (let y = 1; y <= canopyY - h; y++) genSetBlock(x, h + y, z, trunkType);
     if (!withLeaves) {
-      const armY = h + Math.max(2, trunk - 1);
+      const armY = h + Math.max(5, trunk);
       genSetBlock(x + (seededHash(x, z) > .5 ? 1 : -1), armY, z, trunkType);
       genSetBlock(x, armY + 1, z + (seededHash(x + 9, z - 7) > .5 ? 1 : -1), trunkType);
       return;
     }
-    const crownY = h + trunk;
+    const crownY = canopyY;
     for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++) for (let dy = -1; dy <= 2; dy++) {
       const dist = Math.abs(dx) + Math.abs(dz) + Math.max(0, dy - 1);
       if (dist <= 4 && seededHash(x + dx * 19 + dy, z + dz * 23) > 0.08) {
@@ -1754,7 +1771,7 @@
   function growPineTree(x, h, z) {
     const trunk = 4 + Math.floor(seededHash(x + 31, z - 13) * 3);
     for (let y = 1; y <= trunk; y++) genSetBlock(x, h + y, z, BLOCK.WOOD);
-    const baseY = h + 2;
+    const baseY = h + 5;
     const topY = h + trunk + 2;
     for (let y = baseY; y <= topY; y++) {
       const layer = y - baseY;
