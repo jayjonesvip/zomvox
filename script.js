@@ -288,7 +288,7 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.24.03');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.24.04');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -1735,14 +1735,15 @@
 
   function growTree(x, h, z, trunkType = BLOCK.WOOD, withLeaves = true, trunkBase = 4, trunkRange = 3) {
     const trunk = trunkBase + Math.floor(seededHash(x + 11.2, z - 4.1) * trunkRange);
-    for (let y = 1; y <= trunk; y++) genSetBlock(x, h + y, z, trunkType);
+    const canopyY = h + Math.max(trunk, 6);
+    for (let y = 1; y <= canopyY - h; y++) genSetBlock(x, h + y, z, trunkType);
     if (!withLeaves) {
-      const armY = h + Math.max(2, trunk - 1);
+      const armY = h + Math.max(5, trunk);
       genSetBlock(x + (seededHash(x, z) > .5 ? 1 : -1), armY, z, trunkType);
       genSetBlock(x, armY + 1, z + (seededHash(x + 9, z - 7) > .5 ? 1 : -1), trunkType);
       return;
     }
-    const crownY = h + trunk;
+    const crownY = canopyY;
     for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++) for (let dy = -1; dy <= 2; dy++) {
       const dist = Math.abs(dx) + Math.abs(dz) + Math.max(0, dy - 1);
       if (dist <= 4 && seededHash(x + dx * 19 + dy, z + dz * 23) > 0.08) {
@@ -1770,7 +1771,7 @@
   function growPineTree(x, h, z) {
     const trunk = 4 + Math.floor(seededHash(x + 31, z - 13) * 3);
     for (let y = 1; y <= trunk; y++) genSetBlock(x, h + y, z, BLOCK.WOOD);
-    const baseY = h + 2;
+    const baseY = h + 5;
     const topY = h + trunk + 2;
     for (let y = baseY; y <= topY; y++) {
       const layer = y - baseY;
