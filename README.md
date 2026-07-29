@@ -240,30 +240,16 @@ Other sections in `config.js` expose safe defaults for:
 - `mission`: five island seeds, per-island biomes, toxin drain, source disable timing, insertion drop tuning, per-island infected objectives, fallback infected objective, and first wave size.
 - `pickups`: ammo, health, and C4 pickup amounts/drop chances.
 - `timers`: death overlay delay, world rebuild meter duration, heartbeat interval, and day/night cycle length.
-- `audio`: optional mp3/wav overrides for each sound effect.
 
-Audio files live in `assets/`. Set a sound value to a file name to use that asset, `null` to keep the built-in synthesized effect, or `''` to disable that sound:
+Audio is generated entirely in `sound.js` with Web Audio oscillators and filtered noise. No sound files are loaded, so the cues stay cohesive with the procedural voxel style and react quickly on mobile.
 
-```js
-audio: {
-  files: {
-    shoot: 'shoot.mp3',
-    empty: null,
-    reloadStart: null,
-    hit: null,
-    pickupAmmo: null,
-    pickupHealth: null,
-    pickupC4: null,
-    perkEquip: null,
-    zombieMoan: '',
-    toxin: null,
-    land: '',
-    objectiveClear: null,
-    explosion: '',
-    ambientTundra: ''
-  }
-}
-```
+Procedural cue references:
+
+- Weapon: `shoot`, `empty`, `reloadStart`, `reloadDone`, `explosion`.
+- Impact and feedback: `hit`, `head`, `kill`, `block`, `hurt`, `death`, `toxin`, `heartbeat`.
+- Pickups and UI: `pickupAmmo`, `pickupHealth`, `pickupC4`, `pickup`, `perkEquip`, `confirm`, `briefing`, `objectiveClear`, `wave`.
+- Foley and ambience: `footstep`, `land`, `ambientMenu`, `ambientForest`, `ambientDunes`, `ambientRocky`, `ambientSwamp`, `ambientAshlands`, `ambientTundra`.
+- Zombie voices: `zombieMoan` is generated per zombie type. Normal zombies use a mid-low breathy groan, speedy zombies use a shorter higher rasp, brute zombies use a deeper longer growl, and grey zombies use a hollow unnatural moan.
 
 ## Repository Layout
 
@@ -281,7 +267,6 @@ audio: {
     |-- favicon.ico
     |-- favicon.png
     |-- favicon-192.png
-    |-- shoot.mp3
     |-- zomvox-gun-spritesheet.png
     `-- zomvox-splash.png
 ```
@@ -292,10 +277,10 @@ audio: {
 - `config.js`: future-dev friendly tuning values for environment, world, player, weapon, enemies, pickups, timers, seed, and build version.
 - `manifest.webmanifest`: install metadata, app icons, fullscreen display, and landscape orientation request.
 - `sw.js`: lightweight service worker for app shell caching and home-screen launch reliability.
-- `sound.js`: configurable audio playback with file overrides and synthesized fallback effects.
+- `sound.js`: pure procedural Web Audio effects, ambience sweeteners, foley, weapon sounds, UI cues, and per-type zombie voices.
 - `styles.css`: visual styling, responsive mobile layout, splash screen, health/ammo HUD, death overlay, world rebuild overlay, and touch controls.
 - `script.js`: WebGL setup, procedural terrain, fixed world chunks, movement, combat, enemy behavior, pickups, world rebuilding, HUD updates, and game loop.
-- `assets/`: splash screen, favicon files, weapon sprite sheet, and optional audio files.
+- `assets/`: splash screen, favicon files, title/social images, and weapon sprite sheet.
 
 ## Hosting
 

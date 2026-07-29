@@ -292,7 +292,7 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.29.11');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.29.12');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -873,7 +873,7 @@
     }
     const messages = [
       'Getting latest version...',
-      'Preloading audio...',
+      'Warming audio synth...',
       'Generating world...',
       'Calibrating display...'
     ];
@@ -2669,6 +2669,7 @@ function playerOnMachinePad() {
     nearby.slice(0, ZOMBIE_MOAN_MAX_VOICES).forEach(({ enemy, dist }, index) => {
       const closeness = 1 - dist / ZOMBIE_MOAN_RADIUS;
       const volume = Math.max(0.12, Math.min(0.74, 0.18 + closeness * 0.56));
+      const stats = enemy.variant || enemyVariantStats(enemy.x, enemy.z);
       const rate = zombieMoanPlaybackRate(enemy);
 
       // Stagger nearby voices so a small pack sounds layered instead of clipped.
@@ -2676,7 +2677,7 @@ function playerOnMachinePad() {
         if (!enemy.dead && enemy.hp > 0 && canPlayZombieMoan()) {
           stopSoundHandle(enemy.moanHandle);
           enemy.mouthOpenTimer = Math.max(enemy.mouthOpenTimer || 0, 1.05);
-          const handle = sound('zombieMoan', volume, rate);
+          const handle = sound('zombieMoan', volume, rate, { variant: stats.kind });
           enemy.moanHandle = handle && typeof handle.stop === 'function' ? handle : null;
         }
       }, index * 180);
