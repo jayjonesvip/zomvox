@@ -3894,8 +3894,8 @@ function playerOnMachinePad() {
       pushBoxY(arr, x, y, z, -.18*scale, 0,  .02*scale, .22*scale, .45*scale, .22*scale, yaw, limbType);
       pushBoxY(arr, x, y, z,  .02*scale, 0,  .02*scale, .22*scale, .45*scale, .22*scale, yaw, limbType);
       pushBoxY(arr, x, y, z, -.34*scale, .36*scale, -.24*scale, .68*scale, .95*scale, .48*scale, yaw, bodyType);
-      pushZombieArm(arr, x, y, z, -.45*scale, leftArmPitch, elbowBend, yaw, scale, limbType);
-      pushZombieArm(arr, x, y, z,  .45*scale, rightArmPitch, elbowBend, yaw, scale, limbType);
+      pushZombieArm(arr, x, y, z, -.45*scale, leftArmPitch, elbowBend, yaw, scale, bodyType);
+      pushZombieArm(arr, x, y, z,  .45*scale, rightArmPitch, elbowBend, yaw, scale, bodyType);
       pushBoxY(arr, x, y, z, -.42*scale, 1.22*scale, -.35*scale, .84*scale, .78*scale, .70*scale, yaw, bodyType);
       pushBoxY(arr, x, y, z, -.22*scale, 1.62*scale, -.39*scale, .12*scale, .12*scale, .06*scale, yaw, eyeType);
       pushBoxY(arr, x, y, z,  .10*scale, 1.62*scale, -.39*scale, .12*scale, .12*scale, .06*scale, yaw, eyeType);
