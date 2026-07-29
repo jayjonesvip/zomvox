@@ -78,6 +78,16 @@
     node.connect(mix[busName] || mix.sfx);
   }
 
+  function shapeImpulseGain(param, now, peak, attack, decay) {
+    const safePeak = Math.max(0.0001, peak);
+    const safeAttack = Math.max(0.001, attack);
+    const safeDecay = Math.max(0.006, decay);
+    param.cancelScheduledValues(now);
+    param.setValueAtTime(0.0001, now);
+    param.linearRampToValueAtTime(safePeak, now + safeAttack);
+    param.exponentialRampToValueAtTime(0.001, now + safeAttack + safeDecay);
+  }
+
   function tone(freq, dur = .08, type = 'square', gain = .05, endFreq = null, busName = 'sfx', delay = 0) {
     const ctx = getAudio();
     if (!ctx) return;
@@ -93,14 +103,27 @@
       osc.frequency.exponentialRampToValueAtTime(Math.max(20, endFreq), now + dur);
     }
 
-    g.gain.setValueAtTime(Math.max(gain, 0.0001), now);
-    g.gain.exponentialRampToValueAtTime(0.001, now + dur);
+    shapeImpulseGain(g.gain, now, gain, Math.min(0.01, Math.max(0.0015, dur * 0.12)), dur);
 
     osc.connect(g);
     connectOutput(g, busName);
 
     osc.start(now);
     osc.stop(now + dur + .02);
+  }
+
+  function attackDecayTone(freq, attack = .003, decay = .08, type = 'triangle', peakGain = .05, endFreq = null, busName = 'sfx', delay = 0) {
+    tone(freq, attack + decay, type, peakGain, endFreq, busName, delay);
+  }
+
+  function chorusTone(freq, dur = .08, type = 'triangle', gain = .05, endFreq = null, busName = 'sfx', delay = 0, detuneHz = 7) {
+    tone(freq, dur, type, gain * 0.68, endFreq, busName, delay);
+    tone(freq + detuneHz, dur * 1.04, type, gain * 0.46, endFreq ? endFreq + detuneHz : null, busName, delay + 0.002);
+  }
+
+  function physicalTone(freq, dur = .08, type = 'triangle', gain = .05, endFreq = null, busName = 'sfx', delay = 0, noiseCutoff = 1200, noiseFilter = 'bandpass', noiseGain = 0.018, q = 1.2) {
+    noise(Math.max(0.018, dur * 0.55), noiseGain, noiseCutoff, busName, noiseFilter, delay, q);
+    tone(freq, dur, type, gain, endFreq, busName, delay + 0.001);
   }
 
   function noise(dur = .05, gain = .08, cutoff = 1200, busName = 'sfx', filterType = 'lowpass', delay = 0, q = 0.7) {
@@ -124,8 +147,7 @@
     filt.frequency.setValueAtTime(cutoff, now);
     filt.Q.setValueAtTime(q, now);
 
-    g.gain.setValueAtTime(gain, now);
-    g.gain.exponentialRampToValueAtTime(0.001, now + dur);
+    shapeImpulseGain(g.gain, now, gain, Math.min(0.008, Math.max(0.0015, dur * 0.1)), dur);
 
     src.buffer = buffer;
     src.connect(filt);
@@ -158,8 +180,7 @@
     band.frequency.setValueAtTime(center, now);
     band.Q.setValueAtTime(1.8, now);
 
-    gain.gain.setValueAtTime(gainValue, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+    shapeImpulseGain(gain.gain, now, gainValue, Math.min(0.008, Math.max(0.0015, dur * 0.08)), dur);
 
     src.buffer = buffer;
     src.connect(band);
@@ -186,9 +207,9 @@
     noise(.045, .42 * level, 3000 * pitch, 'weapon', 'bandpass', .004, .9);
     noise(.18, .22 * level, 1280 * pitch, 'weapon', 'lowpass', .012, .58);
     noise(.44, .12 * level, 520 * pitch, 'weapon', 'lowpass', .04, .46);
-    tone(92 * pitch, .15, 'sine', .19 * level, 34 * pitch, 'weapon');
-    tone(46 * pitch, .22, 'triangle', .13 * level, 24 * pitch, 'weapon', .008);
-    tone(820 * pitch, .035, 'square', .038 * level, 420 * pitch, 'weapon', .018);
+    physicalTone(92 * pitch, .15, 'sine', .19 * level, 34 * pitch, 'weapon', 0, 420, 'lowpass', .035 * level, .5);
+    physicalTone(46 * pitch, .22, 'triangle', .13 * level, 24 * pitch, 'weapon', .008, 260, 'lowpass', .025 * level, .45);
+    physicalTone(820 * pitch, .035, 'square', .038 * level, 420 * pitch, 'weapon', .018, 2400, 'bandpass', .022 * level, 1.8);
     for (let i = 0; i < 5; i++) {
       const delay = .018 + i * rand(.009, .018);
       noise(rand(.012, .024), .036 * level, rand(2100, 5200) * pitch, 'weapon', 'bandpass', delay, rand(1.1, 2.6));
@@ -198,81 +219,81 @@
   function dryFire(level = 1) {
     const pitch = rand(.94, 1.08);
     noise(.012, .045 * level, 3600 * pitch, 'weapon', 'highpass', 0, 2.4);
-    tone(1320 * pitch, .018, 'square', .024 * level, 820 * pitch, 'weapon');
-    tone(360 * pitch, .032, 'triangle', .018 * level, 220 * pitch, 'weapon', .018);
+    physicalTone(1320 * pitch, .018, 'square', .024 * level, 820 * pitch, 'weapon', 0, 2900 * pitch, 'bandpass', .014 * level, 2.2);
+    physicalTone(360 * pitch, .032, 'triangle', .018 * level, 220 * pitch, 'weapon', .018, 1150 * pitch, 'bandpass', .012 * level, 1.5);
     noise(.026, .022 * level, 1500 * pitch, 'weapon', 'bandpass', .018, 1.8);
   }
 
   function reloadStartSynth(level = 1) {
     noise(.035, .04 * level, 2100, 'weapon', 'bandpass', 0, 1.5);
-    tone(240, .045, 'triangle', .033 * level, 148, 'weapon', .006);
-    tone(880, .018, 'square', .02 * level, 520, 'weapon', .064);
+    physicalTone(240, .045, 'triangle', .033 * level, 148, 'weapon', .006, 920, 'bandpass', .018 * level, 1.2);
+    physicalTone(880, .018, 'square', .02 * level, 520, 'weapon', .064, 1900, 'bandpass', .012 * level, 1.6);
     noise(.042, .035 * level, 1250, 'weapon', 'bandpass', .072, 1.1);
-    tone(168, .052, 'triangle', .024 * level, 118, 'weapon', .118);
+    physicalTone(168, .052, 'triangle', .024 * level, 118, 'weapon', .118, 760, 'bandpass', .016 * level, 1.0);
   }
 
   function reloadDoneSynth(level = 1) {
-    tone(720, .024, 'square', .024 * level, 470, 'weapon');
+    physicalTone(720, .024, 'square', .024 * level, 470, 'weapon', 0, 2600, 'highpass', .016 * level, 1.5);
     noise(.028, .036 * level, 2600, 'weapon', 'highpass', .012, 1.2);
-    tone(360, .045, 'triangle', .034 * level, 610, 'weapon', .056);
-    tone(118, .055, 'sine', .024 * level, 82, 'weapon', .074);
+    physicalTone(360, .045, 'triangle', .034 * level, 610, 'weapon', .056, 1400, 'bandpass', .017 * level, 1.1);
+    physicalTone(118, .055, 'sine', .024 * level, 82, 'weapon', .074, 520, 'lowpass', .014 * level, .7);
   }
 
   function explosionSynth(level = 1) {
     noise(.035, .42 * level, 3600, 'weapon', 'highpass', 0, .9);
     noise(.26, .25 * level, 760, 'weapon', 'lowpass', .018, .6);
     noise(.58, .12 * level, 320, 'weapon', 'lowpass', .05, .5);
-    tone(72, .26, 'sine', .18 * level, 28, 'weapon');
-    tone(38, .42, 'triangle', .12 * level, 24, 'weapon', .025);
+    physicalTone(72, .26, 'sine', .18 * level, 28, 'weapon', 0, 360, 'lowpass', .04 * level, .48);
+    physicalTone(38, .42, 'triangle', .12 * level, 24, 'weapon', .025, 240, 'lowpass', .032 * level, .42);
     for (let i = 0; i < 5; i++) {
       const delay = .05 + i * rand(.022, .055);
-      tone(rand(520, 1480), rand(.018, .044), 'square', .018 * level, rand(260, 720), 'weapon', delay);
+      physicalTone(rand(520, 1480), rand(.018, .044), 'square', .018 * level, rand(260, 720), 'weapon', delay, rand(1400, 3600), 'bandpass', .012 * level, 1.6);
       noise(rand(.018, .04), .022 * level, rand(1400, 3600), 'weapon', 'bandpass', delay, 1.6);
     }
   }
 
   function playerPainSynth(level = 1) {
     noise(.045, .06 * level, 850, 'sfx', 'bandpass', 0, 1.7);
-    tone(164, .12, 'sawtooth', .06 * level, 82, 'sfx', .004);
-    tone(88, .18, 'triangle', .035 * level, 52, 'sfx', .024);
+    physicalTone(164, .12, 'sawtooth', .06 * level, 82, 'sfx', .004, 780, 'bandpass', .024 * level, 1.4);
+    physicalTone(88, .18, 'triangle', .035 * level, 52, 'sfx', .024, 360, 'lowpass', .018 * level, .7);
     radioStatic(.05, .018 * level, 620, 'sfx');
   }
 
   function playerDeathSynth(level = 1) {
     noise(.11, .075 * level, 520, 'sfx', 'lowpass', 0, .75);
-    tone(122, .28, 'sawtooth', .075 * level, 42, 'sfx');
-    tone(58, .45, 'sine', .055 * level, 24, 'sfx', .045);
+    physicalTone(122, .28, 'sawtooth', .075 * level, 42, 'sfx', 0, 520, 'lowpass', .025 * level, .7);
+    physicalTone(58, .45, 'sine', .055 * level, 24, 'sfx', .045, 260, 'lowpass', .018 * level, .55);
     setTimeout(() => noise(.24, .04 * level, 390, 'sfx', 'lowpass', 0, .7), 125);
   }
 
   function pickupSparkle(level = 1, base = 520, busName = 'sfx') {
-    tone(base, .052, 'triangle', .034 * level, base * 1.45, busName);
-    tone(base * 1.9, .055, 'sine', .024 * level, base * 2.25, busName, .055);
     noise(.025, .012 * level, base * 4, busName, 'bandpass', .018, 2.2);
+    chorusTone(base, .052, 'triangle', .034 * level, base * 1.45, busName, 0, rand(5, 10));
+    chorusTone(base * 1.9, .055, 'sine', .024 * level, base * 2.25, busName, .055, rand(5, 10));
   }
 
   function pickupAmmoSynth(level = 1) {
     noise(.026, .026 * level, 1900, 'sfx', 'bandpass', 0, 1.4);
-    tone(440, .045, 'triangle', .034 * level, 620, 'sfx', .006);
-    tone(780, .052, 'square', .018 * level, 520, 'sfx', .058);
+    physicalTone(440, .045, 'triangle', .034 * level, 620, 'sfx', .006, 2200, 'bandpass', .014 * level, 1.4);
+    physicalTone(780, .052, 'square', .018 * level, 520, 'sfx', .058, 1600, 'bandpass', .011 * level, 1.5);
   }
 
   function pickupHealthSynth(level = 1) {
     pickupSparkle(level, 620);
-    tone(930, .065, 'sine', .03 * level, 1320, 'sfx', .105);
+    chorusTone(930, .065, 'sine', .03 * level, 1320, 'sfx', .105, rand(5, 10));
   }
 
   function pickupC4Synth(level = 1) {
     noise(.032, .026 * level, 900, 'sfx', 'bandpass', 0, 1.2);
-    tone(172, .06, 'triangle', .033 * level, 120, 'sfx', .006);
-    tone(740, .03, 'square', .022 * level, 520, 'sfx', .07);
-    tone(980, .025, 'square', .017 * level, 1320, 'sfx', .125);
+    physicalTone(172, .06, 'triangle', .033 * level, 120, 'sfx', .006, 620, 'lowpass', .014 * level, .8);
+    physicalTone(740, .03, 'square', .022 * level, 520, 'sfx', .07, 1700, 'bandpass', .011 * level, 1.6);
+    physicalTone(980, .025, 'square', .017 * level, 1320, 'sfx', .125, 2100, 'bandpass', .009 * level, 1.8);
   }
 
   function perkEquipSynth(level = 1) {
     pickupSparkle(level, 560, 'ui');
-    tone(880, .07, 'triangle', .035 * level, 1180, 'ui', .082);
-    tone(1320, .09, 'sine', .026 * level, 1680, 'ui', .158);
+    chorusTone(880, .07, 'triangle', .035 * level, 1180, 'ui', .082, rand(5, 10));
+    chorusTone(1320, .09, 'sine', .026 * level, 1680, 'ui', .158, rand(5, 10));
   }
 
   function commandVoiceSetting(name, fallback) {
@@ -325,7 +346,7 @@
   function commandFallback(level = 1, chirps = 2) {
     radioStatic(.06, .055 * level, 1550, 'ui');
     for (let i = 0; i < chirps; i++) {
-      tone(720 + i * 220, .045, 'square', .026 * level, 480 + i * 150, 'ui', .08 + i * .085);
+      physicalTone(720 + i * 220, .045, 'square', .026 * level, 480 + i * 150, 'ui', .08 + i * .085, 2100 + i * 260, 'bandpass', .01 * level, 1.6);
     }
     radioStatic(.08, .032 * level, 2150, 'ui', .18 + chirps * .08);
   }
@@ -611,7 +632,8 @@
       filt.type = filterType;
       filt.frequency.setValueAtTime(freq, now);
       filt.Q.setValueAtTime(q, now);
-      layerGain.gain.setValueAtTime(gainValue, now);
+      layerGain.gain.setValueAtTime(0.0001, now);
+      layerGain.gain.linearRampToValueAtTime(Math.max(0.0001, gainValue), now + 0.12);
       lfo.type = 'sine';
       lfo.frequency.setValueAtTime(lfoRate, now);
       lfoGain.gain.setValueAtTime(lfoDepth, now);
@@ -639,7 +661,8 @@
       const lfoGain = ctx.createGain();
       osc.type = type;
       osc.frequency.setValueAtTime(freq, now);
-      layerGain.gain.setValueAtTime(gainValue, now);
+      layerGain.gain.setValueAtTime(0.0001, now);
+      layerGain.gain.linearRampToValueAtTime(Math.max(0.0001, gainValue), now + 0.12);
       lfo.frequency.setValueAtTime(lfoRate, now);
       lfoGain.gain.setValueAtTime(lfoDepth, now);
       lfo.connect(lfoGain);
@@ -716,18 +739,24 @@
       reloadDoneSynth(gainValue);
     } else if (name === 'block') {
       noise(.055, .075 * gainValue, 520, 'foley');
-      tone(165, .045, 'square', .035 * gainValue, 110, 'foley');
+      physicalTone(165, .045, 'square', .035 * gainValue, 110, 'foley', 0, 680, 'lowpass', .022 * gainValue, .8);
     } else if (name === 'hit') {
-      noise(.018, .034 * gainValue, 2400, 'sfx', 'bandpass', 0, 1.7);
-      tone(510, .045, 'triangle', .052 * gainValue, 290, 'sfx');
-      tone(920, .028, 'square', .018 * gainValue, 620, 'sfx', .035);
+      noise(.02, .05 * gainValue, 2600, 'sfx', 'bandpass', 0, 1.4);
+      noise(.055, .036 * gainValue, 460, 'sfx', 'lowpass', .003, .6);
+      physicalTone(510, .045, 'triangle', .052 * gainValue, 290, 'sfx', 0, 2100, 'bandpass', .018 * gainValue, 1.5);
+      physicalTone(920, .028, 'square', .018 * gainValue, 620, 'sfx', .035, 2900, 'bandpass', .01 * gainValue, 1.8);
     } else if (name === 'head') {
-      noise(.025, .06 * gainValue, 1900);
-      tone(980, .045, 'square', .065 * gainValue, 1450);
-      setTimeout(() => tone(520, .055, 'triangle', .045 * gainValue, 780), 45);
+      noise(.03, .07 * gainValue, 2200, 'sfx', 'bandpass', 0, 1.6);
+      noise(.05, .045 * gainValue, 500, 'sfx', 'lowpass', .006, .55);
+      physicalTone(980, .045, 'square', .065 * gainValue, 1450, 'sfx', 0, 3200, 'bandpass', .018 * gainValue, 1.8);
+      setTimeout(() => physicalTone(520, .055, 'triangle', .045 * gainValue, 780, 'sfx', 0, 1400, 'bandpass', .012 * gainValue, 1.2), 45);
     } else if (name === 'kill') {
-      tone(260, .075, 'square', .055 * gainValue, 390);
-      setTimeout(() => tone(520, .08, 'triangle', .05 * gainValue, 780), 80);
+      noise(.07, .05 * gainValue, 680, 'sfx', 'lowpass', 0, .55);
+      physicalTone(260, .075, 'square', .055 * gainValue, 390, 'sfx', 0, 920, 'bandpass', .016 * gainValue, 1.1);
+      setTimeout(() => {
+        physicalTone(520, .08, 'triangle', .05 * gainValue, 780, 'sfx', 0, 1500, 'bandpass', .014 * gainValue, 1.35);
+        noise(.05, .02 * gainValue, 1400, 'sfx', 'bandpass', 0, 1.6);
+      }, 80);
     } else if (name === 'pickup' || name === 'pickupAmmo') {
       pickupAmmoSynth(gainValue);
     } else if (name === 'pickupHealth') {
@@ -739,32 +768,37 @@
     } else if (name === 'death') {
       playerDeathSynth(gainValue);
     } else if (name === 'toxin') {
-      tone(115, .11, 'sawtooth', .045 * gainValue, 62);
       noise(.08, .045 * gainValue, 360);
+      physicalTone(115, .11, 'sawtooth', .045 * gainValue, 62, 'sfx', 0, 520, 'lowpass', .02 * gainValue, .8);
     } else if (name === 'land') {
       synthFootstep({ ...options, gait: 'land' }, gainValue);
     } else if (name === 'footstep') {
       synthFootstep(options, gainValue);
     } else if (name === 'objectiveClear') {
-      tone(220, .08, 'triangle', .05 * gainValue, 330, 'ui');
-      setTimeout(() => tone(440, .09, 'triangle', .05 * gainValue, 660, 'ui'), 85);
-      setTimeout(() => tone(720, .11, 'sine', .045 * gainValue, 960, 'ui'), 175);
+      noise(.05, .02 * gainValue, 3200, 'ui', 'highpass', 0, 1.2);
+      chorusTone(220, .08, 'triangle', .05 * gainValue, 330, 'ui', 0, rand(5, 10));
+      setTimeout(() => chorusTone(440, .09, 'triangle', .05 * gainValue, 660, 'ui', 0, rand(5, 10)), 85);
+      setTimeout(() => {
+        chorusTone(720, .11, 'sine', .045 * gainValue, 960, 'ui', 0, rand(5, 10));
+        noise(.06, .016 * gainValue, 3600, 'ui', 'bandpass', 0, 2.2);
+      }, 175);
     } else if (name === 'wave') {
-      tone(180, .08, 'sawtooth', .05 * gainValue, 120, 'ui');
-      setTimeout(() => tone(330, .09, 'triangle', .045 * gainValue, 480, 'ui'), 85);
+      noise(.06, .03 * gainValue, 700, 'ui', 'lowpass', 0, .6);
+      physicalTone(180, .08, 'sawtooth', .05 * gainValue, 120, 'ui', 0, 680, 'lowpass', .014 * gainValue, .7);
+      setTimeout(() => physicalTone(330, .09, 'triangle', .045 * gainValue, 480, 'ui', 0, 1350, 'bandpass', .012 * gainValue, 1.1), 85);
     } else if (name === 'heartbeat') {
-      tone(56, .12, 'sine', .052 * gainValue, 42, 'ui');
-      tone(68, .095, 'sine', .038 * gainValue, 46, 'ui', .18);
       noise(.05, .012 * gainValue, 210, 'ui', 'lowpass', .02, .6);
+      physicalTone(56, .12, 'sine', .052 * gainValue, 42, 'ui', 0, 180, 'lowpass', .012 * gainValue, .5);
+      physicalTone(68, .095, 'sine', .038 * gainValue, 46, 'ui', .18, 190, 'lowpass', .01 * gainValue, .5);
     } else if (name === 'confirm') {
-      noise(.012, .018 * gainValue, 2600, 'ui');
-      tone(1150, .018, 'square', .018 * gainValue, 640, 'ui');
-      setTimeout(() => tone(420, .018, 'triangle', .012 * gainValue, 260, 'ui'), 18);
+      noise(.014, .02 * gainValue, 2800, 'ui', 'highpass', 0, 1.8);
+      physicalTone(1150, .018, 'square', .018 * gainValue, 640, 'ui', 0, 2600, 'bandpass', .007 * gainValue, 1.6);
+      setTimeout(() => physicalTone(420, .018, 'triangle', .012 * gainValue, 260, 'ui', 0, 1300, 'bandpass', .005 * gainValue, 1.1), 18);
     } else if (name === 'briefing') {
       radioStatic(.045, .07, 1200);
-      tone(1180, .025, 'square', .018 * gainValue, 680, 'ui');
+      physicalTone(1180, .025, 'square', .018 * gainValue, 680, 'ui', 0, 2200, 'bandpass', .008 * gainValue, 1.4);
       setTimeout(() => radioStatic(.13, .045, 2100), 34);
-      setTimeout(() => tone(330, .035, 'square', .018 * gainValue, 190, 'ui'), 128);
+      setTimeout(() => physicalTone(330, .035, 'square', .018 * gainValue, 190, 'ui', 0, 1000, 'bandpass', .007 * gainValue, 1.2), 128);
       setTimeout(() => radioStatic(.055, .026, 850), 168);
     } else if (name === 'perkEquip') {
       perkEquipSynth(gainValue);
