@@ -495,15 +495,15 @@
   function zombieMoanProfile(variant = 'normal', playbackRate = 1) {
     const rate = Math.max(0.55, Math.min(1.45, Math.abs(Number(playbackRate) || 1)));
     if (variant === 'speedy') {
-      return { dur: .74 / rate, f0: 164 * rate, f1: 92 * rate, f2: 138 * rate, wave: 'sawtooth', voice: .038, breath: .072, breathFreq: 1360, breathEnd: 940, q: 5.1, delay: .014, wobble: 16, wobbleDepth: .013, formantA: 720, formantAEnd: 1180, formantB: 1640, formantBEnd: 1240, formantQ: 3.8, throat: .22 };
+      return { dur: 1.02 / rate, f0: 138 * rate, f1: 74 * rate, f2: 172 * rate, wave: 'sawtooth', voice: .04, breath: .08, breathFreq: 1280, breathEnd: 860, q: 5.7, delay: .014, wobble: 17.5, wobbleDepth: .015, formantA: 660, formantAEnd: 1240, formantB: 1760, formantBEnd: 1120, formantQ: 4.4, throat: .32 };
     }
     if (variant === 'brute') {
-      return { dur: 1.6 / rate, f0: 58 * rate, f1: 26 * rate, f2: 48 * rate, wave: 'sawtooth', voice: .064, breath: .066, breathFreq: 360, breathEnd: 250, q: 1.6, delay: .04, wobble: 5.6, wobbleDepth: .017, hollow: true, formantA: 310, formantAEnd: 420, formantB: 780, formantBEnd: 560, formantQ: 2.1, throat: .8 };
+      return { dur: 2.48 / rate, f0: 46 * rate, f1: 22 * rate, f2: 68 * rate, wave: 'sawtooth', voice: .07, breath: .076, breathFreq: 330, breathEnd: 210, q: 2.05, delay: .04, wobble: 5.2, wobbleDepth: .021, hollow: true, formantA: 280, formantAEnd: 480, formantB: 840, formantBEnd: 520, formantQ: 2.6, throat: 1.08 };
     }
     if (variant === 'grey') {
-      return { dur: 1.38 / rate, f0: 90 * rate, f1: 34 * rate, f2: 70 * rate, wave: 'triangle', voice: .042, breath: .084, breathFreq: 760, breathEnd: 520, q: 5.6, delay: .028, hollow: true, formantA: 520, formantAEnd: 370, formantB: 1120, formantBEnd: 850, formantQ: 4.6, throat: .48 };
+      return { dur: 1.98 / rate, f0: 76 * rate, f1: 28 * rate, f2: 104 * rate, wave: 'triangle', voice: .048, breath: .094, breathFreq: 700, breathEnd: 430, q: 6.3, delay: .028, hollow: true, formantA: 470, formantAEnd: 330, formantB: 1220, formantBEnd: 780, formantQ: 5.2, throat: .68 };
     }
-    return { dur: 1.12 / rate, f0: 104 * rate, f1: 50 * rate, f2: 84 * rate, wave: 'sawtooth', voice: .048, breath: .064, breathFreq: 580, breathEnd: 390, q: 2.8, delay: .03, wobble: 7.4, wobbleDepth: .014, formantA: 470, formantAEnd: 680, formantB: 1180, formantBEnd: 920, formantQ: 3.0, throat: .42 };
+    return { dur: 1.72 / rate, f0: 86 * rate, f1: 38 * rate, f2: 122 * rate, wave: 'sawtooth', voice: .054, breath: .072, breathFreq: 540, breathEnd: 330, q: 3.35, delay: .03, wobble: 7.8, wobbleDepth: .017, formantA: 430, formantAEnd: 760, formantB: 1280, formantBEnd: 840, formantQ: 3.6, throat: .58 };
   }
 
   function zombieMoanSynth(level = 1, playbackRate = 1, options = {}) {
@@ -529,7 +529,13 @@
     if (panNode) nodes.push(panNode);
 
     const voiceGain = ctx.createGain();
-    voiceGain.gain.setValueAtTime(profile.voice * aggression, now);
+    const baseVoice = profile.voice * aggression;
+    const secondPhraseAt = now + profile.dur * rand(.55, .65);
+    voiceGain.gain.setValueAtTime(0.0001, now);
+    voiceGain.gain.linearRampToValueAtTime(baseVoice, now + .055);
+    voiceGain.gain.exponentialRampToValueAtTime(Math.max(0.0001, baseVoice * .46), secondPhraseAt - .07);
+    voiceGain.gain.linearRampToValueAtTime(baseVoice * rand(1.18, 1.36), secondPhraseAt + .075);
+    voiceGain.gain.exponentialRampToValueAtTime(0.001, now + profile.dur);
     voiceGain.connect(out);
     nodes.push(voiceGain);
 
@@ -548,8 +554,10 @@
     const primary = ctx.createOscillator();
     primary.type = profile.wave;
     primary.frequency.setValueAtTime(profile.f0 * pitchDrift, now);
-    primary.frequency.linearRampToValueAtTime(profile.f2 * rand(.9, 1.08), now + profile.dur * .24);
-    primary.frequency.exponentialRampToValueAtTime(Math.max(24, profile.f1 * rand(.9, 1.07)), now + profile.dur);
+    primary.frequency.linearRampToValueAtTime(profile.f2 * rand(.92, 1.14), now + profile.dur * .24);
+    primary.frequency.exponentialRampToValueAtTime(Math.max(24, profile.f1 * rand(.88, 1.04)), secondPhraseAt - .035);
+    primary.frequency.linearRampToValueAtTime(profile.f2 * rand(.78, 1.24), secondPhraseAt + .06);
+    primary.frequency.exponentialRampToValueAtTime(Math.max(22, profile.f1 * rand(.82, 1.02)), now + profile.dur);
     primary.connect(voiceGain);
     primary.start(now);
     primary.stop(now + profile.dur + .03);
@@ -559,10 +567,10 @@
       const formant = ctx.createBiquadFilter();
       const formantGain = ctx.createGain();
       formant.type = 'bandpass';
-      formant.frequency.setValueAtTime(freq * rand(.92, 1.08), now);
+      formant.frequency.setValueAtTime(freq * rand(.84, 1.16), now);
       // Slow formant drift gives a mouth/throat quality without expensive processing.
-      formant.frequency.linearRampToValueAtTime(endFreq * rand(.92, 1.08), now + profile.dur * .82);
-      formant.Q.setValueAtTime(q, now);
+      formant.frequency.linearRampToValueAtTime(endFreq * rand(.78, 1.24), now + profile.dur * rand(.7, .92));
+      formant.Q.setValueAtTime(q * rand(.82, 1.24), now);
       formantGain.gain.setValueAtTime(gainValue, now);
       source.connect(formant);
       formant.connect(formantGain);
