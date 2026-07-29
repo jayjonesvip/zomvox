@@ -7,12 +7,12 @@
   const commandVoiceConfig = audioConfig.commandVoice || {};
   const ZOMBIE_MOAN_MAX_OVERLAP = Math.max(1, Math.floor(Number(enemyConfig.zombieMoanMaxVoices) || 3));
   const BUS_LEVELS = {
-    weapon: 1.05,
+    weapon: 1.08,
     foley: 0.58,
-    ambient: 0.36,
-    enemy: 0.72,
+    ambient: 0.31,
+    enemy: 0.82,
     ui: 0.86,
-    sfx: 0.72
+    sfx: 0.70
   };
 
   let sfxEnabled = true;
@@ -47,16 +47,51 @@
     return audioCtx;
   }
 
+  function softLimitCurve(amount = 1.7) {
+    const samples = 1024;
+    const curve = new Float32Array(samples);
+    for (let i = 0; i < samples; i++) {
+      const x = i / (samples - 1) * 2 - 1;
+      curve[i] = Math.tanh(x * amount) / Math.tanh(amount);
+    }
+    return curve;
+  }
+
   function buses() {
     const ctx = getAudio();
     if (!ctx) return null;
     if (busGains && busGains.context === ctx) return busGains;
 
     busGains = { context: ctx };
+    const masterInput = ctx.createGain();
+    const compressor = ctx.createDynamicsCompressor();
+    const softLimiter = ctx.createWaveShaper();
+    const master = ctx.createGain();
+
+    masterInput.gain.value = 0.96;
+    // Mild glue compression catches stacked mobile peaks without flattening the lo-fi punch.
+    compressor.threshold.value = -12;
+    compressor.knee.value = 18;
+    compressor.ratio.value = 3.5;
+    compressor.attack.value = 0.003;
+    compressor.release.value = 0.18;
+    softLimiter.curve = softLimitCurve();
+    softLimiter.oversample = '2x';
+    master.gain.value = 0.92;
+
+    masterInput.connect(compressor);
+    compressor.connect(softLimiter);
+    softLimiter.connect(master);
+    master.connect(ctx.destination);
+    busGains.masterInput = masterInput;
+    busGains.compressor = compressor;
+    busGains.softLimiter = softLimiter;
+    busGains.master = master;
+
     for (const name of Object.keys(BUS_LEVELS)) {
       const gain = ctx.createGain();
       gain.gain.value = BUS_LEVELS[name];
-      gain.connect(ctx.destination);
+      gain.connect(masterInput);
       busGains[name] = gain;
     }
     return busGains;
@@ -72,10 +107,20 @@
     return 'sfx';
   }
 
-  function connectOutput(node, busName = 'sfx') {
+  function connectOutput(node, busName = 'sfx', pan = 0) {
     const mix = buses();
     if (!mix || !node) return;
-    node.connect(mix[busName] || mix.sfx);
+    const out = mix[busName] || mix.sfx;
+    const ctx = mix.context;
+    const safePan = Math.max(-1, Math.min(1, Number(pan) || 0));
+    if (Math.abs(safePan) > 0.001 && ctx && typeof ctx.createStereoPanner === 'function') {
+      const panner = ctx.createStereoPanner();
+      panner.pan.value = safePan;
+      node.connect(panner);
+      panner.connect(out);
+      return panner;
+    }
+    node.connect(out);
   }
 
   function shapeImpulseGain(param, now, peak, attack, decay) {
@@ -106,7 +151,14 @@
     shapeImpulseGain(g.gain, now, gain, Math.min(0.01, Math.max(0.0015, dur * 0.12)), dur);
 
     osc.connect(g);
-    connectOutput(g, busName);
+    const outputNode = connectOutput(g, busName);
+    osc.onended = () => {
+      try { osc.disconnect(); } catch (_) {}
+      try { g.disconnect(); } catch (_) {}
+      if (outputNode) {
+        try { outputNode.disconnect(); } catch (_) {}
+      }
+    };
 
     osc.start(now);
     osc.stop(now + dur + .02);
@@ -124,6 +176,45 @@
   function physicalTone(freq, dur = .08, type = 'triangle', gain = .05, endFreq = null, busName = 'sfx', delay = 0, noiseCutoff = 1200, noiseFilter = 'bandpass', noiseGain = 0.018, q = 1.2) {
     noise(Math.max(0.018, dur * 0.55), noiseGain, noiseCutoff, busName, noiseFilter, delay, q);
     tone(freq, dur, type, gain, endFreq, busName, delay + 0.001);
+  }
+
+  function pannedNoise(dur = .05, gain = .08, cutoff = 1200, busName = 'sfx', filterType = 'lowpass', delay = 0, q = 0.7, pan = 0) {
+    const ctx = getAudio();
+    if (!ctx) return;
+
+    const len = Math.max(1, Math.floor(ctx.sampleRate * dur));
+    const buffer = ctx.createBuffer(1, len, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+
+    for (let i = 0; i < len; i++) {
+      data[i] = (Math.random() * 2 - 1) * (1 - i / len);
+    }
+
+    const src = ctx.createBufferSource();
+    const filt = ctx.createBiquadFilter();
+    const g = ctx.createGain();
+    const now = ctx.currentTime + Math.max(0, delay);
+
+    filt.type = filterType;
+    filt.frequency.setValueAtTime(cutoff, now);
+    filt.Q.setValueAtTime(q, now);
+    shapeImpulseGain(g.gain, now, gain, Math.min(0.008, Math.max(0.0015, dur * 0.1)), dur);
+
+    src.buffer = buffer;
+    src.connect(filt);
+    filt.connect(g);
+    const outputNode = connectOutput(g, busName, pan);
+    src.onended = () => {
+      try { src.disconnect(); } catch (_) {}
+      try { filt.disconnect(); } catch (_) {}
+      try { g.disconnect(); } catch (_) {}
+      if (outputNode) {
+        try { outputNode.disconnect(); } catch (_) {}
+      }
+    };
+
+    src.start(now);
+    src.stop(now + dur + .02);
   }
 
   function noise(dur = .05, gain = .08, cutoff = 1200, busName = 'sfx', filterType = 'lowpass', delay = 0, q = 0.7) {
@@ -152,7 +243,15 @@
     src.buffer = buffer;
     src.connect(filt);
     filt.connect(g);
-    connectOutput(g, busName);
+    const outputNode = connectOutput(g, busName);
+    src.onended = () => {
+      try { src.disconnect(); } catch (_) {}
+      try { filt.disconnect(); } catch (_) {}
+      try { g.disconnect(); } catch (_) {}
+      if (outputNode) {
+        try { outputNode.disconnect(); } catch (_) {}
+      }
+    };
 
     src.start(now);
     src.stop(now + dur + .02);
@@ -185,7 +284,15 @@
     src.buffer = buffer;
     src.connect(band);
     band.connect(gain);
-    connectOutput(gain, busName);
+    const outputNode = connectOutput(gain, busName);
+    src.onended = () => {
+      try { src.disconnect(); } catch (_) {}
+      try { band.disconnect(); } catch (_) {}
+      try { gain.disconnect(); } catch (_) {}
+      if (outputNode) {
+        try { outputNode.disconnect(); } catch (_) {}
+      }
+    };
 
     src.start(now);
     src.stop(now + dur + .02);
@@ -201,19 +308,35 @@
     return Math.max(min, Math.min(max, num));
   }
 
+  function optionVolumeScale(options = {}) {
+    const explicit = Number(options.volumeScale);
+    let scale = Number.isFinite(explicit) ? explicit : 1;
+    const distance = Number(options.distance);
+    if (Number.isFinite(distance)) {
+      scale *= clamp(1 - distance / 16, .18, 1, 1);
+    }
+    return clamp(scale, .05, 1.25, 1);
+  }
+
   function shotgunShot(level = 1) {
     const pitch = rand(.86, 1.02);
-    noise(.018, .52 * level, 6200 * pitch, 'weapon', 'highpass', 0, .7);
-    noise(.045, .42 * level, 3000 * pitch, 'weapon', 'bandpass', .004, .9);
-    noise(.18, .22 * level, 1280 * pitch, 'weapon', 'lowpass', .012, .58);
-    noise(.44, .12 * level, 520 * pitch, 'weapon', 'lowpass', .04, .46);
-    physicalTone(92 * pitch, .15, 'sine', .19 * level, 34 * pitch, 'weapon', 0, 420, 'lowpass', .035 * level, .5);
-    physicalTone(46 * pitch, .22, 'triangle', .13 * level, 24 * pitch, 'weapon', .008, 260, 'lowpass', .025 * level, .45);
-    physicalTone(820 * pitch, .035, 'square', .038 * level, 420 * pitch, 'weapon', .018, 2400, 'bandpass', .022 * level, 1.8);
-    for (let i = 0; i < 5; i++) {
+    const pan = rand(-0.05, 0.05);
+    // Shotgun layers: very short pressure crack, lower body, airy tail, and tiny pellet grit.
+    noise(.012, .55 * level, 7200 * pitch, 'weapon', 'highpass', 0, .8);
+    noise(.038, .44 * level, 3200 * pitch, 'weapon', 'bandpass', .003, 1.05);
+    noise(.16, .24 * level, 1160 * pitch, 'weapon', 'lowpass', .011, .55);
+    noise(.52, .105 * level, 470 * pitch, 'weapon', 'lowpass', .035, .42);
+    physicalTone(104 * pitch, .12, 'sine', .20 * level, 38 * pitch, 'weapon', 0, 390, 'lowpass', .035 * level, .5);
+    physicalTone(48 * pitch, .25, 'triangle', .12 * level, 24 * pitch, 'weapon', .006, 230, 'lowpass', .022 * level, .42);
+    physicalTone(920 * pitch, .032, 'square', .034 * level, 430 * pitch, 'weapon', .016, 2500, 'bandpass', .022 * level, 1.9);
+    for (let i = 0; i < 7; i++) {
       const delay = .018 + i * rand(.009, .018);
       noise(rand(.012, .024), .036 * level, rand(2100, 5200) * pitch, 'weapon', 'bandpass', delay, rand(1.1, 2.6));
     }
+    // A tiny metallic shell/ejector hint keeps the weapon feeling mechanical without a sample.
+    pannedNoise(.032, .024 * level, 5600 * pitch, 'weapon', 'highpass', .13, 2.4, pan);
+    physicalTone(1860 * pitch, .028, 'triangle', .016 * level, 1220 * pitch, 'weapon', .145, 3600 * pitch, 'bandpass', .008 * level, 2.3);
+    pannedNoise(.018, .012 * level, 4200 * pitch, 'weapon', 'bandpass', .165, 2.1, -pan * .8);
   }
 
   function dryFire(level = 1) {
@@ -237,6 +360,8 @@
     noise(.028, .036 * level, 2600, 'weapon', 'highpass', .012, 1.2);
     physicalTone(360, .045, 'triangle', .034 * level, 610, 'weapon', .056, 1400, 'bandpass', .017 * level, 1.1);
     physicalTone(118, .055, 'sine', .024 * level, 82, 'weapon', .074, 520, 'lowpass', .014 * level, .7);
+    pannedNoise(.026, .018 * level, 4800, 'weapon', 'highpass', .126, 2.2, rand(-.16, .16));
+    physicalTone(1620, .018, 'triangle', .014 * level, 1080, 'weapon', .142, 3600, 'bandpass', .006 * level, 2.4);
   }
 
   function explosionSynth(level = 1) {
@@ -370,15 +495,15 @@
   function zombieMoanProfile(variant = 'normal', playbackRate = 1) {
     const rate = Math.max(0.55, Math.min(1.45, Math.abs(Number(playbackRate) || 1)));
     if (variant === 'speedy') {
-      return { dur: .68 / rate, f0: 158 * rate, f1: 88 * rate, f2: 132 * rate, wave: 'sawtooth', voice: .044, breath: .082, breathFreq: 1180, q: 4.2, delay: .018, wobble: 15, wobbleDepth: .014 };
+      return { dur: .74 / rate, f0: 164 * rate, f1: 92 * rate, f2: 138 * rate, wave: 'sawtooth', voice: .038, breath: .072, breathFreq: 1360, breathEnd: 940, q: 5.1, delay: .014, wobble: 16, wobbleDepth: .013, formantA: 720, formantAEnd: 1180, formantB: 1640, formantBEnd: 1240, formantQ: 3.8, throat: .22 };
     }
     if (variant === 'brute') {
-      return { dur: 1.48 / rate, f0: 58 * rate, f1: 28 * rate, f2: 50 * rate, wave: 'sawtooth', voice: .072, breath: .07, breathFreq: 360, q: 1.7, delay: .04, wobble: 5.8, wobbleDepth: .018, hollow: true };
+      return { dur: 1.6 / rate, f0: 58 * rate, f1: 26 * rate, f2: 48 * rate, wave: 'sawtooth', voice: .064, breath: .066, breathFreq: 360, breathEnd: 250, q: 1.6, delay: .04, wobble: 5.6, wobbleDepth: .017, hollow: true, formantA: 310, formantAEnd: 420, formantB: 780, formantBEnd: 560, formantQ: 2.1, throat: .8 };
     }
     if (variant === 'grey') {
-      return { dur: 1.3 / rate, f0: 94 * rate, f1: 34 * rate, f2: 72 * rate, wave: 'triangle', voice: .047, breath: .092, breathFreq: 690, q: 5.4, delay: .028, hollow: true, wobble: 8.5, wobbleDepth: .02 };
+      return { dur: 1.38 / rate, f0: 90 * rate, f1: 34 * rate, f2: 70 * rate, wave: 'triangle', voice: .042, breath: .084, breathFreq: 760, breathEnd: 520, q: 5.6, delay: .028, hollow: true, formantA: 520, formantAEnd: 370, formantB: 1120, formantBEnd: 850, formantQ: 4.6, throat: .48 };
     }
-    return { dur: 1.08 / rate, f0: 104 * rate, f1: 52 * rate, f2: 86 * rate, wave: 'sawtooth', voice: .052, breath: .068, breathFreq: 560, q: 2.8, delay: .03, wobble: 7.2, wobbleDepth: .015 };
+    return { dur: 1.12 / rate, f0: 104 * rate, f1: 50 * rate, f2: 84 * rate, wave: 'sawtooth', voice: .048, breath: .064, breathFreq: 580, breathEnd: 390, q: 2.8, delay: .03, wobble: 7.4, wobbleDepth: .014, formantA: 470, formantAEnd: 680, formantB: 1180, formantBEnd: 920, formantQ: 3.0, throat: .42 };
   }
 
   function zombieMoanSynth(level = 1, playbackRate = 1, options = {}) {
@@ -387,26 +512,31 @@
     const variant = String(options.variant || 'normal');
     const profile = zombieMoanProfile(variant, playbackRate);
     const now = ctx.currentTime;
+    const distanceScale = optionVolumeScale(options);
+    const aggression = clamp(options.aggression, .75, 1.35, distanceScale > .85 ? 1.12 : .92);
+    const pan = clamp(options.pan, -.55, .55, rand(-.22, .22));
+    const pitchDrift = rand(.94, 1.07);
     const nodes = [];
     const sources = [];
     let cleaned = false;
 
     const out = ctx.createGain();
     out.gain.setValueAtTime(0.0001, now);
-    out.gain.exponentialRampToValueAtTime(Math.max(0.0002, level), now + .05);
+    out.gain.exponentialRampToValueAtTime(Math.max(0.0002, level * distanceScale), now + .05);
     out.gain.exponentialRampToValueAtTime(0.001, now + profile.dur);
-    connectOutput(out, 'enemy');
+    const panNode = connectOutput(out, 'enemy', pan);
     nodes.push(out);
+    if (panNode) nodes.push(panNode);
 
     const voiceGain = ctx.createGain();
-    voiceGain.gain.setValueAtTime(profile.voice, now);
+    voiceGain.gain.setValueAtTime(profile.voice * aggression, now);
     voiceGain.connect(out);
     nodes.push(voiceGain);
 
     const tremolo = ctx.createOscillator();
     const tremoloGain = ctx.createGain();
     tremolo.type = 'sine';
-    tremolo.frequency.setValueAtTime(profile.wobble || 7, now);
+    tremolo.frequency.setValueAtTime((profile.wobble || 7) * rand(.86, 1.18), now);
     tremoloGain.gain.setValueAtTime(profile.wobbleDepth || .012, now);
     tremolo.connect(tremoloGain);
     tremoloGain.connect(voiceGain.gain);
@@ -417,20 +547,38 @@
 
     const primary = ctx.createOscillator();
     primary.type = profile.wave;
-    primary.frequency.setValueAtTime(profile.f0, now);
-    primary.frequency.linearRampToValueAtTime(profile.f2, now + profile.dur * .24);
-    primary.frequency.exponentialRampToValueAtTime(Math.max(24, profile.f1), now + profile.dur);
+    primary.frequency.setValueAtTime(profile.f0 * pitchDrift, now);
+    primary.frequency.linearRampToValueAtTime(profile.f2 * rand(.9, 1.08), now + profile.dur * .24);
+    primary.frequency.exponentialRampToValueAtTime(Math.max(24, profile.f1 * rand(.9, 1.07)), now + profile.dur);
     primary.connect(voiceGain);
     primary.start(now);
     primary.stop(now + profile.dur + .03);
     sources.push(primary);
 
+    function addFormant(source, freq, endFreq, gainValue, q = 3.0) {
+      const formant = ctx.createBiquadFilter();
+      const formantGain = ctx.createGain();
+      formant.type = 'bandpass';
+      formant.frequency.setValueAtTime(freq * rand(.92, 1.08), now);
+      // Slow formant drift gives a mouth/throat quality without expensive processing.
+      formant.frequency.linearRampToValueAtTime(endFreq * rand(.92, 1.08), now + profile.dur * .82);
+      formant.Q.setValueAtTime(q, now);
+      formantGain.gain.setValueAtTime(gainValue, now);
+      source.connect(formant);
+      formant.connect(formantGain);
+      formantGain.connect(out);
+      nodes.push(formant, formantGain);
+    }
+
+    addFormant(primary, profile.formantA, profile.formantAEnd, profile.voice * .42 * aggression, profile.formantQ);
+    addFormant(primary, profile.formantB, profile.formantBEnd, profile.voice * .24 * aggression, (profile.formantQ || 3) + .8);
+
     const sub = ctx.createOscillator();
     sub.type = 'sine';
-    sub.frequency.setValueAtTime(profile.f0 * .48, now);
+    sub.frequency.setValueAtTime(profile.f0 * .48 * pitchDrift, now);
     sub.frequency.exponentialRampToValueAtTime(Math.max(20, profile.f1 * .5), now + profile.dur);
     const subGain = ctx.createGain();
-    subGain.gain.setValueAtTime(profile.voice * (variant === 'brute' ? .95 : .45), now);
+    subGain.gain.setValueAtTime(profile.voice * profile.throat * aggression, now);
     sub.connect(subGain);
     subGain.connect(out);
     sub.start(now + profile.delay);
@@ -441,10 +589,10 @@
     if (profile.hollow) {
       const hollow = ctx.createOscillator();
       hollow.type = 'square';
-      hollow.frequency.setValueAtTime(profile.f0 * 1.74, now);
+      hollow.frequency.setValueAtTime(profile.f0 * 1.74 * pitchDrift, now);
       hollow.frequency.exponentialRampToValueAtTime(Math.max(35, profile.f1 * 1.2), now + profile.dur);
       const hollowGain = ctx.createGain();
-      hollowGain.gain.setValueAtTime(profile.voice * .16, now);
+      hollowGain.gain.setValueAtTime(profile.voice * .14 * aggression, now);
       hollow.connect(hollowGain);
       hollowGain.connect(out);
       hollow.start(now + .09);
@@ -468,8 +616,9 @@
     breath.buffer = buffer;
     breathFilter.type = variant === 'speedy' || variant === 'grey' ? 'bandpass' : 'lowpass';
     breathFilter.frequency.setValueAtTime(profile.breathFreq, now);
+    breathFilter.frequency.linearRampToValueAtTime(profile.breathEnd || profile.breathFreq * .68, now + profile.dur * .9);
     breathFilter.Q.setValueAtTime(profile.q, now);
-    breathGain.gain.setValueAtTime(profile.breath, now);
+    breathGain.gain.setValueAtTime(profile.breath * aggression, now);
     breath.connect(breathFilter);
     breathFilter.connect(breathGain);
     breathGain.connect(out);
@@ -592,29 +741,41 @@
     return buffer;
   }
 
-  function stopAmbientBed() {
+  function stopAmbientBed(fadeSeconds = .45) {
     if (!ambientBed) return;
-    for (const source of ambientBed.sources) {
-      try { source.stop(); } catch (_) {}
-      try { source.disconnect(); } catch (_) {}
-    }
-    for (const node of ambientBed.nodes) {
-      try { node.disconnect(); } catch (_) {}
-    }
+    const bed = ambientBed;
     ambientBed = null;
+    const ctx = bed.context || getAudio();
+    const now = ctx ? ctx.currentTime : 0;
+    const fade = Math.max(.04, fadeSeconds);
+    if (ctx && bed.out) {
+      bed.out.gain.cancelScheduledValues(now);
+      bed.out.gain.setValueAtTime(Math.max(0.0001, bed.out.gain.value || 0.0001), now);
+      bed.out.gain.exponentialRampToValueAtTime(0.0001, now + fade);
+    }
+    setTimeout(() => {
+      for (const source of bed.sources) {
+        try { source.stop(); } catch (_) {}
+        try { source.disconnect(); } catch (_) {}
+      }
+      for (const node of bed.nodes) {
+        try { node.disconnect(); } catch (_) {}
+      }
+    }, Math.ceil((fade + .05) * 1000));
   }
 
   function startAmbientBed(name) {
     const ctx = getAudio();
     if (!ctx || !ambientEnabled || !name) return;
     if (ambientBed?.name === name) return;
-    stopAmbientBed();
+    stopAmbientBed(.65);
 
     const now = ctx.currentTime;
     const nodes = [];
     const sources = [];
     const bedOut = ctx.createGain();
-    bedOut.gain.setValueAtTime(1, now);
+    bedOut.gain.setValueAtTime(0.0001, now);
+    bedOut.gain.exponentialRampToValueAtTime(1, now + .72);
     connectOutput(bedOut, 'ambient');
     nodes.push(bedOut);
 
@@ -676,28 +837,33 @@
     }
 
     if (name === 'ambientMenu') {
-      addNoiseLayer({ gainValue: .042, filterType: 'lowpass', freq: 680, q: .5, lfoRate: .075, lfoDepth: .02, freqDepth: 280 });
-      addNoiseLayer({ gainValue: .012, filterType: 'bandpass', freq: 1700, q: 1.2, lfoRate: .11, lfoDepth: .008, freqDepth: 420 });
-      addToneLayer({ freq: 43, gainValue: .012, lfoRate: .028, lfoDepth: .006 });
+      addNoiseLayer({ gainValue: .034, filterType: 'lowpass', freq: 620, q: .5, lfoRate: .06, lfoDepth: .016, freqDepth: 320 });
+      addNoiseLayer({ gainValue: .01, filterType: 'bandpass', freq: 1850, q: 1.2, lfoRate: .09, lfoDepth: .006, freqDepth: 520 });
+      addToneLayer({ freq: 43, gainValue: .01, lfoRate: .026, lfoDepth: .005 });
     } else if (name === 'ambientForest') {
-      addNoiseLayer({ gainValue: .022, filterType: 'lowpass', freq: 780, q: .58, lfoRate: .08, lfoDepth: .012, freqDepth: 260 });
+      addNoiseLayer({ gainValue: .019, filterType: 'lowpass', freq: 780, q: .58, lfoRate: .08, lfoDepth: .011, freqDepth: 300 });
+      addNoiseLayer({ gainValue: .004, filterType: 'bandpass', freq: 3100, q: 3.5, lfoRate: .13, lfoDepth: .0025, freqDepth: 450 });
     } else if (name === 'ambientSwamp') {
-      addNoiseLayer({ gainValue: .024, filterType: 'lowpass', freq: 520, q: .75, lfoRate: .06, lfoDepth: .011, freqDepth: 170 });
-      addNoiseLayer({ gainValue: .012, filterType: 'bandpass', freq: 2600, q: 4.5, lfoRate: .13, lfoDepth: .006, freqDepth: 380 });
+      addNoiseLayer({ gainValue: .021, filterType: 'lowpass', freq: 520, q: .75, lfoRate: .055, lfoDepth: .01, freqDepth: 200 });
+      addNoiseLayer({ gainValue: .01, filterType: 'bandpass', freq: 2500, q: 4.5, lfoRate: .13, lfoDepth: .005, freqDepth: 420 });
+      addToneLayer({ freq: 58, gainValue: .005, lfoRate: .04, lfoDepth: .003 });
     } else if (name === 'ambientDunes') {
-      addNoiseLayer({ gainValue: .03, filterType: 'bandpass', freq: 1040, q: 1.05, lfoRate: .075, lfoDepth: .018, freqDepth: 460 });
+      addNoiseLayer({ gainValue: .026, filterType: 'bandpass', freq: 1040, q: 1.05, lfoRate: .07, lfoDepth: .015, freqDepth: 520 });
     } else if (name === 'ambientRocky') {
-      addNoiseLayer({ gainValue: .026, filterType: 'bandpass', freq: 1120, q: .9, lfoRate: .065, lfoDepth: .014, freqDepth: 360 });
+      addNoiseLayer({ gainValue: .023, filterType: 'bandpass', freq: 1120, q: .9, lfoRate: .065, lfoDepth: .012, freqDepth: 400 });
+      addToneLayer({ freq: 48, gainValue: .0045, lfoRate: .023, lfoDepth: .0025 });
     } else if (name === 'ambientAshlands') {
-      addNoiseLayer({ gainValue: .034, filterType: 'lowpass', freq: 620, q: .58, lfoRate: .055, lfoDepth: .019, freqDepth: 210 });
-      addToneLayer({ freq: 52, gainValue: .01, lfoRate: .021, lfoDepth: .005 });
+      addNoiseLayer({ gainValue: .03, filterType: 'lowpass', freq: 600, q: .58, lfoRate: .052, lfoDepth: .016, freqDepth: 240 });
+      addNoiseLayer({ gainValue: .007, filterType: 'bandpass', freq: 1480, q: 2.0, lfoRate: .08, lfoDepth: .004, freqDepth: 520 });
+      addToneLayer({ freq: 52, gainValue: .009, lfoRate: .021, lfoDepth: .004 });
     } else if (name === 'ambientTundra') {
-      addNoiseLayer({ gainValue: .03, filterType: 'bandpass', freq: 1420, q: 1.8, lfoRate: .07, lfoDepth: .017, freqDepth: 520 });
+      addNoiseLayer({ gainValue: .026, filterType: 'bandpass', freq: 1420, q: 1.8, lfoRate: .067, lfoDepth: .014, freqDepth: 580 });
+      addNoiseLayer({ gainValue: .005, filterType: 'highpass', freq: 2600, q: 1.0, lfoRate: .11, lfoDepth: .0025, freqDepth: 620 });
     } else {
       addNoiseLayer({ gainValue: .02, filterType: 'lowpass', freq: 760, q: .65, freqDepth: 240 });
     }
 
-    ambientBed = { name, sources, nodes };
+    ambientBed = { name, context: ctx, out: bedOut, sources, nodes };
   }
 
   function synthAmbientSweetener(cue) {
@@ -741,15 +907,18 @@
       noise(.055, .075 * gainValue, 520, 'foley');
       physicalTone(165, .045, 'square', .035 * gainValue, 110, 'foley', 0, 680, 'lowpass', .022 * gainValue, .8);
     } else if (name === 'hit') {
-      noise(.02, .05 * gainValue, 2600, 'sfx', 'bandpass', 0, 1.4);
-      noise(.055, .036 * gainValue, 460, 'sfx', 'lowpass', .003, .6);
+      noise(.018, .038 * gainValue, 2200, 'sfx', 'bandpass', 0, 1.2);
+      noise(.052, .032 * gainValue, 430, 'sfx', 'lowpass', .003, .55);
       physicalTone(510, .045, 'triangle', .052 * gainValue, 290, 'sfx', 0, 2100, 'bandpass', .018 * gainValue, 1.5);
       physicalTone(920, .028, 'square', .018 * gainValue, 620, 'sfx', .035, 2900, 'bandpass', .01 * gainValue, 1.8);
     } else if (name === 'head') {
-      noise(.03, .07 * gainValue, 2200, 'sfx', 'bandpass', 0, 1.6);
-      noise(.05, .045 * gainValue, 500, 'sfx', 'lowpass', .006, .55);
-      physicalTone(980, .045, 'square', .065 * gainValue, 1450, 'sfx', 0, 3200, 'bandpass', .018 * gainValue, 1.8);
-      setTimeout(() => physicalTone(520, .055, 'triangle', .045 * gainValue, 780, 'sfx', 0, 1400, 'bandpass', .012 * gainValue, 1.2), 45);
+      // Headshots should read as a sharper skull crack plus a short wet body, not just a louder hit.
+      noise(.014, .082 * gainValue, 5200, 'sfx', 'highpass', 0, 1.1);
+      noise(.032, .064 * gainValue, 2400, 'sfx', 'bandpass', .004, 1.8);
+      noise(.085, .052 * gainValue, 360, 'sfx', 'lowpass', .012, .5);
+      physicalTone(1180, .038, 'square', .066 * gainValue, 1640, 'sfx', 0, 3400, 'bandpass', .018 * gainValue, 2.0);
+      setTimeout(() => physicalTone(470, .07, 'triangle', .045 * gainValue, 690, 'sfx', 0, 960, 'bandpass', .014 * gainValue, 1.0), 42);
+      setTimeout(() => chorusTone(840, .055, 'sine', .024 * gainValue, 1180, 'sfx', 0, rand(5, 9)), 82);
     } else if (name === 'kill') {
       noise(.07, .05 * gainValue, 680, 'sfx', 'lowpass', 0, .55);
       physicalTone(260, .075, 'square', .055 * gainValue, 390, 'sfx', 0, 920, 'bandpass', .016 * gainValue, 1.1);
@@ -787,9 +956,17 @@
       physicalTone(180, .08, 'sawtooth', .05 * gainValue, 120, 'ui', 0, 680, 'lowpass', .014 * gainValue, .7);
       setTimeout(() => physicalTone(330, .09, 'triangle', .045 * gainValue, 480, 'ui', 0, 1350, 'bandpass', .012 * gainValue, 1.1), 85);
     } else if (name === 'heartbeat') {
-      noise(.05, .012 * gainValue, 210, 'ui', 'lowpass', .02, .6);
-      physicalTone(56, .12, 'sine', .052 * gainValue, 42, 'ui', 0, 180, 'lowpass', .012 * gainValue, .5);
-      physicalTone(68, .095, 'sine', .038 * gainValue, 46, 'ui', .18, 190, 'lowpass', .01 * gainValue, .5);
+      const health = Number(options.health);
+      const intensity = clamp(
+        options.intensity,
+        0,
+        1,
+        Number.isFinite(health) ? 1 - clamp(health, 0, 100, 100) / 100 : 0
+      );
+      const pulseLevel = gainValue * (1 + intensity * .35);
+      noise(.05, .012 * pulseLevel, 210 + intensity * 80, 'ui', 'lowpass', .02, .6);
+      physicalTone(56 + intensity * 8, .12, 'sine', .052 * pulseLevel, 42, 'ui', 0, 180, 'lowpass', .012 * pulseLevel, .5);
+      physicalTone(68 + intensity * 10, .095, 'sine', .038 * pulseLevel, 46, 'ui', .18, 190, 'lowpass', .01 * pulseLevel, .5);
     } else if (name === 'confirm') {
       noise(.014, .02 * gainValue, 2800, 'ui', 'highpass', 0, 1.8);
       physicalTone(1150, .018, 'square', .018 * gainValue, 640, 'ui', 0, 2600, 'bandpass', .007 * gainValue, 1.6);

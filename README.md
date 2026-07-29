@@ -114,7 +114,7 @@ Common tuning options live in `config.js` under `window.ZOMVOX_CONFIG`. Edit tha
 
 ```js
 window.ZOMVOX_CONFIG = {
-  buildVersion: '2026.07.29.21',
+  buildVersion: '2026.07.29.22',
   initialSeed: 729641,
 
   environment: {
@@ -218,7 +218,7 @@ Other sections in `config.js` expose safe defaults for:
 - `timers`: death overlay delay, world rebuild meter duration, heartbeat interval, and day/night cycle length.
 - `audio.commandVoice`: browser speech tuning for command callouts, including preferred voice name, pitch, rate, and volume.
 
-Audio is generated entirely in `sound.js` with procedural Web Audio synthesis. The cues use short ADSR-style envelopes, layered filtered noise, detuned shimmer tones for pickups, oscillators, and generated ambience beds. No sound files are loaded, so the cues stay cohesive with the procedural voxel style and react quickly on mobile.
+Audio is generated entirely in `sound.js` with procedural Web Audio synthesis. The cues use short ADSR-style envelopes, layered filtered noise, detuned shimmer tones for pickups, oscillators, soft-limited buses, and crossfaded ambience beds. No sound files are loaded, so the cues stay cohesive with the procedural voxel style and react quickly on mobile.
 
 Procedural cue references:
 
@@ -226,8 +226,8 @@ Procedural cue references:
 - Impact and feedback: `hit`, `head`, `kill`, `block`, `hurt`, `death`, `toxin`, `heartbeat`.
 - Pickups and UI: `pickupAmmo`, `pickupHealth`, `pickupC4`, `pickup`, `perkEquip`, `confirm`, `briefing`, `objectiveClear`, `wave`.
 - Command voice: `voiceDrop` for drop-in radio encouragement and `voiceTriple` for triple-kill praise. These use browser speech when available with procedural radio texture around the line. The actual voice depends on the device/browser, but `config.js` can prefer a named voice and tune pitch/rate.
-- Foley and ambience: `footstep`, `land`, `ambientMenu`, `ambientForest`, `ambientDunes`, `ambientRocky`, `ambientSwamp`, `ambientAshlands`, `ambientTundra`. Ambience includes a lightweight procedural bed plus occasional biome/menu sweeteners, mixed below zombie voices so nearby threats stay readable.
-- Zombie voices: `zombieMoan` is generated per zombie type. Normal zombies use a mid-low breathy groan, speedy zombies use a shorter higher rasp, brute zombies use a deeper longer growl, and grey zombies use a hollow unnatural moan.
+- Foley and ambience: `footstep`, `land`, `ambientMenu`, `ambientForest`, `ambientDunes`, `ambientRocky`, `ambientSwamp`, `ambientAshlands`, `ambientTundra`. Ambience includes lightweight procedural beds plus occasional biome/menu sweeteners, mixed below zombie voices so nearby threats stay readable.
+- Zombie voices: `zombieMoan` is generated per zombie type with moving formants and distance-aware gain. Normal zombies use a mid-low breathy groan, speedy zombies use a shorter higher rasp, brute zombies use a deeper longer growl, and grey zombies use a hollow unnatural moan.
 
 ## Repository Layout
 
