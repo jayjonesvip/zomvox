@@ -183,15 +183,16 @@
     return min + Math.random() * (max - min);
   }
 
-  function pistolShot(level = 1) {
+  function rifleShot(level = 1) {
     const pitch = rand(0.94, 1.08);
-    noise(.018, .18 * level, 4400 * pitch, 'weapon', 'highpass', 0, .7);
-    noise(.045, .13 * level, 2550 * pitch, 'weapon', 'bandpass', 0, 1.25);
-    noise(.12, .045 * level, 1350 * pitch, 'weapon', 'lowpass', .012, .8);
-    tone(190 * pitch, .07, 'sine', .07 * level, 86 * pitch, 'weapon');
-    tone(92 * pitch, .08, 'triangle', .045 * level, 48 * pitch, 'weapon', .006);
-    tone(2550 * pitch, .022, 'square', .018 * level, 1900 * pitch, 'weapon', .038);
-    tone(4300 * pitch, .016, 'triangle', .012 * level, 2600 * pitch, 'weapon', .072);
+    noise(.014, .24 * level, 5200 * pitch, 'weapon', 'highpass', 0, .85);
+    noise(.06, .18 * level, 2300 * pitch, 'weapon', 'bandpass', 0, 1.05);
+    noise(.22, .07 * level, 1150 * pitch, 'weapon', 'lowpass', .012, .7);
+    noise(.34, .045 * level, 620 * pitch, 'weapon', 'lowpass', .055, .65);
+    tone(142 * pitch, .095, 'sine', .09 * level, 56 * pitch, 'weapon');
+    tone(62 * pitch, .13, 'triangle', .06 * level, 34 * pitch, 'weapon', .006);
+    tone(1900 * pitch, .026, 'square', .026 * level, 1320 * pitch, 'weapon', .03);
+    tone(3450 * pitch, .02, 'triangle', .016 * level, 2200 * pitch, 'weapon', .075);
   }
 
   function surfaceFoleySurface(options = {}) {
@@ -217,11 +218,11 @@
       dirt: [78, 740, 'lowpass', .7]
     }[surface] || [86, 1120, 'bandpass', .65];
     const [thump, textureFreq, filter, q] = body;
-    const textureGain = (surface === 'ice' || surface === 'stone' || surface === 'rock') ? .034 : .026;
-    tone(thump * rand(.92, 1.08), land ? .07 : .045, 'sine', .024 * heavy * level, thump * .62, 'foley');
+    const textureGain = (surface === 'ice' || surface === 'stone' || surface === 'rock') ? .052 : .04;
+    tone(thump * rand(.92, 1.08), land ? .07 : .045, 'sine', .035 * heavy * level, thump * .62, 'foley');
     noise(land ? .09 : .055, textureGain * heavy * level, textureFreq * rand(.86, 1.14), 'foley', filter, .004, q);
-    if (surface === 'water') noise(.12, .028 * heavy * level, 900, 'foley', 'bandpass', .035, .8);
-    if (surface === 'ice') tone(720 * rand(.9, 1.12), .05, 'triangle', .012 * heavy * level, 1180, 'foley', .024);
+    if (surface === 'water') noise(.12, .04 * heavy * level, 900, 'foley', 'bandpass', .035, .8);
+    if (surface === 'ice') tone(720 * rand(.9, 1.12), .05, 'triangle', .019 * heavy * level, 1180, 'foley', .024);
   }
 
   function ambientBirds(level = 1) {
@@ -280,7 +281,7 @@
 
   function synth(name, gainValue = 1, playbackRate = 1, options = {}) {
     if (name === 'shoot') {
-      pistolShot(gainValue);
+      rifleShot(gainValue);
     } else if (name === 'empty') {
       tone(120, .07, 'square', .04 * gainValue, 85, 'weapon');
     } else if (name === 'reloadStart') {
@@ -515,13 +516,25 @@
     proceduralAmbientName = '';
   }
 
+  function stopAmbientLoop(clearActiveName = true) {
+    if (ambientSource) {
+      try { ambientSource.stop(); } catch (_) {}
+      ambientSource.onended = null;
+      ambientSource.disconnect();
+    }
+    if (ambientGain) ambientGain.disconnect();
+    ambientSource = null;
+    ambientGain = null;
+    if (clearActiveName) activeAmbientName = '';
+  }
+
   function nextAmbientDelay(name) {
-    if (name === 'ambientSwamp') return rand(3.5, 8.5);
-    if (name === 'ambientForest') return rand(5, 12);
-    if (name === 'ambientDunes' || name === 'ambientTundra') return rand(4, 10);
-    if (name === 'ambientAshlands') return rand(6, 14);
-    if (name === 'ambientMenu') return rand(10, 22);
-    return rand(7, 16);
+    if (name === 'ambientSwamp') return rand(2.8, 6.2);
+    if (name === 'ambientForest') return rand(3.6, 8);
+    if (name === 'ambientDunes' || name === 'ambientTundra') return rand(3.2, 7);
+    if (name === 'ambientAshlands') return rand(4.4, 9);
+    if (name === 'ambientMenu') return rand(8, 18);
+    return rand(5, 11);
   }
 
   function scheduleProceduralAmbience(name, first = false) {
@@ -545,15 +558,7 @@
   }
 
   function stopAmbient() {
-    if (ambientSource) {
-      try { ambientSource.stop(); } catch (_) {}
-      ambientSource.onended = null;
-      ambientSource.disconnect();
-    }
-    if (ambientGain) ambientGain.disconnect();
-    ambientSource = null;
-    ambientGain = null;
-    activeAmbientName = '';
+    stopAmbientLoop();
     stopProceduralAmbience();
   }
 
@@ -561,7 +566,7 @@
     const ctx = getAudio();
     if (!ctx || !buffer || !ambientEnabled || ambientTargetName !== name) return;
 
-    stopAmbient();
+    stopAmbientLoop(false);
 
     const src = ctx.createBufferSource();
     const gain = ctx.createGain();
@@ -595,16 +600,22 @@
       return;
     }
 
-    if (activeAmbientName === name && ambientSource) return;
+    const hasOverride = Object.prototype.hasOwnProperty.call(soundFiles, name);
+    const fileName = hasOverride ? soundFiles[name] : '';
+
+    if (fileName === '') {
+      stopAmbient();
+      return;
+    }
+
+    if (activeAmbientName === name && (ambientSource || proceduralAmbientName === name)) return;
 
     ambientTargetName = name;
     startProceduralAmbience(name);
 
-    const hasOverride = Object.prototype.hasOwnProperty.call(soundFiles, name);
-    const fileName = hasOverride ? soundFiles[name] : '';
-
     if (!fileName) {
-      stopAmbient();
+      stopAmbientLoop(false);
+      activeAmbientName = name;
       return;
     }
 
@@ -677,7 +688,7 @@
       const handle = playFile(name, fileName, gainValue, playbackRate);
       if (handle) return handle === true ? undefined : handle;
 
-      trackSynthOneShot(name);
+      if (name !== 'footstep') trackSynthOneShot(name);
       synth(name, gainValue, playbackRate, options);
       return undefined;
     },
