@@ -17,7 +17,7 @@ window.ZOMVOX_CONFIG = {
     Bump this when you make visible changes so you can tell the browser
     loaded the newest version.
   */
-  buildVersion: '2026.07.29.18',
+  buildVersion: '2026.07.29.19',
 
   /*
     Seed used for deterministic world generation.
@@ -412,5 +412,28 @@ window.ZOMVOX_CONFIG = {
       360000 = 6 minutes from dawn to dusk.
     */
     cycleHalfDayMs: 360000
+  },
+
+  audio: {
+    commandVoice: {
+      /*
+        Browser speech settings for radio command callouts.
+
+        Available voices depend on the device/browser. Set preferredVoice
+        to part of a voice name if you find one you like, such as 'David',
+        'Daniel', 'Google US English', etc. Leave blank for auto-pick.
+      */
+      enabled: true,
+      preferredVoice: '',
+
+      /*
+        Lower pitch/rate reads less feminine and less cheerful.
+
+        Browser support varies, but these are safe SpeechSynthesis values.
+      */
+      pitch: 0.45,
+      rate: 0.80,
+      volume: 0.90
+    }
   }
 };
