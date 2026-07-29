@@ -17,7 +17,7 @@ window.ZOMVOX_CONFIG = {
     Bump this when you make visible changes so you can tell the browser
     loaded the newest version.
   */
-  buildVersion: '2026.07.29.11',
+  buildVersion: '2026.07.29.12',
 
   /*
     Seed used for deterministic world generation.
@@ -412,57 +412,5 @@ window.ZOMVOX_CONFIG = {
       360000 = 6 minutes from dawn to dusk.
     */
     cycleHalfDayMs: 360000
-  },
-
-  audio: {
-    /*
-      Optional sound file overrides.
-
-      Put mp3/wav files in assets/ and set the file name here.
-      Use null to keep the built-in synthesized sound.
-      Use an empty string '' to disable a specific sound.
-    */
-    files: {
-      shoot: null,
-      empty: null,
-      reloadStart: null,
-      reloadDone: null,
-      block: null,
-      hit: null,
-      head: 'head.mp3',
-      kill: 'hit.mp3',
-      pickup: null,
-      pickupAmmo: null,
-      pickupHealth: null,
-      pickupC4: null,
-      hurt: null,
-      death: null,
-      toxin: 'toxin.mp3',
-      land: null,
-      footstep: null,
-      objectiveClear: 'objectiveClear.mp3',
-      wave: null,
-      heartbeat: null,
-      confirm: null,
-      briefing: null,
-      perkEquip: null,
-      explosion: null,
-      zombieMoan: 'zombiemoan.wav',
-
-      /*
-        Ambient loops can use either files or procedural sweeteners.
-        Use null for procedural-only ambience.
-        Use '' to keep that area silent.
-        Drop mp3/wav loops into assets/ and set the matching file name here.
-      */
-      ambientMenu: null,
-      ambientForest: null,
-      ambientDunes: null,
-      ambientRocky: null,
-      ambientSwamp: null,
-      ambientAshlands: null,
-      ambientTundra: null
-    }
   }
 };
- 

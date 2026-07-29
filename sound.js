@@ -2,11 +2,7 @@
   'use strict';
 
   const config = window.ZOMVOX_CONFIG || {};
-  const soundFiles = (config.audio && config.audio.files) || {};
   const enemyConfig = config.enemies || {};
-  const SILENCE_TRIM_THRESHOLD = 0.003;
-  const SILENCE_TRIM_MAX_SECONDS = 0.65;
-  const SILENCE_TRIM_PREROLL_SECONDS = 0.006;
   const ZOMBIE_MOAN_MAX_OVERLAP = Math.max(1, Math.floor(Number(enemyConfig.zombieMoanMaxVoices) || 3));
   const BUS_LEVELS = {
     weapon: 1.05,
@@ -21,21 +17,12 @@
   let ambientEnabled = true;
   let audioCtx = null;
   let busGains = null;
-  let ambientSource = null;
-  let ambientGain = null;
   let ambientTargetName = '';
   let activeAmbientName = '';
   let proceduralAmbientName = '';
   let proceduralAmbientTimer = null;
   let activeOneShots = 0;
-  let landSource = null;
   let zombieMoanSources = [];
-
-  // decoded AudioBuffers, not HTMLAudioElement objects
-  const bufferCache = new Map();
-  const loadingCache = new Map();
-  const leadInCache = new WeakMap();
-  const reverseBufferCache = new WeakMap();
 
   function getAudio() {
     const AC = window.AudioContext || window.webkitAudioContext;
@@ -276,6 +263,125 @@
     tone(1320, .09, 'sine', .026 * level, 1680, 'ui', .158);
   }
 
+  function zombieMoanProfile(variant = 'normal', playbackRate = 1) {
+    const rate = Math.max(0.55, Math.min(1.45, Math.abs(Number(playbackRate) || 1)));
+    if (variant === 'speedy') {
+      return { dur: .58 / rate, f0: 178 * rate, f1: 118 * rate, f2: 220 * rate, wave: 'sawtooth', voice: .048, breath: .065, breathFreq: 1450, q: 2.8, delay: .014 };
+    }
+    if (variant === 'brute') {
+      return { dur: 1.32 / rate, f0: 64 * rate, f1: 34 * rate, f2: 88 * rate, wave: 'sawtooth', voice: .07, breath: .058, breathFreq: 420, q: 1.2, delay: .035 };
+    }
+    if (variant === 'grey') {
+      return { dur: 1.12 / rate, f0: 104 * rate, f1: 46 * rate, f2: 150 * rate, wave: 'triangle', voice: .052, breath: .075, breathFreq: 760, q: 3.5, delay: .02, hollow: true };
+    }
+    return { dur: .95 / rate, f0: 112 * rate, f1: 66 * rate, f2: 145 * rate, wave: 'sawtooth', voice: .055, breath: .052, breathFreq: 680, q: 1.9, delay: .025 };
+  }
+
+  function zombieMoanSynth(level = 1, playbackRate = 1, options = {}) {
+    const ctx = getAudio();
+    if (!ctx || zombieMoanSources.length >= ZOMBIE_MOAN_MAX_OVERLAP) return;
+    const variant = String(options.variant || 'normal');
+    const profile = zombieMoanProfile(variant, playbackRate);
+    const now = ctx.currentTime;
+    const nodes = [];
+    const sources = [];
+    let cleaned = false;
+
+    const out = ctx.createGain();
+    out.gain.setValueAtTime(0.0001, now);
+    out.gain.exponentialRampToValueAtTime(Math.max(0.0002, level), now + .05);
+    out.gain.exponentialRampToValueAtTime(0.001, now + profile.dur);
+    connectOutput(out, 'enemy');
+    nodes.push(out);
+
+    const voiceGain = ctx.createGain();
+    voiceGain.gain.setValueAtTime(profile.voice, now);
+    voiceGain.connect(out);
+    nodes.push(voiceGain);
+
+    const primary = ctx.createOscillator();
+    primary.type = profile.wave;
+    primary.frequency.setValueAtTime(profile.f0, now);
+    primary.frequency.linearRampToValueAtTime(profile.f2, now + profile.dur * .28);
+    primary.frequency.exponentialRampToValueAtTime(Math.max(24, profile.f1), now + profile.dur);
+    primary.connect(voiceGain);
+    primary.start(now);
+    primary.stop(now + profile.dur + .03);
+    sources.push(primary);
+
+    const sub = ctx.createOscillator();
+    sub.type = 'sine';
+    sub.frequency.setValueAtTime(profile.f0 * .48, now);
+    sub.frequency.exponentialRampToValueAtTime(Math.max(20, profile.f1 * .5), now + profile.dur);
+    const subGain = ctx.createGain();
+    subGain.gain.setValueAtTime(profile.voice * (variant === 'brute' ? .95 : .45), now);
+    sub.connect(subGain);
+    subGain.connect(out);
+    sub.start(now + profile.delay);
+    sub.stop(now + profile.dur + .03);
+    sources.push(sub);
+    nodes.push(subGain);
+
+    if (profile.hollow) {
+      const hollow = ctx.createOscillator();
+      hollow.type = 'square';
+      hollow.frequency.setValueAtTime(profile.f0 * 1.74, now);
+      hollow.frequency.exponentialRampToValueAtTime(Math.max(35, profile.f1 * 1.2), now + profile.dur);
+      const hollowGain = ctx.createGain();
+      hollowGain.gain.setValueAtTime(profile.voice * .16, now);
+      hollow.connect(hollowGain);
+      hollowGain.connect(out);
+      hollow.start(now + .09);
+      hollow.stop(now + profile.dur * .86);
+      sources.push(hollow);
+      nodes.push(hollowGain);
+    }
+
+    const len = Math.max(1, Math.floor(ctx.sampleRate * profile.dur));
+    const buffer = ctx.createBuffer(1, len, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < len; i++) {
+      const t = i / len;
+      const envelope = Math.sin(Math.PI * t) * (variant === 'speedy' ? 1 - t * .35 : 1);
+      data[i] = (Math.random() * 2 - 1) * envelope;
+    }
+
+    const breath = ctx.createBufferSource();
+    const breathFilter = ctx.createBiquadFilter();
+    const breathGain = ctx.createGain();
+    breath.buffer = buffer;
+    breathFilter.type = variant === 'speedy' || variant === 'grey' ? 'bandpass' : 'lowpass';
+    breathFilter.frequency.setValueAtTime(profile.breathFreq, now);
+    breathFilter.Q.setValueAtTime(profile.q, now);
+    breathGain.gain.setValueAtTime(profile.breath, now);
+    breath.connect(breathFilter);
+    breathFilter.connect(breathGain);
+    breathGain.connect(out);
+    breath.start(now);
+    breath.stop(now + profile.dur + .03);
+    sources.push(breath);
+    nodes.push(breathFilter, breathGain);
+
+    const handle = {
+      stop() {
+        if (cleaned) return;
+        cleaned = true;
+        zombieMoanSources = zombieMoanSources.filter(item => item !== handle);
+        for (const src of sources) {
+          try { src.stop(); } catch (_) {}
+          try { src.disconnect(); } catch (_) {}
+        }
+        for (const node of nodes) {
+          try { node.disconnect(); } catch (_) {}
+        }
+      }
+    };
+
+    zombieMoanSources.push(handle);
+    setTimeout(() => handle.stop(), Math.ceil((profile.dur + .08) * 1000));
+    return handle;
+  }
+
   function surfaceFoleySurface(options = {}) {
     return String(options.surface || 'grass').toLowerCase();
   }
@@ -425,101 +531,9 @@
       perkEquipSynth(gainValue);
     } else if (name === 'explosion') {
       explosionSynth(gainValue);
+    } else if (name === 'zombieMoan') {
+      return zombieMoanSynth(gainValue, playbackRate, options);
     }
-  }
-
-  function soundKey(fileName) {
-    return 'assets/' + fileName;
-  }
-
-  function loadFile(fileName) {
-    const ctx = getAudio();
-    if (!ctx || !fileName) return Promise.resolve(null);
-
-    const key = soundKey(fileName);
-
-    if (bufferCache.has(key)) {
-      return Promise.resolve(bufferCache.get(key));
-    }
-
-    if (loadingCache.has(key)) {
-      return loadingCache.get(key);
-    }
-
-    const promise = fetch(key)
-      .then(res => {
-        if (!res.ok) throw new Error('Audio load failed: ' + key);
-        return res.arrayBuffer();
-      })
-      .then(arrayBuffer => ctx.decodeAudioData(arrayBuffer))
-      .then(buffer => {
-        bufferCache.set(key, buffer);
-        loadingCache.delete(key);
-        return buffer;
-      })
-      .catch(err => {
-        console.warn(err);
-        loadingCache.delete(key);
-        return null;
-      });
-
-    loadingCache.set(key, promise);
-    return promise;
-  }
-
-  function configuredFiles() {
-    const files = Object.values(soundFiles).filter(fileName => !!fileName);
-    return Array.from(new Set(files));
-  }
-
-  function leadInOffset(buffer) {
-    if (!buffer || buffer.duration < 0.08) return 0;
-    if (leadInCache.has(buffer)) return leadInCache.get(buffer);
-
-    const maxSamples = Math.min(buffer.length, Math.floor(buffer.sampleRate * SILENCE_TRIM_MAX_SECONDS));
-    let offset = 0;
-
-    // MP3s from public SFX libraries often have padded silence before the hit.
-    // Find the first meaningful sample and keep a tiny pre-roll so attacks stay natural.
-    scan:
-    for (let i = 0; i < maxSamples; i += 32) {
-      for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
-        if (Math.abs(buffer.getChannelData(channel)[i]) >= SILENCE_TRIM_THRESHOLD) {
-          offset = Math.max(0, i / buffer.sampleRate - SILENCE_TRIM_PREROLL_SECONDS);
-          break scan;
-        }
-      }
-    }
-
-    leadInCache.set(buffer, offset);
-    return offset;
-  }
-
-  function reversedBuffer(buffer) {
-    const ctx = getAudio();
-    if (!ctx || !buffer) return buffer;
-    if (reverseBufferCache.has(buffer)) return reverseBufferCache.get(buffer);
-
-    const reversed = ctx.createBuffer(buffer.numberOfChannels, buffer.length, buffer.sampleRate);
-    for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
-      const source = buffer.getChannelData(channel);
-      const target = reversed.getChannelData(channel);
-      for (let i = 0, j = source.length - 1; i < source.length; i++, j--) {
-        target[i] = source[j];
-      }
-    }
-
-    reverseBufferCache.set(buffer, reversed);
-    return reversed;
-  }
-
-  function stopLand() {
-    if (!landSource) return;
-    try { landSource.stop(); } catch (_) {}
-    landSource.onended = null;
-    landSource.disconnect();
-    landSource = null;
-    activeOneShots = Math.max(0, activeOneShots - 1);
   }
 
   function trackSynthOneShot(name) {
@@ -529,88 +543,10 @@
     }, name === 'land' ? 120 : name === 'footstep' ? 90 : 260);
   }
 
-  function playBuffer(buffer, gainValue = 1, trimLeadingSilence = true, name = '', playbackRate = 1) {
-    const ctx = getAudio();
-    if (!ctx || !buffer) return false;
-
-    if (name === 'land' && activeOneShots > 0) return true;
-    if (name === 'zombieMoan' && zombieMoanSources.length >= ZOMBIE_MOAN_MAX_OVERLAP) return true;
-    if (name !== 'land') stopLand();
-
-    const requestedRate = Number(playbackRate) || 1;
-    const sourceBuffer = requestedRate < 0 ? reversedBuffer(buffer) : buffer;
-    const src = ctx.createBufferSource();
-    const gain = ctx.createGain();
-
-    src.buffer = sourceBuffer;
-    src.playbackRate.value = Math.max(0.5, Math.min(1.6, Math.abs(requestedRate) || 1));
-    gain.gain.value = gainValue;
-
-    src.connect(gain);
-    connectOutput(gain, busForSound(name));
-
-    activeOneShots++;
-    let cleaned = false;
-    function cleanup() {
-      if (cleaned) return;
-      cleaned = true;
-      activeOneShots = Math.max(0, activeOneShots - 1);
-      if (landSource === src) landSource = null;
-      if (name === 'zombieMoan') zombieMoanSources = zombieMoanSources.filter(item => item !== src);
-    }
-    src.onended = cleanup;
-    if (name === 'land') landSource = src;
-    if (name === 'zombieMoan') zombieMoanSources.push(src);
-
-    src.start(ctx.currentTime, trimLeadingSilence ? leadInOffset(sourceBuffer) : 0);
-    if (name !== 'zombieMoan') return true;
-
-    return {
-      stop() {
-        cleanup();
-        src.onended = null;
-        try { src.stop(); } catch (_) {}
-        try { src.disconnect(); } catch (_) {}
-        try { gain.disconnect(); } catch (_) {}
-      }
-    };
-  }
-
-  function playFile(name, fileName, gainValue = 1, playbackRate = 1) {
-    if (fileName === '') return true;
-    if (!fileName) return false;
-
-    const key = soundKey(fileName);
-    const buffer = bufferCache.get(key);
-
-    if (buffer) {
-      const baseGain = name === 'land' ? .28 : 1;
-      return playBuffer(buffer, baseGain * gainValue, true, name, playbackRate);
-    }
-
-    // Start loading, but don't block gameplay.
-    loadFile(fileName);
-
-    // Until decoded, fall back to synth so button presses still feel responsive.
-    return false;
-  }
-
   function stopProceduralAmbience() {
     if (proceduralAmbientTimer) clearTimeout(proceduralAmbientTimer);
     proceduralAmbientTimer = null;
     proceduralAmbientName = '';
-  }
-
-  function stopAmbientLoop(clearActiveName = true) {
-    if (ambientSource) {
-      try { ambientSource.stop(); } catch (_) {}
-      ambientSource.onended = null;
-      ambientSource.disconnect();
-    }
-    if (ambientGain) ambientGain.disconnect();
-    ambientSource = null;
-    ambientGain = null;
-    if (clearActiveName) activeAmbientName = '';
   }
 
   function nextAmbientDelay(name) {
@@ -643,78 +579,22 @@
   }
 
   function stopAmbient() {
-    stopAmbientLoop();
     stopProceduralAmbience();
-  }
-
-  function startAmbientBuffer(name, buffer) {
-    const ctx = getAudio();
-    if (!ctx || !buffer || !ambientEnabled || ambientTargetName !== name) return;
-
-    stopAmbientLoop(false);
-
-    const src = ctx.createBufferSource();
-    const gain = ctx.createGain();
-
-    src.buffer = buffer;
-    src.loop = true;
-    gain.gain.value = .32;
-
-    src.connect(gain);
-    connectOutput(gain, 'ambient');
-
-    src.onended = () => {
-      if (ambientSource === src) {
-        ambientSource = null;
-        ambientGain = null;
-        activeAmbientName = '';
-      }
-    };
-
-    ambientSource = src;
-    ambientGain = gain;
-    activeAmbientName = name;
-    startProceduralAmbience(name);
-    src.start(ctx.currentTime);
+    activeAmbientName = '';
+    ambientTargetName = '';
   }
 
   function requestAmbient(name) {
     if (!ambientEnabled || !name) {
-      ambientTargetName = '';
       stopAmbient();
       return;
     }
 
-    const hasOverride = Object.prototype.hasOwnProperty.call(soundFiles, name);
-    const fileName = hasOverride ? soundFiles[name] : '';
-
-    if (fileName === '') {
-      stopAmbient();
-      return;
-    }
-
-    if (activeAmbientName === name && (ambientSource || proceduralAmbientName === name)) return;
+    if (activeAmbientName === name && proceduralAmbientName === name) return;
 
     ambientTargetName = name;
+    activeAmbientName = name;
     startProceduralAmbience(name);
-
-    if (!fileName) {
-      stopAmbientLoop(false);
-      activeAmbientName = name;
-      return;
-    }
-
-    const key = soundKey(fileName);
-    const buffer = bufferCache.get(key);
-
-    if (buffer) {
-      startAmbientBuffer(name, buffer);
-      return;
-    }
-
-    loadFile(fileName).then(loadedBuffer => {
-      if (ambientTargetName === name) startAmbientBuffer(name, loadedBuffer);
-    });
   }
 
   window.ZomVoxSound = {
@@ -729,53 +609,19 @@
 
     prime(onProgress) {
       getAudio();
-
-      const files = configuredFiles();
-      const total = files.length;
-      let loaded = 0;
-
-      function report(fileName = '', ok = true) {
-        if (typeof onProgress !== 'function') return;
-        onProgress({
-          loaded,
-          total,
-          fileName,
-          ok,
-          progress: total ? loaded / total : 1
-        });
+      if (typeof onProgress === 'function') {
+        onProgress({ loaded: 1, total: 1, fileName: 'procedural-synth', ok: true, progress: 1 });
       }
-
-      report();
-      if (!total) return Promise.resolve([]);
-
-      return Promise.all(files.map(fileName => {
-        return loadFile(fileName).then(buffer => {
-          loaded++;
-          report(fileName, !!buffer);
-          return buffer;
-        });
-      }));
+      return Promise.resolve(['procedural-synth']);
     },
 
     play(name, gainValue = 1, playbackRate = 1, options = {}) {
       if (!sfxEnabled) return;
 
-      const hasOverride = Object.prototype.hasOwnProperty.call(soundFiles, name);
-      const fileName = hasOverride
-        ? soundFiles[name]
-        : ((name === 'pickupAmmo' || name === 'pickupHealth' || name === 'pickupC4') ? soundFiles.pickup : null);
-
-      if (fileName === '') return;
-
       if (name === 'land' && activeOneShots > 0) return;
-      if (name !== 'land') stopLand();
-
-      const handle = playFile(name, fileName, gainValue, playbackRate);
-      if (handle) return handle === true ? undefined : handle;
 
       if (name !== 'footstep') trackSynthOneShot(name);
-      synth(name, gainValue, playbackRate, options);
-      return undefined;
+      return synth(name, gainValue, playbackRate, options);
     },
 
     playAmbient(name) {
