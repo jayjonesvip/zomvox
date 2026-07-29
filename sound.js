@@ -3,6 +3,8 @@
 
   const config = window.ZOMVOX_CONFIG || {};
   const enemyConfig = config.enemies || {};
+  const audioConfig = config.audio || {};
+  const commandVoiceConfig = audioConfig.commandVoice || {};
   const ZOMBIE_MOAN_MAX_OVERLAP = Math.max(1, Math.floor(Number(enemyConfig.zombieMoanMaxVoices) || 3));
   const BUS_LEVELS = {
     weapon: 1.05,
@@ -172,16 +174,25 @@
     return min + Math.random() * (max - min);
   }
 
-  function rifleShot(level = 1) {
-    const pitch = rand(0.94, 1.08);
-    noise(.014, .31 * level, 5400 * pitch, 'weapon', 'highpass', 0, .85);
-    noise(.065, .23 * level, 2350 * pitch, 'weapon', 'bandpass', 0, 1.05);
-    noise(.24, .092 * level, 1180 * pitch, 'weapon', 'lowpass', .012, .7);
-    noise(.36, .058 * level, 650 * pitch, 'weapon', 'lowpass', .055, .65);
-    tone(142 * pitch, .105, 'sine', .118 * level, 56 * pitch, 'weapon');
-    tone(62 * pitch, .145, 'triangle', .078 * level, 34 * pitch, 'weapon', .006);
-    tone(1900 * pitch, .028, 'square', .034 * level, 1320 * pitch, 'weapon', .03);
-    tone(3450 * pitch, .02, 'triangle', .016 * level, 2200 * pitch, 'weapon', .075);
+  function clamp(value, min, max, fallback) {
+    const num = Number(value);
+    if (!Number.isFinite(num)) return fallback;
+    return Math.max(min, Math.min(max, num));
+  }
+
+  function shotgunShot(level = 1) {
+    const pitch = rand(.86, 1.02);
+    noise(.018, .52 * level, 6200 * pitch, 'weapon', 'highpass', 0, .7);
+    noise(.045, .42 * level, 3000 * pitch, 'weapon', 'bandpass', .004, .9);
+    noise(.18, .22 * level, 1280 * pitch, 'weapon', 'lowpass', .012, .58);
+    noise(.44, .12 * level, 520 * pitch, 'weapon', 'lowpass', .04, .46);
+    tone(92 * pitch, .15, 'sine', .19 * level, 34 * pitch, 'weapon');
+    tone(46 * pitch, .22, 'triangle', .13 * level, 24 * pitch, 'weapon', .008);
+    tone(820 * pitch, .035, 'square', .038 * level, 420 * pitch, 'weapon', .018);
+    for (let i = 0; i < 5; i++) {
+      const delay = .018 + i * rand(.009, .018);
+      noise(rand(.012, .024), .036 * level, rand(2100, 5200) * pitch, 'weapon', 'bandpass', delay, rand(1.1, 2.6));
+    }
   }
 
   function dryFire(level = 1) {
@@ -264,20 +275,44 @@
     tone(1320, .09, 'sine', .026 * level, 1680, 'ui', .158);
   }
 
+  function commandVoiceSetting(name, fallback) {
+    return Object.prototype.hasOwnProperty.call(commandVoiceConfig, name) ? commandVoiceConfig[name] : fallback;
+  }
+
+  function selectCommandVoice(voices) {
+    const englishVoices = voices.filter(voice => /^en[-_]/i.test(voice.lang || ''));
+    const candidates = englishVoices.length ? englishVoices : voices;
+    const preferred = String(commandVoiceSetting('preferredVoice', '') || '').trim().toLowerCase();
+    if (preferred) {
+      const match = candidates.find(voice => String(voice.name || '').toLowerCase().includes(preferred));
+      if (match) return match;
+    }
+    return candidates
+      .map(voice => {
+        const name = String(voice.name || '').toLowerCase();
+        let score = 0;
+        if (/male|david|mark|george|daniel|alex|guy|fred|bruce|ralph/.test(name)) score += 8;
+        if (/female|zira|susan|samantha|victoria|karen|moira|tessa/.test(name)) score -= 8;
+        if (/google|microsoft|enhanced|premium|natural/.test(name)) score += 2;
+        return { voice, score };
+      })
+      .sort((a, b) => b.score - a.score)[0]?.voice || candidates[0];
+  }
+
   function speakCommandLine(text, level = 1, rate = .9, pitch = .72) {
+    if (commandVoiceSetting('enabled', true) === false) return false;
     const synth = window.speechSynthesis;
     if (!synth || typeof window.SpeechSynthesisUtterance !== 'function') return false;
 
     try {
       const utterance = new SpeechSynthesisUtterance(text);
       const voices = typeof synth.getVoices === 'function' ? synth.getVoices() : [];
-      const englishVoices = voices.filter(voice => /^en[-_]/i.test(voice.lang || ''));
-      const preferredVoice = englishVoices.find(voice => /male|david|mark|george|daniel|alex|guy/i.test(voice.name || '')) || englishVoices[0];
+      const preferredVoice = selectCommandVoice(voices);
       if (preferredVoice) utterance.voice = preferredVoice;
       utterance.lang = preferredVoice?.lang || 'en-US';
-      utterance.rate = rate;
-      utterance.pitch = pitch;
-      utterance.volume = Math.max(0, Math.min(1, .82 * level));
+      utterance.rate = clamp(commandVoiceSetting('rate', rate), .5, 1.5, rate);
+      utterance.pitch = clamp(commandVoiceSetting('pitch', pitch), 0, 2, pitch);
+      utterance.volume = clamp(commandVoiceSetting('volume', .9), 0, 1, .9) * Math.max(0, Math.min(1, level));
 
       radioStatic(.06, .065 * level, 1550, 'ui');
       synth.speak(utterance);
@@ -296,7 +331,7 @@
   }
 
   function voiceDropSynth(level = 1) {
-    if (speakCommandLine('Good luck, soldier.', level, .88, .68)) {
+    if (speakCommandLine('Good luck, soldier.', level, .8, .45)) {
       radioStatic(.08, .035 * level, 2100, 'ui', 1.16);
       return;
     }
@@ -304,7 +339,7 @@
   }
 
   function voiceTripleSynth(level = 1) {
-    if (speakCommandLine('Impressive!', level, .92, .78)) {
+    if (speakCommandLine('Impressive!', level, .86, .52)) {
       radioStatic(.07, .032 * level, 2200, 'ui', .74);
       return;
     }
@@ -663,7 +698,7 @@
 
   function synth(name, gainValue = 1, playbackRate = 1, options = {}) {
     if (name === 'shoot') {
-      rifleShot(gainValue);
+      shotgunShot(gainValue);
     } else if (name === 'empty') {
       dryFire(gainValue);
     } else if (name === 'reloadStart') {
