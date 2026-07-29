@@ -266,15 +266,15 @@
   function zombieMoanProfile(variant = 'normal', playbackRate = 1) {
     const rate = Math.max(0.55, Math.min(1.45, Math.abs(Number(playbackRate) || 1)));
     if (variant === 'speedy') {
-      return { dur: .58 / rate, f0: 178 * rate, f1: 118 * rate, f2: 220 * rate, wave: 'sawtooth', voice: .048, breath: .065, breathFreq: 1450, q: 2.8, delay: .014 };
+      return { dur: .68 / rate, f0: 158 * rate, f1: 88 * rate, f2: 132 * rate, wave: 'sawtooth', voice: .044, breath: .082, breathFreq: 1180, q: 4.2, delay: .018, wobble: 15, wobbleDepth: .014 };
     }
     if (variant === 'brute') {
-      return { dur: 1.32 / rate, f0: 64 * rate, f1: 34 * rate, f2: 88 * rate, wave: 'sawtooth', voice: .07, breath: .058, breathFreq: 420, q: 1.2, delay: .035 };
+      return { dur: 1.48 / rate, f0: 58 * rate, f1: 28 * rate, f2: 50 * rate, wave: 'sawtooth', voice: .072, breath: .07, breathFreq: 360, q: 1.7, delay: .04, wobble: 5.8, wobbleDepth: .018, hollow: true };
     }
     if (variant === 'grey') {
-      return { dur: 1.12 / rate, f0: 104 * rate, f1: 46 * rate, f2: 150 * rate, wave: 'triangle', voice: .052, breath: .075, breathFreq: 760, q: 3.5, delay: .02, hollow: true };
+      return { dur: 1.3 / rate, f0: 94 * rate, f1: 34 * rate, f2: 72 * rate, wave: 'triangle', voice: .047, breath: .092, breathFreq: 690, q: 5.4, delay: .028, hollow: true, wobble: 8.5, wobbleDepth: .02 };
     }
-    return { dur: .95 / rate, f0: 112 * rate, f1: 66 * rate, f2: 145 * rate, wave: 'sawtooth', voice: .055, breath: .052, breathFreq: 680, q: 1.9, delay: .025 };
+    return { dur: 1.08 / rate, f0: 104 * rate, f1: 52 * rate, f2: 86 * rate, wave: 'sawtooth', voice: .052, breath: .068, breathFreq: 560, q: 2.8, delay: .03, wobble: 7.2, wobbleDepth: .015 };
   }
 
   function zombieMoanSynth(level = 1, playbackRate = 1, options = {}) {
@@ -299,10 +299,22 @@
     voiceGain.connect(out);
     nodes.push(voiceGain);
 
+    const tremolo = ctx.createOscillator();
+    const tremoloGain = ctx.createGain();
+    tremolo.type = 'sine';
+    tremolo.frequency.setValueAtTime(profile.wobble || 7, now);
+    tremoloGain.gain.setValueAtTime(profile.wobbleDepth || .012, now);
+    tremolo.connect(tremoloGain);
+    tremoloGain.connect(voiceGain.gain);
+    tremolo.start(now);
+    tremolo.stop(now + profile.dur + .03);
+    sources.push(tremolo);
+    nodes.push(tremoloGain);
+
     const primary = ctx.createOscillator();
     primary.type = profile.wave;
     primary.frequency.setValueAtTime(profile.f0, now);
-    primary.frequency.linearRampToValueAtTime(profile.f2, now + profile.dur * .28);
+    primary.frequency.linearRampToValueAtTime(profile.f2, now + profile.dur * .24);
     primary.frequency.exponentialRampToValueAtTime(Math.max(24, profile.f1), now + profile.dur);
     primary.connect(voiceGain);
     primary.start(now);
