@@ -242,22 +242,32 @@ body::after{
 .deathMeter{height:4px;border-radius:0}
 #commandBanner{border-radius:0;clip-path:polygon(0 0,calc(100% - 12px) 0,100% 12px,100% 100%,12px 100%,0 calc(100% - 12px))}
 
-@media(max-width:820px){
+@media(max-width:820px),(pointer:coarse){
   body::after{display:none}
-  #fieldHeader{height:50px;padding:0 9px}
-  .fieldBrandMark{width:29px;height:29px;font-size:11px}
-  .fieldBrand b{font-size:10px}.fieldBrand small,.fieldOperation{display:none}
-  .fieldSignal{font-size:7px}
-  #healthStatus,#weaponPanel{top:8px;bottom:auto;clip-path:none;border-radius:4px}
-  #healthStatus{left:8px;width:128px;padding:7px 8px}
+  #fieldHeader{display:none}
+  #healthStatus,#weaponPanel{
+    top:calc(8px + env(safe-area-inset-top));
+    bottom:auto;
+    min-height:0;
+    clip-path:none;
+    border-radius:3px;
+    backdrop-filter:none;
+    box-shadow:0 5px 18px rgba(0,0,0,.32);
+  }
+  #healthStatus{left:calc(10px + env(safe-area-inset-left));width:116px;padding:6px 8px}
   #healthStatus::before{display:none}
-  #weaponPanel{right:8px;min-width:112px;padding:6px 8px}
+  #healthStatus .healthTop{margin-bottom:4px}
+  #healthStatus .healthLabel{display:none}
+  #healthBigText{font-size:23px;line-height:1}
+  .bigHealthBar{height:3px}
+  #weaponPanel{right:calc(10px + env(safe-area-inset-right));min-width:92px;padding:5px 8px}
   #weaponPanel .label{display:none}
-  #clipText{font-size:28px}
-  #missionPanel{top:8px;min-width:150px;max-width:34vw;padding:5px 7px}
+  .ammoIcon{display:none}
+  #clipText{font-size:26px;line-height:1}
+  #reserveText,.ammoSlash{font-size:11px}
+  #missionPanel{top:calc(8px + env(safe-area-inset-top));min-width:140px;max-width:34vw;padding:4px 7px}
   .missionLabel,#objectiveMeta{display:none}
-  #objectiveText{font-size:10px;white-space:normal}
-  #fieldHeader{background:none}.fieldBrand,.fieldSignal{display:none}
+  #objectiveText{font-size:9px;white-space:normal}
   #menu{justify-content:center;padding:8px;background:linear-gradient(rgba(2,6,7,.75),rgba(2,6,7,.88)),url("assets/zomvox-splash.png") center/cover}
   #menu::before{display:none}
   #mainMenuCard{width:min(600px,94vw);text-align:center}
