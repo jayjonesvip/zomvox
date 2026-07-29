@@ -292,7 +292,7 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.29.13');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.29.14');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -2676,9 +2676,11 @@ function playerOnMachinePad() {
       setTimeout(() => {
         if (!enemy.dead && enemy.hp > 0 && canPlayZombieMoan()) {
           stopSoundHandle(enemy.moanHandle);
-          enemy.mouthOpenTimer = Math.max(enemy.mouthOpenTimer || 0, 1.05);
           const handle = sound('zombieMoan', volume, rate, { variant: stats.kind });
           enemy.moanHandle = handle && typeof handle.stop === 'function' ? handle : null;
+          if (enemy.moanHandle) {
+            enemy.mouthOpenTimer = Math.max(enemy.mouthOpenTimer || 0, enemy.moanHandle.duration || 1.05);
+          }
         }
       }, index * 180);
     });
