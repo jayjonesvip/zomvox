@@ -6,7 +6,7 @@
 ![WebGL](https://img.shields.io/badge/WebGL-voxel_engine-990000?style=for-the-badge&logo=webgl&logoColor=white)
 ![100% Vibe Coded](https://img.shields.io/badge/100%25-vibe_coded-ff3f7f?style=for-the-badge)
 
-**ZomVox: Zombies and Voxels** is a browser-based voxel zombie survival shooter built for quick static hosting. The player drops onto a fixed-size voxel island, hunts down a blinking metal contamination spire, jumps onto its yellow shutdown block under toxin pressure, then unlocks the blaster and fights roaming voxel zombies.
+**ZomVox: Zombies and Voxels** is a browser-based voxel zombie survival shooter built for quick static hosting. The player drops onto a randomized fixed-size voxel island, grabs ammo and C4, earns perks from triple kills, and clears a short infected target before the island overwhelms them.
 
 The game runs directly in the browser with WebGL. There is no build step, package install, bundler, backend, or asset pipeline required.
 
@@ -34,9 +34,8 @@ ZomVox is listed on [IGDB](https://www.igdb.com/) and [DEAD.ARMY](https://dead.a
 - Fixed-size chunk generation so the game area stays bounded and performance remains predictable.
 - Player movement is clamped inside the generated world.
 - Targeted mesh rebuilding for mission set pieces and world updates.
-- Mission-based opening loop with military-style objective briefings, cinematic insertion drops, a no-gun exploration phase, metal-spire shutdown objective, explosive supply crate reward, delayed zombie threat, drop-beacon extraction, triple-kill perk drops, and escalating redeployment objectives across five seeded islands.
-- Quick Hunt island unlocks stored locally per device: Forest and Dunes start open, then Rocky, Swamp, Ashlands, and Tundra unlock through survival, kills, triple-kill, total-kill challenges, or Story Mode island clears.
-- Center combat HUD with a voxel zombie head counter: Quick Hunt shows kills, while Story combat counts down infected remaining.
+- One-button Frontier Hunt loop with random biome selection and a random infected target from 20 to 40 kills.
+- Center combat HUD with a voxel zombie head countdown for infected remaining.
 - Compact ammo HUD on desktop and mobile, plus a six-round blaster magazine with staged per-round reloads, reserve ammo, recoil, and fire-rate cooldown.
 - Camo ammo pickups that add six rounds at a time, plus low-ammo mercy caches when reserve ammo hits zero.
 - Flat silver C4 proximity charges with blinking red dots, yellow hazard strips, one starting charge, and rare zombie drops.
@@ -51,7 +50,7 @@ ZomVox is listed on [IGDB](https://www.igdb.com/) and [DEAD.ARMY](https://dead.a
 - Optional fog through code.
 - Dangerous water enabled by default through code.
 - Damage flash and screen shake when the player is hit.
-- Dramatic `YOU DIED!` overlay with respawn meter.
+- Dramatic `YOU DIED!` overlay with run stats, retry, and main-menu options.
 - Menu-safe gameplay pause so the player does not take damage before pressing Play.
 
 ## Game Flow
@@ -59,61 +58,32 @@ ZomVox is listed on [IGDB](https://www.igdb.com/) and [DEAD.ARMY](https://dead.a
 ```mermaid
 flowchart TD
     A[ZomVox splash] --> B[Main menu]
-    B --> C{Mode}
-
-    C -->|Story Mode| D[Mission briefing]
+    B --> C[Frontier Hunt]
+    C --> D[Random island and 20 to 40 target]
     D --> E[Insertion drop]
-    E --> F[Explore island without gun]
-    F --> G[Locate contamination spire]
-    G --> H[Jump on yellow shutdown block]
-    H --> I[Disable toxin source]
-    I --> J[Supply crate reward]
-    J --> K[Gun unlocked]
-    K --> L[Eliminate infected objective]
-    L --> M{Objective cleared?}
-    M -->|No| L
-    M -->|Yes| N[Return to drop beacon]
-    N --> O[Extraction meter]
-    O --> P{More islands?}
-    P -->|Yes| D
-    P -->|No| R[Final mission clear]
-
-    C -->|Survival Mode| S[Choose island]
-    S --> U[Insertion drop]
-    U --> V[Gun unlocked immediately]
-    V --> W[Survive endless infected]
-
-    C -->|Quick Hunt| AD[Random island and target]
-    AD --> AE[Insertion drop]
-    AE --> AF[Gun unlocked immediately]
-    AF --> AG[Clear 20 to 40 infected]
-    AG --> B
-
-    L --> X{Player dies?}
-    W --> X
-    AG --> X
-    X -->|Story| Y[Mission failure]
-    Y --> Z{Continue?}
-    Z -->|Continue| AA[Remote revive]
-    AA --> L
-    Z -->|Give up| B
-    X -->|Quick Hunt| AB[Death stats]
-    AB --> AC{Continue hunt?}
-    AC -->|Continue| W
-    AC -->|Main menu| B
+    E --> F[Gun unlocked immediately]
+    F --> G[Clear infected countdown]
+    G --> H{Target cleared?}
+    H -->|Yes| I[Hunt complete stats]
+    I --> B
+    H -->|No| J{Player dies?}
+    J -->|No| G
+    J -->|Yes| K[Death stats]
+    K --> L{Retry?}
+    L -->|Retry| D
+    L -->|Main menu| B
 ```
 
 ## Desktop Controls
 
 - `WASD` or arrow keys: move
 - Mouse: aim
-- Jump onto the translucent yellow block: disable the contamination source
 - Left click: shoot
 - Right click or `R`: reload
 - `Space`: jump
 - `C`: place C4 if equipped
 - `Shift`: sprint
-- `N`: redeploy to the next mission island
+- `N`: roll a new hunt island
 
 ## Mobile Controls
 
@@ -136,7 +106,7 @@ The pre-game settings panel allows quick tuning before entering the world:
 - Sound: turn game sounds on or off.
 - Fullscreen: request fullscreen on mobile when play starts.
 
-Seed controls were removed from the visible menu. The game rotates through configured mission island seeds, but players no longer have to manage seed values from the main screen.
+Seed controls were removed from the visible menu. Frontier Hunt rolls a fresh island seed and avoids repeating the previous biome when possible.
 
 ## Code Options
 
@@ -144,7 +114,7 @@ Common tuning options live in `config.js` under `window.ZOMVOX_CONFIG`. Edit tha
 
 ```js
 window.ZOMVOX_CONFIG = {
-  buildVersion: '2026.07.29.16',
+  buildVersion: '2026.07.29.17',
   initialSeed: 729641,
 
   environment: {
@@ -243,7 +213,7 @@ Other sections in `config.js` expose safe defaults for:
 - `player`: collision size, one-block terrain auto-step height, camera step smoothing, starting health, starting ammo reserve, starting C4, respawn reserve floor, and low-health heartbeat threshold.
 - `weapon`: magazine size, staged reload time, fire cooldown, recoil, perk multipliers, and long-range kill distance.
 - `enemies`: base enemy cap, horde escalation values, and close-range zombie moan radius/voice/timing controls.
-- `mission`: five island seeds, per-island biomes, toxin drain, source disable timing, insertion drop tuning, per-island infected objectives, fallback infected objective, and first wave size.
+- `mission`: legacy/story mission tuning plus insertion drop timing and first wave size. Frontier Hunt currently rolls random hunt seeds and targets at runtime.
 - `pickups`: ammo, health, and C4 pickup amounts/drop chances.
 - `timers`: death overlay delay, world rebuild meter duration, heartbeat interval, and day/night cycle length.
 
@@ -254,6 +224,7 @@ Procedural cue references:
 - Weapon: `shoot`, `empty`, `reloadStart`, `reloadDone`, `explosion`.
 - Impact and feedback: `hit`, `head`, `kill`, `block`, `hurt`, `death`, `toxin`, `heartbeat`.
 - Pickups and UI: `pickupAmmo`, `pickupHealth`, `pickupC4`, `pickup`, `perkEquip`, `confirm`, `briefing`, `objectiveClear`, `wave`.
+- Command voice: `voiceDrop` for drop-in radio encouragement and `voiceTriple` for triple-kill praise.
 - Foley and ambience: `footstep`, `land`, `ambientMenu`, `ambientForest`, `ambientDunes`, `ambientRocky`, `ambientSwamp`, `ambientAshlands`, `ambientTundra`.
 - Zombie voices: `zombieMoan` is generated per zombie type. Normal zombies use a mid-low breathy groan, speedy zombies use a shorter higher rasp, brute zombies use a deeper longer growl, and grey zombies use a hollow unnatural moan.
 

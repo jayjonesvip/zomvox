@@ -220,11 +220,9 @@
   .setting{ display:flex; align-items:center; gap:8px; border:1px solid rgba(255,255,255,.13); background:rgba(255,255,255,.055); border-radius:8px; padding:9px 10px; color:#dcecf7; font-size:13px; font-weight:800; user-select:none; }
   .setting input{ width:18px; height:18px; accent-color:#86ee66; }
   .startActions{ width:70%; margin:24px auto 0; display:grid; grid-template-columns:1fr; gap:12px; }
-  .startBtn{ appearance:none; width:100%; min-height:58px; border:0; border-radius:8px; padding:14px 20px; font-size:18px; font-weight:1000; text-transform:uppercase; cursor:pointer; }
+  .startBtn{ appearance:none; width:100%; min-height:66px; border:0; border-radius:8px; padding:15px 20px; font-size:20px; font-weight:1000; text-transform:uppercase; cursor:pointer; }
   .primaryStart{ color:#06230e; background:linear-gradient(180deg,#d9ffc8 0%,#86ef65 54%,#46b946 100%); box-shadow:0 14px 40px rgba(105,216,90,.26), inset 0 3px 0 rgba(255,255,255,.5), inset 0 -5px 0 rgba(0,0,0,.16); }
-  .survivalStart{ color:#061923; background:linear-gradient(180deg,#c9f3ff 0%,#71c9ef 54%,#3583b8 100%); box-shadow:0 14px 40px rgba(83,189,255,.2), inset 0 3px 0 rgba(255,255,255,.42), inset 0 -5px 0 rgba(0,0,0,.18); }
-  .secondaryStart{ color:#210606; background:linear-gradient(180deg,#ffe99b 0%,#ff9160 54%,#e94e38 100%); box-shadow:0 14px 40px rgba(255,98,72,.24), inset 0 3px 0 rgba(255,255,255,.38), inset 0 -5px 0 rgba(0,0,0,.16); }
-  .startBtn:hover,.quickBiomeGrid button:hover,.quickBackBtn:hover,.settingsGear:hover,.controlsButton:hover{ filter:brightness(1.05); }
+  .startBtn:hover,.quickBackBtn:hover,.settingsGear:hover,.controlsButton:hover{ filter:brightness(1.05); }
   .settingsGear,.controlsButton{ position:absolute; bottom:calc(22px + env(safe-area-inset-bottom)); width:52px; height:52px; display:grid; place-items:center; border:1px solid rgba(255,255,255,.18); border-radius:12px; color:#d9ffd0; background:rgba(5,12,15,.72); box-shadow:inset 0 2px 0 rgba(255,255,255,.12), inset 0 -4px 0 rgba(0,0,0,.28), 0 14px 36px rgba(0,0,0,.36); font-size:28px; line-height:1; cursor:pointer; z-index:2; }
   .settingsGear{ right:calc(22px + env(safe-area-inset-right)); }
   .controlsButton{ left:calc(22px + env(safe-area-inset-left)); font-size:26px; }
@@ -237,16 +235,6 @@
   .controlsGrid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; text-align:left; }
   .controlsGrid .tip{ border-radius:8px; font-size:13px; font-weight:800; }
   .mobileControlsList{ display:none; }
-  .quickBiomePanel{ width:min(620px, 96vw); text-align:center; }
-  .quickBiomePanel[hidden], #menu.quick-select #mainMenuCard{ display:none; }
-  .quickBiomeTopline{ color:#91f36e; font-size:12px; font-weight:1000; letter-spacing:.2em; text-transform:uppercase; margin-bottom:8px; }
-  .quickBiomeTitle{ color:#f5fff2; font-size:clamp(30px, 5vw, 50px); font-weight:1000; line-height:.9; letter-spacing:0; text-transform:uppercase; margin:0 0 8px; text-shadow:0 3px 0 rgba(0,0,0,.72),0 0 20px rgba(145,243,110,.2); }
-  .quickBiomeCopy{ color:#c1d7e6; font-size:14px; font-weight:800; margin:0 0 16px; }
-  .quickBiomeGrid{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:7px; }
-  .quickBiomeGrid button{ appearance:none; min-height:74px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px; border:1px solid rgba(255,255,255,.18); border-radius:8px; padding:12px 8px; color:#edf8ff; font-size:14px; font-weight:1000; text-transform:uppercase; background:linear-gradient(180deg, rgba(14,26,32,.84), rgba(4,10,14,.76)); box-shadow:inset 0 2px 0 rgba(255,255,255,.12), inset 0 -4px 0 rgba(0,0,0,.24); cursor:pointer; }
-  .quickBiomeGrid button small{ display:block; color:#91f36e; font-size:9px; line-height:1.12; font-weight:900; letter-spacing:.04em; text-transform:uppercase; }
-  .quickBiomeGrid button.locked{ color:#8f9da3; border-color:rgba(255,255,255,.10); background:rgba(3,7,9,.58); cursor:not-allowed; filter:saturate(.6); }
-  .quickBiomeGrid button.locked small{ color:#ffc96a; }
   .quickBackBtn{ margin-top:12px; appearance:none; border:1px solid rgba(255,255,255,.22); border-radius:8px; padding:9px 18px; color:#eaf7ff; font-size:12px; font-weight:1000; letter-spacing:.08em; text-transform:uppercase; background:rgba(255,255,255,.08); cursor:pointer; }
   #menu button,
   #objectiveBriefing button,
@@ -367,13 +355,6 @@
     .mobileControlsList{ display:grid; }
     .controlsGrid{ gap:5px; }
     .controlsGrid .tip{ padding:6px 7px; font-size:11px; }
-    .quickBiomePanel{ width:min(98vw, 520px); padding:12px; }
-    .quickBiomeTopline{ font-size:10px; margin-bottom:5px; }
-    .quickBiomeTitle{ font-size:26px; margin-bottom:5px; }
-    .quickBiomeCopy{ font-size:11px; line-height:1.18; margin-bottom:8px; }
-    .quickBiomeGrid{ grid-template-columns:repeat(3,minmax(0,1fr)); gap:4px; }
-    .quickBiomeGrid button{ border-radius:7px; padding:8px 4px; font-size:10px; min-height:54px; gap:3px; }
-    .quickBiomeGrid button small{ font-size:7px; line-height:1.05; }
     .deathUnlocks{ font-size:10px; padding:6px 8px; margin-bottom:7px; }
     .quickBackBtn{ margin-top:8px; padding:7px 14px; font-size:10px; }
     .splashLoad{ right:calc(12px + env(safe-area-inset-right)); bottom:calc(12px + env(safe-area-inset-bottom)); width:min(300px, calc(100vw - 24px)); padding:9px; }
@@ -452,11 +433,6 @@
     .settingsCard,.controlsCard{ max-height:calc(100svh - 18px); overflow:hidden; padding:10px; }
     .settingsCard h2,.controlsCard h2{ font-size:21px; margin-bottom:8px; }
     .controlsGrid{ gap:4px; }
-    .quickBiomePanel{ max-height:calc(100svh - 6px); padding:8px 10px; }
-    .quickBiomeTopline{ font-size:9px; margin-bottom:3px; }
-    .quickBiomeTitle{ font-size:22px; margin-bottom:3px; }
-    .quickBiomeCopy{ font-size:10px; margin-bottom:6px; }
-    .quickBiomeGrid button{ min-height:47px; padding:6px 4px; font-size:9px; }
     .quickBackBtn{ margin-top:6px; padding:6px 12px; }
   }
   @media (pointer: coarse) and (orientation: landscape) and (max-height: 310px){
