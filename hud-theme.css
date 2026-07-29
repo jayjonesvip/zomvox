@@ -103,7 +103,12 @@ body::after{
 #reticle{width:44px;height:44px;filter:drop-shadow(0 1px 2px #000)}
 #reticle::before{inset:20px;border:0;width:4px;height:4px;background:var(--tactical-amber);border-radius:0;box-shadow:0 0 5px rgba(255,212,93,.55)}
 #reticle::after{display:none}
+#reticle.on-target::before{background:var(--tactical-red);box-shadow:0 0 9px rgba(255,52,52,.9)}
+#reticle.hit::before{background:#ffed7a;box-shadow:0 0 14px rgba(255,237,122,.92);animation:hitMarker .18s ease-out}
+#reticle.kill::before{background:var(--tactical-red);box-shadow:0 0 18px rgba(255,52,52,.95);animation:killMarker .26s ease-out}
 .tick{background:rgba(241,246,242,.92);box-shadow:0 0 0 1px rgba(0,0,0,.55)}
+#reticle.hit .tick{background:#ffed7a}
+#reticle.kill .tick{background:var(--tactical-red)}
 .tick.t{left:21px;height:8px}.tick.b{left:21px;height:8px}.tick.l{top:21px;width:8px}.tick.r{top:21px;width:8px}
 
 #c4Hud{

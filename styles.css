@@ -36,6 +36,11 @@
   #reticle.hit::after{ background:#ffed7a; }
   #reticle.kill::before{ border-color:#8cff73; animation:killMarker .26s ease-out; }
   #reticle.kill::after{ background:#8cff73; box-shadow:0 0 16px rgba(140,255,115,.72); }
+  #reticle.on-target::after{ background:#ff3434; box-shadow:0 0 0 1px rgba(0,0,0,.72),0 0 12px rgba(255,52,52,.82); }
+  #reticle.on-target.hit::after{ background:#ffed7a; box-shadow:0 0 14px rgba(255,237,122,.92); }
+  #reticle.on-target.kill::after{ background:#ff5252; box-shadow:0 0 18px rgba(255,52,52,.95); }
+  #reticle.hit .tick{ background:#ffed7a; animation:hitMarker .18s ease-out; }
+  #reticle.kill .tick{ background:#ff5252; animation:killMarker .26s ease-out; }
   body.dead #reticle,
   body.dead #muzzleFx,
   body.dead #crosshairFlash{ display:none; }

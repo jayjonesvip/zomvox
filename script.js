@@ -292,7 +292,7 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.29.08');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.29.09');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -618,6 +618,11 @@
     clearTimeout(pulseHitMarker.timer);
     pulseHitMarker.timer = setTimeout(() => reticle.classList.remove('hit', 'kill'), kind === 'kill' ? 260 : 180);
     triggerCrosshairFlash(kind === 'kill' ? 'kill' : 'hit');
+  }
+
+  function setReticleOnTarget(value) {
+    if (!reticle) return;
+    reticle.classList.toggle('on-target', !!value);
   }
 
   function triggerCrosshairFlash(kind = 'shot') {
@@ -2751,8 +2756,8 @@ function playerOnMachinePad() {
     pulseDamage();
     shakeScreen();
     if (impactSound) sound(impactSound);
-    sound('hurt');
     if (player.health <= 0) beginDeathSequence();
+    else sound('hurt');
     return true;
   }
   function beginDeathSequence() {
@@ -2770,6 +2775,7 @@ function playerOnMachinePad() {
     player.reloadTimer = 0;
     reloadOverlay.classList.remove('show');
     reloadOverlayFill.style.width = '0%';
+    sound('death');
     document.body.classList.toggle('story-death', mission.mode === MODE_STORY);
     if (mission.mode === MODE_STORY) {
       deathTitle.textContent = 'MISSION FAILURE';
@@ -2998,6 +3004,47 @@ function playerOnMachinePad() {
     return { kind: 'miss', point: [e[0] + d[0] * maxDist, e[1] + d[1] * maxDist, e[2] + d[2] * maxDist] };
   }
 
+  function enemyAimTarget(maxDist = 58) {
+    if (!gunUnlocked() || deathState.active || worldRebuildState.active || mission.insertionActive || isMenuOpen()) return null;
+    const eye = eyePos();
+    const dir = lookDir();
+    let best = null;
+
+    for (const enemy of enemies) {
+      if (enemy.dead || enemy.hp <= 0 || (enemy.emerge || 0) < 1) continue;
+      const scale = (enemy.variant && enemy.variant.scale) || (enemy.big ? 1.18 : 1);
+      const cx = enemy.x;
+      const cy = enemy.y + 1.08 * scale;
+      const cz = enemy.z;
+      const vx = cx - eye[0];
+      const vy = cy - eye[1];
+      const vz = cz - eye[2];
+      const along = vx * dir[0] + vy * dir[1] + vz * dir[2];
+      if (along <= 0 || along > maxDist) continue;
+
+      const closestX = eye[0] + dir[0] * along;
+      const closestY = eye[1] + dir[1] * along;
+      const closestZ = eye[2] + dir[2] * along;
+      const miss = Math.hypot(cx - closestX, cy - closestY, cz - closestZ);
+      if (miss > 0.64 * scale) continue;
+      if (!best || along < best.dist) best = { enemy, dist: along };
+    }
+
+    if (!best) return null;
+    for (let t = 0; t < best.dist - 0.2; t += 0.28) {
+      const bx = Math.floor(eye[0] + dir[0] * t);
+      const by = Math.floor(eye[1] + dir[1] * t);
+      const bz = Math.floor(eye[2] + dir[2] * t);
+      const type = getBlock(bx, by, bz);
+      if (type && type !== BLOCK.WATER) return null;
+    }
+    return best;
+  }
+
+  function updateReticleTargeting() {
+    setReticleOnTarget(!!enemyAimTarget());
+  }
+
   function spawnEnemyDrop(enemy) {
     const dropRoll = Math.random();
     const x = Math.floor(enemy.x);
@@ -3143,9 +3190,9 @@ function playerOnMachinePad() {
       x: player.pos[0] + forward[0] * .45,
       y: player.pos[1] + 1.25,
       z: player.pos[2] + forward[1] * .45,
-      vx: forward[0] * 5.8,
-      vy: 4.2,
-      vz: forward[1] * 5.8,
+      vx: forward[0] * 3.8,
+      vy: 3.35,
+      vz: forward[1] * 3.8,
       airborne: true,
       armed: 999,
       phase: Math.random() * Math.PI * 2
@@ -3755,6 +3802,7 @@ function playerOnMachinePad() {
   function update(dt) {
     updateAmbientSound();
     updateCommandBanner(dt);
+    updateReticleTargeting();
     if (updatePortraitPauseState()) {
       updateHud();
       return;

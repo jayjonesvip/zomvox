@@ -75,8 +75,9 @@
   function busForSound(name) {
     if (name === 'shoot' || name === 'empty' || name === 'reloadStart' || name === 'reloadDone' || name === 'explosion') return 'weapon';
     if (name === 'land' || name === 'footstep' || name === 'block') return 'foley';
-    if (name === 'bite' || name === 'hurt' || name === 'zombieMoan') return 'enemy';
+    if (name === 'bite' || name === 'zombieMoan') return 'enemy';
     if (name && name.startsWith('ambient')) return 'ambient';
+    if (name === 'hurt' || name === 'death') return 'sfx';
     if (name === 'confirm' || name === 'briefing' || name === 'perkEquip' || name === 'objectiveClear' || name === 'wave' || name === 'heartbeat') return 'ui';
     return 'sfx';
   }
@@ -195,6 +196,56 @@
     tone(3450 * pitch, .02, 'triangle', .016 * level, 2200 * pitch, 'weapon', .075);
   }
 
+  function dryFire(level = 1) {
+    const pitch = rand(.94, 1.08);
+    noise(.012, .045 * level, 3600 * pitch, 'weapon', 'highpass', 0, 2.4);
+    tone(1320 * pitch, .018, 'square', .024 * level, 820 * pitch, 'weapon');
+    tone(360 * pitch, .032, 'triangle', .018 * level, 220 * pitch, 'weapon', .018);
+    noise(.026, .022 * level, 1500 * pitch, 'weapon', 'bandpass', .018, 1.8);
+  }
+
+  function reloadStartSynth(level = 1) {
+    noise(.035, .04 * level, 2100, 'weapon', 'bandpass', 0, 1.5);
+    tone(240, .045, 'triangle', .033 * level, 148, 'weapon', .006);
+    tone(880, .018, 'square', .02 * level, 520, 'weapon', .064);
+    noise(.042, .035 * level, 1250, 'weapon', 'bandpass', .072, 1.1);
+    tone(168, .052, 'triangle', .024 * level, 118, 'weapon', .118);
+  }
+
+  function reloadDoneSynth(level = 1) {
+    tone(720, .024, 'square', .024 * level, 470, 'weapon');
+    noise(.028, .036 * level, 2600, 'weapon', 'highpass', .012, 1.2);
+    tone(360, .045, 'triangle', .034 * level, 610, 'weapon', .056);
+    tone(118, .055, 'sine', .024 * level, 82, 'weapon', .074);
+  }
+
+  function explosionSynth(level = 1) {
+    noise(.035, .42 * level, 3600, 'weapon', 'highpass', 0, .9);
+    noise(.26, .25 * level, 760, 'weapon', 'lowpass', .018, .6);
+    noise(.58, .12 * level, 320, 'weapon', 'lowpass', .05, .5);
+    tone(72, .26, 'sine', .18 * level, 28, 'weapon');
+    tone(38, .42, 'triangle', .12 * level, 24, 'weapon', .025);
+    for (let i = 0; i < 5; i++) {
+      const delay = .05 + i * rand(.022, .055);
+      tone(rand(520, 1480), rand(.018, .044), 'square', .018 * level, rand(260, 720), 'weapon', delay);
+      noise(rand(.018, .04), .022 * level, rand(1400, 3600), 'weapon', 'bandpass', delay, 1.6);
+    }
+  }
+
+  function playerPainSynth(level = 1) {
+    noise(.045, .06 * level, 850, 'sfx', 'bandpass', 0, 1.7);
+    tone(164, .12, 'sawtooth', .06 * level, 82, 'sfx', .004);
+    tone(88, .18, 'triangle', .035 * level, 52, 'sfx', .024);
+    radioStatic(.05, .018 * level, 620, 'sfx');
+  }
+
+  function playerDeathSynth(level = 1) {
+    noise(.11, .075 * level, 520, 'sfx', 'lowpass', 0, .75);
+    tone(122, .28, 'sawtooth', .075 * level, 42, 'sfx');
+    tone(58, .45, 'sine', .055 * level, 24, 'sfx', .045);
+    setTimeout(() => noise(.24, .04 * level, 390, 'sfx', 'lowpass', 0, .7), 125);
+  }
+
   function surfaceFoleySurface(options = {}) {
     return String(options.surface || 'grass').toLowerCase();
   }
@@ -283,12 +334,11 @@
     if (name === 'shoot') {
       rifleShot(gainValue);
     } else if (name === 'empty') {
-      tone(120, .07, 'square', .04 * gainValue, 85, 'weapon');
+      dryFire(gainValue);
     } else if (name === 'reloadStart') {
-      tone(180, .05, 'square', .04 * gainValue, 105, 'weapon');
-      setTimeout(() => tone(260, .04, 'square', .035 * gainValue, 180, 'weapon'), 110);
+      reloadStartSynth(gainValue);
     } else if (name === 'reloadDone') {
-      tone(360, .06, 'triangle', .045 * gainValue, 520, 'weapon');
+      reloadDoneSynth(gainValue);
     } else if (name === 'block') {
       noise(.055, .075 * gainValue, 520, 'foley');
       tone(165, .045, 'square', .035 * gainValue, 110, 'foley');
@@ -310,7 +360,9 @@
       noise(.08, .08 * gainValue, 430, 'enemy');
       tone(72, .09, 'sawtooth', .045 * gainValue, 38, 'enemy');
     } else if (name === 'hurt') {
-      tone(85, .12, 'sawtooth', .07 * gainValue, 45, 'enemy');
+      playerPainSynth(gainValue);
+    } else if (name === 'death') {
+      playerDeathSynth(gainValue);
     } else if (name === 'toxin') {
       tone(115, .11, 'sawtooth', .045 * gainValue, 62);
       noise(.08, .045 * gainValue, 360);
@@ -326,7 +378,9 @@
       tone(180, .08, 'sawtooth', .05 * gainValue, 120, 'ui');
       setTimeout(() => tone(330, .09, 'triangle', .045 * gainValue, 480, 'ui'), 85);
     } else if (name === 'heartbeat') {
-      tone(55, .11, 'sine', .045 * gainValue, 45, 'ui');
+      tone(56, .12, 'sine', .052 * gainValue, 42, 'ui');
+      tone(68, .095, 'sine', .038 * gainValue, 46, 'ui', .18);
+      noise(.05, .012 * gainValue, 210, 'ui', 'lowpass', .02, .6);
     } else if (name === 'confirm') {
       noise(.012, .018 * gainValue, 2600, 'ui');
       tone(1150, .018, 'square', .018 * gainValue, 640, 'ui');
@@ -340,6 +394,8 @@
     } else if (name === 'perkEquip') {
       tone(480, .055, 'triangle', .045 * gainValue, 720, 'ui');
       setTimeout(() => tone(960, .08, 'sine', .04 * gainValue, 1280, 'ui'), 65);
+    } else if (name === 'explosion') {
+      explosionSynth(gainValue);
     }
   }
 
