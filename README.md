@@ -114,7 +114,7 @@ Common tuning options live in `config.js` under `window.ZOMVOX_CONFIG`. Edit tha
 
 ```js
 window.ZOMVOX_CONFIG = {
-  buildVersion: '2026.07.29.20',
+  buildVersion: '2026.07.29.21',
   initialSeed: 729641,
 
   environment: {
@@ -218,7 +218,7 @@ Other sections in `config.js` expose safe defaults for:
 - `timers`: death overlay delay, world rebuild meter duration, heartbeat interval, and day/night cycle length.
 - `audio.commandVoice`: browser speech tuning for command callouts, including preferred voice name, pitch, rate, and volume.
 
-Audio is generated entirely in `sound.js` with Web Audio oscillators and filtered noise. No sound files are loaded, so the cues stay cohesive with the procedural voxel style and react quickly on mobile.
+Audio is generated entirely in `sound.js` with procedural Web Audio synthesis. The cues use short ADSR-style envelopes, layered filtered noise, detuned shimmer tones for pickups, oscillators, and generated ambience beds. No sound files are loaded, so the cues stay cohesive with the procedural voxel style and react quickly on mobile.
 
 Procedural cue references:
 
