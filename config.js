@@ -17,7 +17,7 @@ window.ZOMVOX_CONFIG = {
     Bump this when you make visible changes so you can tell the browser
     loaded the newest version.
   */
-  buildVersion: '2026.07.29.06',
+  buildVersion: '2026.07.29.07',
 
   /*
     Seed used for deterministic world generation.
@@ -423,7 +423,7 @@ window.ZOMVOX_CONFIG = {
       Use an empty string '' to disable a specific sound.
     */
     files: {
-      shoot: 'shoot.mp3',
+      shoot: null,
       empty: 'empty.mp3',
       reloadStart: 'reloadStart.mp3',
       reloadDone: null,
@@ -438,6 +438,7 @@ window.ZOMVOX_CONFIG = {
       hurt: 'hurt.mp3',
       toxin: 'toxin.mp3',
       land: 'land.mp3',
+      footstep: null,
       objectiveClear: 'objectiveClear.mp3',
       wave: null,
       heartbeat: null,
@@ -448,7 +449,8 @@ window.ZOMVOX_CONFIG = {
       zombieMoan: 'zombiemoan.wav',
 
       /*
-        Ambient loops are file-only. Leave as '' to keep that area silent.
+        Ambient loops are file-based, with subtle procedural sweeteners layered
+        in while a cue is active. Leave as '' to keep that area silent.
         Drop mp3/wav loops into assets/ and set the matching file name here.
       */
       ambientMenu: 'ambientMenu.mp3',
