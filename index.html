@@ -13,8 +13,8 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
 <title>ZomVox - Free Browser Voxel Zombie FPS</title>
-<meta name="description" content="Play ZomVox, a free browser voxel zombie FPS with story drops, survival hunts, perks, C4, ammo pickups, and blocky undead combat across hostile islands." />
-<meta name="keywords" content="ZomVox, free zombie FPS, browser zombie FPS, voxel zombie game, blocky zombie survival, no download zombie shooter, mobile zombie game, WebGL game, survival hunt, quick hunt, zombies and voxels" />
+<meta name="description" content="Play ZomVox, a free browser voxel zombie FPS with randomized Frontier Hunt drops, perks, C4, ammo pickups, and blocky undead combat across hostile islands." />
+<meta name="keywords" content="ZomVox, free zombie FPS, browser zombie FPS, voxel zombie game, blocky zombie survival, no download zombie shooter, mobile zombie game, WebGL game, frontier hunt, zombies and voxels" />
 <meta name="author" content="ZomVox" />
 <meta name="robots" content="index, follow" />
 <link rel="canonical" href="https://zomvox.com/" />
@@ -39,7 +39,7 @@
 <meta property="og:image:alt" content="ZomVox voxel zombie survival game splash art" />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="ZomVox - Free Browser Voxel Zombie FPS" />
-<meta name="twitter:description" content="Play a free no-download voxel zombie FPS with story drops, survival hunts, perks, C4, ammo, and blocky undead combat." />
+<meta name="twitter:description" content="Play a free no-download voxel zombie FPS with randomized hunt drops, perks, C4, ammo, and blocky undead combat." />
 <meta name="twitter:image" content="https://zomvox.com/assets/zomvox-splash.png" />
 <meta name="twitter:image:alt" content="ZomVox voxel zombie survival game splash art" />
 <link rel="manifest" href="manifest.webmanifest" />
@@ -61,7 +61,7 @@
   "url": "https://zomvox.com/",
   "sameAs": "https://github.com/jayjonesvip/zomvox",
   "image": "https://zomvox.com/assets/zomvox-splash.png",
-  "description": "A free browser voxel zombie FPS with story missions, quick hunts, unlockable islands, perks, ammo pickups, and blocky undead combat. Play instantly with no download.",
+  "description": "A free browser voxel zombie FPS with randomized Frontier Hunt drops, perks, ammo pickups, C4, and blocky undead combat. Play instantly with no download.",
   "genre": ["Survival", "Shooter", "Action", "FPS", "Voxel", "Zombie"],
   "gamePlatform": ["Web browser", "Mobile browser"],
   "applicationCategory": "Game",
@@ -204,7 +204,7 @@
     <div class="portraitKicker">Landscape Required</div>
     <h2>Rotate to Play ZomVox</h2>
     <p>Turn your phone sideways for fullscreen voxel zombie hunting.</p>
-    <div class="portraitCallout">Story + Survival + Quick Hunt Await</div>
+    <div class="portraitCallout">Random Islands + Perks + C4 Await</div>
     <div class="portraitPause">Hunt Paused</div>
     <button id="portraitInstallCallout" class="portraitInstallCallout" type="button" hidden>+ Add to Desktop</button>
   </div>
@@ -223,32 +223,16 @@
     <p class="menuTagline">DROP INTO THE FRONTIER.<br><span>CONTAIN THE INFECTION.</span></p>
     <div class="menuReadout" aria-label="Game features">
       <span><b>06</b> HOSTILE BIOMES</span>
-      <span><b>03</b> FIELD MODES</span>
-      <span><b>&infin;</b> INFECTED</span>
+      <span><b>01</b> HUNT MODE</span>
+      <span><b>20-40</b> TARGETS</span>
     </div>
     <div class="startActions">
-      <button id="play" class="startBtn primaryStart" type="button"><span>Story Mode</span><small>Begin operation</small></button>
-      <button id="survivalStart" class="startBtn survivalStart" type="button"><span>Survival Mode</span><small>Hold the island</small></button>
-      <button id="quickStart" class="startBtn secondaryStart" type="button"><span>Quick Hunt</span><small>Immediate contact</small></button>
+      <button id="play" class="startBtn primaryStart" type="button"><span>Frontier Hunt</span><small>Random island drop</small></button>
     </div>
     <div class="menuFieldGuide">
       <span><kbd>WASD</kbd> MOVE</span><span><kbd>MOUSE</kbd> AIM</span>
       <span><kbd>LMB</kbd> FIRE</span><span><kbd>R</kbd> RELOAD</span>
     </div>
-  </div>
-  <div id="quickBiomePanel" class="card quickBiomePanel" hidden>
-    <div class="quickBiomeTopline">Survival Mode</div>
-    <h2 class="quickBiomeTitle">Choose Island</h2>
-    <p class="quickBiomeCopy">Pick an island and hunt until the island takes you.</p>
-    <div class="quickBiomeGrid">
-      <button type="button" data-biome="forest">Forest</button>
-      <button type="button" data-biome="dunes">Dunes</button>
-      <button type="button" data-biome="rocky">Rocky</button>
-      <button type="button" data-biome="swamp">Swamp</button>
-      <button type="button" data-biome="ashlands">Ashlands</button>
-      <button type="button" data-biome="tundra">Tundra</button>
-    </div>
-    <button id="quickBack" class="quickBackBtn" type="button">Back</button>
   </div>
   <button id="controlsButton" class="controlsButton" type="button" aria-label="Open controls">&#9000;</button>
   <button id="settingsGear" class="settingsGear" type="button" aria-label="Open settings">&#9881;</button>

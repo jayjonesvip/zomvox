@@ -7,7 +7,7 @@
   const BUS_LEVELS = {
     weapon: 1.05,
     foley: 0.58,
-    ambient: 0.46,
+    ambient: 0.74,
     enemy: 0.49,
     ui: 0.86,
     sfx: 0.72
@@ -65,7 +65,7 @@
     if (name === 'zombieMoan') return 'enemy';
     if (name && name.startsWith('ambient')) return 'ambient';
     if (name === 'hurt' || name === 'death') return 'sfx';
-    if (name === 'confirm' || name === 'briefing' || name === 'perkEquip' || name === 'objectiveClear' || name === 'wave' || name === 'heartbeat') return 'ui';
+    if (name === 'confirm' || name === 'briefing' || name === 'perkEquip' || name === 'objectiveClear' || name === 'wave' || name === 'heartbeat' || name === 'voiceDrop' || name === 'voiceTriple') return 'ui';
     return 'sfx';
   }
 
@@ -133,7 +133,7 @@
     src.stop(now + dur + .02);
   }
 
-  function radioStatic(dur = .08, gainValue = .04, center = 1600, busName = 'ui') {
+  function radioStatic(dur = .08, gainValue = .04, center = 1600, busName = 'ui', delay = 0) {
     const ctx = getAudio();
     if (!ctx) return;
 
@@ -149,7 +149,7 @@
     const src = ctx.createBufferSource();
     const band = ctx.createBiquadFilter();
     const gain = ctx.createGain();
-    const now = ctx.currentTime;
+    const now = ctx.currentTime + Math.max(0, delay);
 
     band.type = 'bandpass';
     band.frequency.setValueAtTime(center, now);
@@ -261,6 +261,103 @@
     pickupSparkle(level, 560, 'ui');
     tone(880, .07, 'triangle', .035 * level, 1180, 'ui', .082);
     tone(1320, .09, 'sine', .026 * level, 1680, 'ui', .158);
+  }
+
+  const VOICE_VOWELS = {
+    uh: [420, 980, 2380],
+    ah: [720, 1180, 2480],
+    eh: [540, 1780, 2520],
+    ih: [310, 2180, 2960],
+    oh: [500, 850, 2350],
+    er: [470, 1340, 1800],
+    oo: [330, 720, 2480]
+  };
+
+  function voiceSyllable(delay, dur, vowel = 'ah', pitch = 110, level = 1, onset = '') {
+    const ctx = getAudio();
+    if (!ctx) return 0;
+    const now = ctx.currentTime + Math.max(0, delay);
+    const end = now + dur;
+    const formants = VOICE_VOWELS[vowel] || VOICE_VOWELS.ah;
+    const out = ctx.createGain();
+    const hp = ctx.createBiquadFilter();
+    const lp = ctx.createBiquadFilter();
+    const presence = ctx.createBiquadFilter();
+
+    out.gain.setValueAtTime(0.0001, now);
+    out.gain.exponentialRampToValueAtTime(Math.max(0.0002, .16 * level), now + .018);
+    out.gain.setTargetAtTime(.09 * level, now + dur * .42, .035);
+    out.gain.exponentialRampToValueAtTime(0.001, end + .04);
+    hp.type = 'highpass';
+    hp.frequency.setValueAtTime(380, now);
+    lp.type = 'lowpass';
+    lp.frequency.setValueAtTime(3150, now);
+    presence.type = 'peaking';
+    presence.frequency.setValueAtTime(1850, now);
+    presence.Q.setValueAtTime(1.3, now);
+    presence.gain.setValueAtTime(4.5, now);
+    out.connect(hp);
+    hp.connect(lp);
+    lp.connect(presence);
+    connectOutput(presence, 'ui');
+
+    const osc = ctx.createOscillator();
+    const srcGain = ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(pitch * rand(.96, 1.04), now);
+    osc.frequency.setTargetAtTime(pitch * rand(.82, .94), now + dur * .45, .05);
+    srcGain.gain.setValueAtTime(.12 * level, now);
+    osc.connect(srcGain);
+    for (let i = 0; i < formants.length; i++) {
+      const bp = ctx.createBiquadFilter();
+      const fg = ctx.createGain();
+      bp.type = 'bandpass';
+      bp.frequency.setValueAtTime(formants[i] * rand(.97, 1.03), now);
+      bp.Q.setValueAtTime([7.5, 9, 11][i], now);
+      fg.gain.setValueAtTime([1.0, .48, .22][i], now);
+      srcGain.connect(bp);
+      bp.connect(fg);
+      fg.connect(out);
+    }
+    osc.start(now);
+    osc.stop(end + .08);
+
+    if (onset) {
+      const burstDur = onset === 'f' ? .055 : .028;
+      noise(burstDur, (onset === 'f' ? .035 : .05) * level, onset === 'f' ? 3900 : 1800, 'ui', onset === 'f' ? 'bandpass' : 'highpass', Math.max(0, delay - .012), onset === 'f' ? 2.8 : 1.4);
+    }
+    noise(dur * .72, .018 * level, 1600, 'ui', 'bandpass', delay + .012, 1.8);
+    return dur;
+  }
+
+  function commandVoice(parts, level = 1) {
+    radioStatic(.055, .05 * level, 1500, 'ui');
+    let t = .035;
+    for (const part of parts) {
+      t += voiceSyllable(t, part.d, part.v, part.p, level * (part.a || 1), part.on || '') + (part.g || .025);
+    }
+    radioStatic(.08, .035 * level, 2100, 'ui', t + .02);
+    radioStatic(.07, .026 * level, 900, 'ui', t + .09);
+    return t;
+  }
+
+  function voiceDropSynth(level = 1) {
+    // Radio-flavored command chatter: "good luck, soldier."
+    commandVoice([
+      { v: 'oo', d: .11, p: 118, on: 'g', g: .02 },
+      { v: 'uh', d: .12, p: 104, on: 'p', g: .055 },
+      { v: 'oh', d: .15, p: 112, on: 'f', g: .018 },
+      { v: 'er', d: .18, p: 92, on: 'p', g: 0 }
+    ], level);
+  }
+
+  function voiceTripleSynth(level = 1) {
+    // Short congratulatory command bark: "impressive!"
+    commandVoice([
+      { v: 'ih', d: .10, p: 142, on: 'n', g: .012 },
+      { v: 'eh', d: .16, p: 154, on: 'p', g: .012 },
+      { v: 'ih', d: .13, p: 132, on: 'f', g: 0 }
+    ], level);
   }
 
   function zombieMoanProfile(variant = 'normal', playbackRate = 1) {
@@ -456,6 +553,25 @@
     noise(.5, .01 * level, 260, 'ambient', 'lowpass');
   }
 
+  function ambientDistantGunfire(level = 1) {
+    const shots = 1 + Math.floor(Math.random() * 4);
+    for (let i = 0; i < shots; i++) {
+      const delay = i * rand(.08, .28);
+      noise(.018, .022 * level, rand(1600, 3000), 'ambient', 'bandpass', delay, 1.1);
+      tone(rand(90, 140), .075, 'triangle', .014 * level, rand(45, 70), 'ambient', delay + .012);
+    }
+  }
+
+  function ambientDistantExplosion(level = 1) {
+    noise(.28, .042 * level, 360, 'ambient', 'lowpass', 0, .55);
+    tone(rand(38, 58), .42, 'sine', .026 * level, rand(24, 34), 'ambient');
+  }
+
+  function ambientDistantZombie(level = 1) {
+    tone(rand(72, 104), rand(.32, .62), 'sawtooth', .018 * level, rand(42, 66), 'ambient');
+    noise(.38, .018 * level, rand(460, 900), 'ambient', 'bandpass', .035, 2.2);
+  }
+
   function synthAmbientSweetener(cue) {
     if (cue === 'ambientForest') {
       if (Math.random() < .7) ambientBirds(.9);
@@ -475,7 +591,12 @@
       if (Math.random() < .75) ambientWind(.95, true);
       else ambientBirds(.45);
     } else if (cue === 'ambientMenu') {
-      if (Math.random() < .45) ambientRumble(.45);
+      const roll = Math.random();
+      ambientWind(.95);
+      if (roll < .18) ambientDistantExplosion(.9);
+      else if (roll < .42) ambientDistantGunfire(.85);
+      else if (roll < .66) ambientDistantZombie(.75);
+      else ambientRumble(.65);
     }
   }
 
@@ -546,6 +667,10 @@
       explosionSynth(gainValue);
     } else if (name === 'zombieMoan') {
       return zombieMoanSynth(gainValue, playbackRate, options);
+    } else if (name === 'voiceDrop') {
+      voiceDropSynth(gainValue);
+    } else if (name === 'voiceTriple') {
+      voiceTripleSynth(gainValue);
     }
   }
 
@@ -567,14 +692,14 @@
     if (name === 'ambientForest') return rand(3.6, 8);
     if (name === 'ambientDunes' || name === 'ambientTundra') return rand(3.2, 7);
     if (name === 'ambientAshlands') return rand(4.4, 9);
-    if (name === 'ambientMenu') return rand(8, 18);
+    if (name === 'ambientMenu') return rand(2.4, 5.6);
     return rand(5, 11);
   }
 
   function scheduleProceduralAmbience(name, first = false) {
     if (!ambientEnabled || !name) return;
     if (proceduralAmbientTimer) clearTimeout(proceduralAmbientTimer);
-    const delay = first ? rand(1.2, 3.2) : nextAmbientDelay(name);
+    const delay = first ? (name === 'ambientMenu' ? rand(.35, 1.1) : rand(1.2, 3.2)) : nextAmbientDelay(name);
     proceduralAmbientTimer = setTimeout(() => {
       proceduralAmbientTimer = null;
       if (ambientEnabled && proceduralAmbientName === name && ambientTargetName === name) {
