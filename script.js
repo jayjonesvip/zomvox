@@ -297,7 +297,7 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.29.15');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.29.16');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -424,9 +424,16 @@
 
   setPlayerMagSize(MAG_SIZE, true);
 
-  function showToast(message, priority = false) {
+  let toastTimer = null;
+
+  function showToast(message, priority = false, tone = '') {
     if (!priority && mission.toastLockTimer > 0) return;
+    toast.classList.remove('show', 'toast-ammo', 'toast-health', 'toast-c4', 'toast-perk');
     toast.textContent = message;
+    if (tone) toast.classList.add('toast-' + tone);
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), priority ? 3600 : 1900);
   }
 
   function showCommandBanner(title, body, duration = 4.2) {
@@ -508,8 +515,8 @@
       cancelReload();
       setPlayerMagSize(effectiveMagSize(), true);
     }
-    scorePop(choice.name.toUpperCase(), 'pickup small');
-    showToast('Perk equipped: ' + choice.name);
+    scorePop(choice.name.toUpperCase(), 'pickup perk small');
+    showToast('Perk equipped: ' + choice.name, false, 'perk');
     sound('perkEquip');
     return true;
   }
@@ -2963,7 +2970,7 @@ function playerOnMachinePad() {
     if (total <= 0) return;
     player.reloading = true;
     player.reloadTimer = 0;
-    player.reloadDuration = currentReloadTime();
+    player.reloadDuration = Math.max(0.08, currentReloadTime() * (total / MAG_SIZE));
     player.reloadTotal = total;
     player.reloadSteps = Math.min(6, total);
     player.reloadStep = 0;
@@ -3366,15 +3373,15 @@ function playerOnMachinePad() {
           const healed = Math.min(p.amount, STARTING_HEALTH - player.health);
           player.health += healed;
           p.collected = true;
-          showToast('Health +' + Math.round(healed));
-          scorePop('+' + Math.round(healed) + ' HEALTH', 'pickup');
+          showToast('Health +' + Math.round(healed), false, 'health');
+          scorePop('+' + Math.round(healed) + ' HEALTH', 'pickup health');
           sound('pickupHealth');
           spawnParticles(p.x, p.y + .3, p.z, 10, 17);
         } else if (p.kind === 'c4') {
           player.c4 += p.amount;
           p.collected = true;
-          showToast('C4 +' + p.amount);
-          scorePop('+' + p.amount + ' C4', 'pickup');
+          showToast('C4 +' + p.amount, false, 'c4');
+          scorePop('+' + p.amount + ' C4', 'pickup c4');
           sound('pickupC4');
           spawnParticles(p.x, p.y + .2, p.z, 10, 24);
         } else if (p.kind === 'perk') {
@@ -3384,13 +3391,13 @@ function playerOnMachinePad() {
             equipPerk(perkId);
             spawnParticles(p.x, p.y + .28, p.z, 14, 42);
           } else {
-            showToast('All perks already equipped.');
+            showToast('All perks already equipped.', false, 'perk');
           }
         } else {
           player.reserve += p.amount;
           p.collected = true;
-          showToast('Ammo +' + p.amount);
-          scorePop('+' + p.amount + ' AMMO PICKUP', 'pickup');
+          showToast('Ammo +' + p.amount, false, 'ammo');
+          scorePop('+' + p.amount + ' AMMO PICKUP', 'pickup ammo');
           sound('pickupAmmo');
         }
       }
@@ -3986,20 +3993,17 @@ function playerOnMachinePad() {
   }
 
   function pushHealthPickup(arr, p, y) {
-    const cx = p.x, cz = p.z, red = 17, t = .032;
-    pushBox(arr, cx - .32, y, cz - .32, .64, .46, .64, 16);
-    pushBox(arr, cx - .20, y + .18, cz - .356, .40, .10, t, red);
-    pushBox(arr, cx - .05, y + .05, cz - .358, .10, .36, t, red);
-    pushBox(arr, cx - .20, y + .18, cz + .324, .40, .10, t, red);
-    pushBox(arr, cx - .05, y + .05, cz + .326, .10, .36, t, red);
-    pushBox(arr, cx - .356, y + .18, cz - .20, t, .10, .40, red);
-    pushBox(arr, cx - .358, y + .05, cz - .05, t, .36, .10, red);
-    pushBox(arr, cx + .324, y + .18, cz - .20, t, .10, .40, red);
-    pushBox(arr, cx + .326, y + .05, cz - .05, t, .36, .10, red);
-    pushBox(arr, cx - .20, y + .462, cz - .05, .40, t, .10, red);
-    pushBox(arr, cx - .05, y + .464, cz - .20, .10, t, .40, red);
-    pushBox(arr, cx - .20, y - .034, cz - .05, .40, t, .10, red);
-    pushBox(arr, cx - .05, y - .036, cz - .20, .10, t, .40, red);
+    const x = p.x, z = p.z, red = 17;
+    pushBox(arr, x - .34, y, z - .34, .68, .38, .68, 37);
+    pushBox(arr, x - .30, y + .38, z - .30, .60, .12, .60, 38);
+    pushBox(arr, x - .36, y + .16, z - .06, .72, .10, .12, 14);
+    pushBox(arr, x - .06, y + .16, z - .36, .12, .10, .72, 14);
+    pushBox(arr, x - .26, y + .08, z - .355, .18, .12, .03, red);
+    pushBox(arr, x + .08, y + .21, z - .356, .18, .11, .03, red);
+    pushBox(arr, x - .355, y + .20, z + .06, .03, .10, .22, red);
+    pushBox(arr, x + .325, y + .06, z - .28, .03, .12, .24, red);
+    pushBox(arr, x - .18, y + .50, z - .05, .36, .08, .10, red);
+    pushBox(arr, x - .05, y + .50, z - .18, .10, .08, .36, red);
   }
 
   function pushAmmoPickup(arr, p, y) {
