@@ -2133,6 +2133,63 @@ function playerOnMachinePad() {
     }
   }
 
+  function pushBoxJointY(arr, cx, y, cz, x0, y0, z0, w, h, d, pivotY, pivotZ, pitch, yaw, type) {
+    const cy = Math.cos(yaw), sy = Math.sin(yaw);
+    const cp = Math.cos(pitch), sp = Math.sin(pitch);
+    const x1 = x0 + w, y1 = y0 + h, z1 = z0 + d;
+    const boxFaces = [
+      { n: [ 1,0,0], v: [[x1,y0,z0],[x1,y1,z0],[x1,y1,z1],[x1,y0,z1]] },
+      { n: [-1,0,0], v: [[x0,y0,z1],[x0,y1,z1],[x0,y1,z0],[x0,y0,z0]] },
+      { n: [0, 1,0], v: [[x0,y1,z1],[x1,y1,z1],[x1,y1,z0],[x0,y1,z0]] },
+      { n: [0,-1,0], v: [[x0,y0,z0],[x1,y0,z0],[x1,y0,z1],[x0,y0,z1]] },
+      { n: [0,0, 1], v: [[x1,y0,z1],[x1,y1,z1],[x0,y1,z1],[x0,y0,z1]] },
+      { n: [0,0,-1], v: [[x0,y0,z0],[x0,y1,z0],[x1,y1,z0],[x1,y0,z0]] }
+    ];
+    for (const f of boxFaces) {
+      const pitchNy = f.n[1] * cp - f.n[2] * sp;
+      const pitchNz = f.n[1] * sp + f.n[2] * cp;
+      const nx = f.n[0] * cy - pitchNz * sy;
+      const nz = f.n[0] * sy + pitchNz * cy;
+      for (const idx of tri) {
+        const p = f.v[idx], uv = uvs[idx];
+        const relY = p[1] - pivotY;
+        const relZ = p[2] - pivotZ;
+        const pitchedY = pivotY + relY * cp - relZ * sp;
+        const pitchedZ = pivotZ + relY * sp + relZ * cp;
+        const wx = cx + p[0] * cy - pitchedZ * sy;
+        const wz = cz + p[0] * sy + pitchedZ * cy;
+        arr.push(wx, y + pitchedY, wz, nx, pitchNy, nz, uv[0], uv[1], type);
+      }
+    }
+  }
+
+  function pushZombieArm(arr, x, y, z, centerX, pitch, elbowBend, yaw, scale, type) {
+    const thickness = .20 * scale;
+    const upperLength = .47 * scale;
+    const lowerLength = .43 * scale;
+    const shoulderY = 1.18 * scale;
+    const shoulderZ = -.02 * scale;
+    const x0 = centerX - thickness * .5;
+    pushBoxJointY(
+      arr, x, y, z,
+      x0, shoulderY - upperLength, shoulderZ - thickness * .5,
+      thickness, upperLength, thickness,
+      shoulderY, shoulderZ,
+      pitch, yaw, type
+    );
+
+    const elbowY = shoulderY - upperLength * Math.cos(pitch);
+    const elbowZ = shoulderZ - upperLength * Math.sin(pitch);
+    const forearmPitch = pitch + elbowBend;
+    pushBoxJointY(
+      arr, x, y, z,
+      x0, elbowY - lowerLength, elbowZ - thickness * .5,
+      thickness, lowerLength, thickness,
+      elbowY, elbowZ,
+      forearmPitch, yaw, type
+    );
+  }
+
   function makeMesh(data) {
     const buffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
@@ -2423,7 +2480,9 @@ function playerOnMachinePad() {
       maxHp: variant.hp,
       speed: variant.speed,
       attack: 0,
+      attackPose: 0,
       retreat: 0,
+      moveBlend: 0,
       phase: seededHash(p.x, p.z) * 10,
       blinkSeed: seededHash(p.x * 3.7 + 18, p.z * 5.9 - 22),
       mouthOpenTimer: 0,
@@ -2477,11 +2536,12 @@ function playerOnMachinePad() {
     }
     if (!best) {
       e.steerSide = -(e.steerSide || 1);
-      return;
+      return false;
     }
     e.x = best.x;
     e.z = best.z;
     e.y += (best.y - e.y) * Math.min(1, dt * 8);
+    return true;
   }
 
   function nextZombieMoanInterval() {
@@ -2565,6 +2625,7 @@ function playerOnMachinePad() {
     }
     for (const e of enemies) {
       e.phase += dt;
+      e.attackPose = Math.max(0, (e.attackPose || 0) - dt);
       e.mouthOpenTimer = Math.max(0, (e.mouthOpenTimer || 0) - dt);
       if ((e.emerge || 0) < 1) {
         e.emerge = Math.min(1, (e.emerge || 0) + dt * 1.75);
@@ -2577,10 +2638,13 @@ function playerOnMachinePad() {
       const dist = Math.hypot(dx, dz) || 1;
       const targetFace = Math.atan2(dx, -dz);
       e.face = lerpAngle(e.face ?? targetFace, targetFace, Math.min(1, dt * 9));
+      let moved = false;
       if (dist < 70) {
         const backingOff = e.retreat > 0;
-        moveEnemyToward(e, dx, dz, dist, dt, backingOff);
+        moved = moveEnemyToward(e, dx, dz, dist, dt, backingOff);
       }
+      const moveTarget = moved ? 1 : 0;
+      e.moveBlend = (e.moveBlend || 0) + (moveTarget - (e.moveBlend || 0)) * Math.min(1, dt * (moved ? 9 : 5));
       e.retreat = Math.max(0, (e.retreat || 0) - dt);
       e.attack -= dt;
       const stats = e.variant || enemyVariantStats(e.x, e.z);
@@ -2592,6 +2656,7 @@ function playerOnMachinePad() {
           damagePlayer(currentZombieDamage(stats.damage));
         }
         e.attack = stats.attackCooldown;
+        e.attackPose = .34;
         e.retreat = stats.retreat;
       }
     }
@@ -3811,11 +3876,26 @@ function playerOnMachinePad() {
       const blinking = blinkPhase < .10 || doubleBlink;
       const eyeType = blinking ? 21 : (stats.eyeType || 12);
       const mouthOpen = (e.mouthOpenTimer || 0) > 0;
+      const moveBlend = Math.max(0, Math.min(1, e.moveBlend || 0));
+      const walkRate = stats.kind === 'speedy' ? 7.4 : (stats.kind === 'brute' ? 4.2 : 5.4);
+      const walkSwing = Math.sin(e.phase * walkRate) * .52 * moveBlend;
+      const playerDistance = Math.hypot(player.pos[0] - e.x, player.pos[2] - e.z);
+      const reach = Math.max(0, Math.min(1, (6 - playerDistance) / 4));
+      const attackProgress = 1 - Math.max(0, Math.min(1, (e.attackPose || 0) / .34));
+      const attackReach = (e.attackPose || 0) > 0 ? Math.sin(attackProgress * Math.PI) : 0;
+      const idleSway = Math.sin(time * 1.7 + (e.blinkSeed || 0) * 8) * .035;
+      const armBase = .16 + reach * .84 + idleSway;
+      const armSwingScale = 1 - reach * .72;
+      const leftArmPitch = armBase + walkSwing * armSwingScale + attackReach * (1.42 - armBase);
+      const rightArmPitch = armBase - walkSwing * armSwingScale + attackReach * (1.42 - armBase);
+      const elbowBend = .30 * (1 - reach) * (1 - attackReach);
       pushBoxY(arr, x, y, z, -.18*scale, 0, -.18*scale, .22*scale, .45*scale, .22*scale, yaw, limbType);
       pushBoxY(arr, x, y, z,  .02*scale, 0, -.18*scale, .22*scale, .45*scale, .22*scale, yaw, limbType);
       pushBoxY(arr, x, y, z, -.18*scale, 0,  .02*scale, .22*scale, .45*scale, .22*scale, yaw, limbType);
       pushBoxY(arr, x, y, z,  .02*scale, 0,  .02*scale, .22*scale, .45*scale, .22*scale, yaw, limbType);
       pushBoxY(arr, x, y, z, -.34*scale, .36*scale, -.24*scale, .68*scale, .95*scale, .48*scale, yaw, bodyType);
+      pushZombieArm(arr, x, y, z, -.45*scale, leftArmPitch, elbowBend, yaw, scale, limbType);
+      pushZombieArm(arr, x, y, z,  .45*scale, rightArmPitch, elbowBend, yaw, scale, limbType);
       pushBoxY(arr, x, y, z, -.42*scale, 1.22*scale, -.35*scale, .84*scale, .78*scale, .70*scale, yaw, bodyType);
       pushBoxY(arr, x, y, z, -.22*scale, 1.62*scale, -.39*scale, .12*scale, .12*scale, .06*scale, yaw, eyeType);
       pushBoxY(arr, x, y, z,  .10*scale, 1.62*scale, -.39*scale, .12*scale, .12*scale, .06*scale, yaw, eyeType);
