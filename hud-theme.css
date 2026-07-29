@@ -107,13 +107,14 @@ body::after{
 .tick.t{left:21px;height:8px}.tick.b{left:21px;height:8px}.tick.l{top:21px;width:8px}.tick.r{top:21px;width:8px}
 
 #c4Hud{
-  left:28px;
-  bottom:106px;
+  left:50%;
+  right:auto;
+  bottom:28px;
   top:auto;
-  border-radius:0;
+  transform:translateX(-50%);
+  border-radius:6px;
   border:1px solid rgba(255,212,93,.35);
   background:var(--tactical-panel);
-  clip-path:polygon(0 0,calc(100% - 8px) 0,100% 8px,100% 100%,8px 100%,0 calc(100% - 8px));
 }
 
 #menu{
@@ -152,11 +153,10 @@ body::after{
 #menu.quick-select::after{mask-image:linear-gradient(90deg,transparent,#000 28% 72%,transparent)}
 #menu.quick-select .quickBiomePanel{
   margin:auto;
-  border-radius:0;
+  border-radius:10px;
   border:1px solid rgba(145,243,110,.28);
   background:linear-gradient(145deg,rgba(8,17,17,.94),rgba(3,8,9,.9));
   box-shadow:0 28px 80px rgba(0,0,0,.58);
-  clip-path:polygon(0 0,calc(100% - 14px) 0,100% 14px,100% 100%,14px 100%,0 calc(100% - 14px));
 }
 .card{position:relative;z-index:1}
 #mainMenuCard{
@@ -199,7 +199,7 @@ body::after{
   color:#e8f1eb;
   background:rgba(8,16,17,.78);
   box-shadow:inset 0 1px rgba(255,255,255,.07),0 12px 30px rgba(0,0,0,.2);
-  clip-path:polygon(0 0,calc(100% - 11px) 0,100% 11px,100% 100%,11px 100%,0 calc(100% - 11px));
+  border-radius:8px;
 }
 .startBtn span{font-size:15px;letter-spacing:.1em}
 .startBtn small{color:#7f8e87;font-size:7px;letter-spacing:.14em}
@@ -231,10 +231,7 @@ body::after{
 .briefingMeta{font-size:9px}
 .briefingObjective{font-size:clamp(38px,6vw,72px);letter-spacing:-.04em}
 .briefingBody{max-width:540px;color:#aab9b1;font-size:14px;border-left:0;padding-left:0}
-#briefingOk,.shareRunBtn,.quickBackBtn{
-  border-radius:0;
-  clip-path:polygon(0 0,calc(100% - 9px) 0,100% 9px,100% 100%,9px 100%,0 calc(100% - 9px));
-}
+#briefingOk,.shareRunBtn,.quickBackBtn{border-radius:8px}
 
 #deathOverlay{background:linear-gradient(90deg,rgba(8,2,2,.94),rgba(3,5,6,.86)),repeating-linear-gradient(0deg,rgba(255,255,255,.025) 0 1px,transparent 1px 5px)}
 .deathCard{transform:none}
@@ -267,7 +264,7 @@ body::after{
 #updateReload{
   appearance:none;
   border:1px solid rgba(255,212,93,.5);
-  border-radius:0;
+  border-radius:7px;
   padding:8px 11px;
   color:#120f05;
   background:linear-gradient(90deg,#ffd45d,#fff0a0);
@@ -277,7 +274,6 @@ body::after{
   letter-spacing:.12em;
   text-transform:uppercase;
   cursor:pointer;
-  clip-path:polygon(0 0,calc(100% - 8px) 0,100% 8px,100% 100%,8px 100%,0 calc(100% - 8px));
 }
 #updateReload:disabled{opacity:.55;cursor:default}
 

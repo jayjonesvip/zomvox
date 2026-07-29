@@ -292,7 +292,7 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.29.05');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.29.06');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -2579,7 +2579,8 @@ function playerOnMachinePad() {
   function zombieMoanPlaybackRate(enemy) {
     const kind = enemy.variant?.kind || 'normal';
     if (kind === 'speedy') return 1.25;
-    if (kind === 'brute' || kind === 'grey') return 0.75;
+    if (kind === 'grey') return -0.75;
+    if (kind === 'brute') return 0.75;
     return 1;
   }
 
