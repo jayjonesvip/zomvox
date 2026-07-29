@@ -8,14 +8,25 @@
   const SILENCE_TRIM_MAX_SECONDS = 0.65;
   const SILENCE_TRIM_PREROLL_SECONDS = 0.006;
   const ZOMBIE_MOAN_MAX_OVERLAP = Math.max(1, Math.floor(Number(enemyConfig.zombieMoanMaxVoices) || 3));
+  const BUS_LEVELS = {
+    weapon: 0.9,
+    foley: 0.58,
+    ambient: 0.46,
+    enemy: 0.82,
+    ui: 0.86,
+    sfx: 0.72
+  };
 
   let sfxEnabled = true;
   let ambientEnabled = true;
   let audioCtx = null;
+  let busGains = null;
   let ambientSource = null;
   let ambientGain = null;
   let ambientTargetName = '';
   let activeAmbientName = '';
+  let proceduralAmbientName = '';
+  let proceduralAmbientTimer = null;
   let activeOneShots = 0;
   let landSource = null;
   let zombieMoanSources = [];
@@ -46,19 +57,43 @@
     return audioCtx;
   }
 
-  function connectOutput(node) {
+  function buses() {
     const ctx = getAudio();
-    if (!ctx || !node) return;
-    node.connect(ctx.destination);
+    if (!ctx) return null;
+    if (busGains && busGains.context === ctx) return busGains;
+
+    busGains = { context: ctx };
+    for (const name of Object.keys(BUS_LEVELS)) {
+      const gain = ctx.createGain();
+      gain.gain.value = BUS_LEVELS[name];
+      gain.connect(ctx.destination);
+      busGains[name] = gain;
+    }
+    return busGains;
   }
 
-  function tone(freq, dur = .08, type = 'square', gain = .05, endFreq = null) {
+  function busForSound(name) {
+    if (name === 'shoot' || name === 'empty' || name === 'reloadStart' || name === 'reloadDone' || name === 'explosion') return 'weapon';
+    if (name === 'land' || name === 'footstep' || name === 'block') return 'foley';
+    if (name === 'bite' || name === 'hurt' || name === 'zombieMoan') return 'enemy';
+    if (name && name.startsWith('ambient')) return 'ambient';
+    if (name === 'confirm' || name === 'briefing' || name === 'perkEquip' || name === 'objectiveClear' || name === 'wave' || name === 'heartbeat') return 'ui';
+    return 'sfx';
+  }
+
+  function connectOutput(node, busName = 'sfx') {
+    const mix = buses();
+    if (!mix || !node) return;
+    node.connect(mix[busName] || mix.sfx);
+  }
+
+  function tone(freq, dur = .08, type = 'square', gain = .05, endFreq = null, busName = 'sfx', delay = 0) {
     const ctx = getAudio();
     if (!ctx) return;
 
     const osc = ctx.createOscillator();
     const g = ctx.createGain();
-    const now = ctx.currentTime;
+    const now = ctx.currentTime + Math.max(0, delay);
 
     osc.type = type;
     osc.frequency.setValueAtTime(freq, now);
@@ -67,17 +102,17 @@
       osc.frequency.exponentialRampToValueAtTime(Math.max(20, endFreq), now + dur);
     }
 
-    g.gain.setValueAtTime(gain, now);
+    g.gain.setValueAtTime(Math.max(gain, 0.0001), now);
     g.gain.exponentialRampToValueAtTime(0.001, now + dur);
 
     osc.connect(g);
-    connectOutput(g);
+    connectOutput(g, busName);
 
     osc.start(now);
     osc.stop(now + dur + .02);
   }
 
-  function noise(dur = .05, gain = .08, cutoff = 1200) {
+  function noise(dur = .05, gain = .08, cutoff = 1200, busName = 'sfx', filterType = 'lowpass', delay = 0, q = 0.7) {
     const ctx = getAudio();
     if (!ctx) return;
 
@@ -92,10 +127,11 @@
     const src = ctx.createBufferSource();
     const filt = ctx.createBiquadFilter();
     const g = ctx.createGain();
-    const now = ctx.currentTime;
+    const now = ctx.currentTime + Math.max(0, delay);
 
-    filt.type = 'lowpass';
+    filt.type = filterType;
     filt.frequency.setValueAtTime(cutoff, now);
+    filt.Q.setValueAtTime(q, now);
 
     g.gain.setValueAtTime(gain, now);
     g.gain.exponentialRampToValueAtTime(0.001, now + dur);
@@ -103,13 +139,13 @@
     src.buffer = buffer;
     src.connect(filt);
     filt.connect(g);
-    connectOutput(g);
+    connectOutput(g, busName);
 
     src.start(now);
     src.stop(now + dur + .02);
   }
 
-  function radioStatic(dur = .08, gainValue = .04, center = 1600) {
+  function radioStatic(dur = .08, gainValue = .04, center = 1600, busName = 'ui') {
     const ctx = getAudio();
     if (!ctx) return;
 
@@ -137,73 +173,172 @@
     src.buffer = buffer;
     src.connect(band);
     band.connect(gain);
-    connectOutput(gain);
+    connectOutput(gain, busName);
 
     src.start(now);
     src.stop(now + dur + .02);
   }
 
-  function synth(name) {
+  function rand(min, max) {
+    return min + Math.random() * (max - min);
+  }
+
+  function pistolShot(level = 1) {
+    const pitch = rand(0.94, 1.08);
+    noise(.018, .18 * level, 4400 * pitch, 'weapon', 'highpass', 0, .7);
+    noise(.045, .13 * level, 2550 * pitch, 'weapon', 'bandpass', 0, 1.25);
+    noise(.12, .045 * level, 1350 * pitch, 'weapon', 'lowpass', .012, .8);
+    tone(190 * pitch, .07, 'sine', .07 * level, 86 * pitch, 'weapon');
+    tone(92 * pitch, .08, 'triangle', .045 * level, 48 * pitch, 'weapon', .006);
+    tone(2550 * pitch, .022, 'square', .018 * level, 1900 * pitch, 'weapon', .038);
+    tone(4300 * pitch, .016, 'triangle', .012 * level, 2600 * pitch, 'weapon', .072);
+  }
+
+  function surfaceFoleySurface(options = {}) {
+    return String(options.surface || 'grass').toLowerCase();
+  }
+
+  function synthFootstep(options = {}, level = 1) {
+    const surface = surfaceFoleySurface(options);
+    const gait = options.gait || 'walk';
+    const land = gait === 'land';
+    const heavy = land ? 1.55 : gait === 'run' ? 1.08 : 0.72;
+    const body = {
+      sand: [72, 760, 'bandpass', .6],
+      snow: [84, 980, 'bandpass', .55],
+      ice: [118, 2400, 'bandpass', 1.4],
+      stone: [102, 1850, 'bandpass', .9],
+      rock: [102, 1850, 'bandpass', .9],
+      mud: [76, 520, 'lowpass', .7],
+      water: [88, 1350, 'bandpass', .8],
+      ash: [70, 640, 'lowpass', .6],
+      wood: [112, 1250, 'bandpass', .9],
+      grass: [86, 1120, 'bandpass', .65],
+      dirt: [78, 740, 'lowpass', .7]
+    }[surface] || [86, 1120, 'bandpass', .65];
+    const [thump, textureFreq, filter, q] = body;
+    const textureGain = (surface === 'ice' || surface === 'stone' || surface === 'rock') ? .034 : .026;
+    tone(thump * rand(.92, 1.08), land ? .07 : .045, 'sine', .024 * heavy * level, thump * .62, 'foley');
+    noise(land ? .09 : .055, textureGain * heavy * level, textureFreq * rand(.86, 1.14), 'foley', filter, .004, q);
+    if (surface === 'water') noise(.12, .028 * heavy * level, 900, 'foley', 'bandpass', .035, .8);
+    if (surface === 'ice') tone(720 * rand(.9, 1.12), .05, 'triangle', .012 * heavy * level, 1180, 'foley', .024);
+  }
+
+  function ambientBirds(level = 1) {
+    const chirps = 2 + Math.floor(Math.random() * 4);
+    for (let i = 0; i < chirps; i++) {
+      const delay = i * rand(.08, .28);
+      const base = rand(2600, 4200);
+      tone(base, .055, 'sine', .012 * level, base * rand(1.18, 1.55), 'ambient', delay);
+    }
+  }
+
+  function ambientFrogs(level = 1) {
+    const croaks = 1 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < croaks; i++) {
+      const delay = i * rand(.18, .42);
+      tone(rand(82, 132), .16, 'sawtooth', .018 * level, rand(58, 92), 'ambient', delay);
+      noise(.09, .012 * level, 420, 'ambient', 'lowpass', delay + .025, .8);
+    }
+  }
+
+  function ambientWind(level = 1, cold = false) {
+    noise(rand(.35, .75), (cold ? .03 : .022) * level, cold ? rand(900, 1500) : rand(420, 840), 'ambient', cold ? 'bandpass' : 'lowpass', 0, cold ? 2.2 : .7);
+  }
+
+  function ambientInsects(level = 1) {
+    noise(rand(.16, .34), .011 * level, rand(2600, 4200), 'ambient', 'bandpass', 0, 4.5);
+  }
+
+  function ambientRumble(level = 1) {
+    tone(rand(42, 68), rand(.45, .9), 'sine', .014 * level, rand(28, 44), 'ambient');
+    noise(.5, .01 * level, 260, 'ambient', 'lowpass');
+  }
+
+  function synthAmbientSweetener(cue) {
+    if (cue === 'ambientForest') {
+      if (Math.random() < .7) ambientBirds(.9);
+      else ambientWind(.75);
+    } else if (cue === 'ambientSwamp') {
+      if (Math.random() < .58) ambientFrogs(1);
+      else ambientInsects(.9);
+    } else if (cue === 'ambientDunes') {
+      ambientWind(.95);
+      if (Math.random() < .35) noise(.18, .012, 1850, 'ambient', 'bandpass', .08, 2.8);
+    } else if (cue === 'ambientRocky') {
+      ambientWind(.75);
+    } else if (cue === 'ambientAshlands') {
+      if (Math.random() < .6) ambientRumble(.9);
+      else ambientWind(.8);
+    } else if (cue === 'ambientTundra') {
+      if (Math.random() < .75) ambientWind(.95, true);
+      else ambientBirds(.45);
+    } else if (cue === 'ambientMenu') {
+      if (Math.random() < .45) ambientRumble(.45);
+    }
+  }
+
+  function synth(name, gainValue = 1, playbackRate = 1, options = {}) {
     if (name === 'shoot') {
-      noise(.045, .12, 950);
-      tone(105, .05, 'sawtooth', .045, 55);
+      pistolShot(gainValue);
     } else if (name === 'empty') {
-      tone(120, .07, 'square', .04, 85);
+      tone(120, .07, 'square', .04 * gainValue, 85, 'weapon');
     } else if (name === 'reloadStart') {
-      tone(180, .05, 'square', .04, 105);
-      setTimeout(() => tone(260, .04, 'square', .035, 180), 110);
+      tone(180, .05, 'square', .04 * gainValue, 105, 'weapon');
+      setTimeout(() => tone(260, .04, 'square', .035 * gainValue, 180, 'weapon'), 110);
     } else if (name === 'reloadDone') {
-      tone(360, .06, 'triangle', .045, 520);
+      tone(360, .06, 'triangle', .045 * gainValue, 520, 'weapon');
     } else if (name === 'block') {
-      noise(.055, .075, 520);
-      tone(165, .045, 'square', .035, 110);
+      noise(.055, .075 * gainValue, 520, 'foley');
+      tone(165, .045, 'square', .035 * gainValue, 110, 'foley');
     } else if (name === 'hit') {
-      tone(470, .055, 'triangle', .055, 260);
+      tone(470, .055, 'triangle', .055 * gainValue, 260);
     } else if (name === 'head') {
-      noise(.025, .06, 1900);
-      tone(980, .045, 'square', .065, 1450);
-      setTimeout(() => tone(520, .055, 'triangle', .045, 780), 45);
+      noise(.025, .06 * gainValue, 1900);
+      tone(980, .045, 'square', .065 * gainValue, 1450);
+      setTimeout(() => tone(520, .055, 'triangle', .045 * gainValue, 780), 45);
     } else if (name === 'kill') {
-      tone(260, .075, 'square', .055, 390);
-      setTimeout(() => tone(520, .08, 'triangle', .05, 780), 80);
+      tone(260, .075, 'square', .055 * gainValue, 390);
+      setTimeout(() => tone(520, .08, 'triangle', .05 * gainValue, 780), 80);
     } else if (name === 'pickup' || name === 'pickupAmmo') {
-      tone(520, .06, 'triangle', .045, 780);
+      tone(520, .06, 'triangle', .045 * gainValue, 780);
     } else if (name === 'pickupHealth') {
-      tone(660, .07, 'sine', .04, 880);
-      setTimeout(() => tone(990, .08, 'triangle', .035, 1320), 70);
+      tone(660, .07, 'sine', .04 * gainValue, 880);
+      setTimeout(() => tone(990, .08, 'triangle', .035 * gainValue, 1320), 70);
     } else if (name === 'bite') {
-      noise(.08, .08, 430);
-      tone(72, .09, 'sawtooth', .045, 38);
+      noise(.08, .08 * gainValue, 430, 'enemy');
+      tone(72, .09, 'sawtooth', .045 * gainValue, 38, 'enemy');
     } else if (name === 'hurt') {
-      tone(85, .12, 'sawtooth', .07, 45);
+      tone(85, .12, 'sawtooth', .07 * gainValue, 45, 'enemy');
     } else if (name === 'toxin') {
-      tone(115, .11, 'sawtooth', .045, 62);
-      noise(.08, .045, 360);
+      tone(115, .11, 'sawtooth', .045 * gainValue, 62);
+      noise(.08, .045 * gainValue, 360);
     } else if (name === 'land') {
-      noise(.055, .025, 260);
-      tone(90, .045, 'sine', .018, 55);
+      synthFootstep({ ...options, gait: 'land' }, gainValue);
+    } else if (name === 'footstep') {
+      synthFootstep(options, gainValue);
     } else if (name === 'objectiveClear') {
-      tone(220, .08, 'triangle', .05, 330);
-      setTimeout(() => tone(440, .09, 'triangle', .05, 660), 85);
-      setTimeout(() => tone(720, .11, 'sine', .045, 960), 175);
+      tone(220, .08, 'triangle', .05 * gainValue, 330, 'ui');
+      setTimeout(() => tone(440, .09, 'triangle', .05 * gainValue, 660, 'ui'), 85);
+      setTimeout(() => tone(720, .11, 'sine', .045 * gainValue, 960, 'ui'), 175);
     } else if (name === 'wave') {
-      tone(180, .08, 'sawtooth', .05, 120);
-      setTimeout(() => tone(330, .09, 'triangle', .045, 480), 85);
+      tone(180, .08, 'sawtooth', .05 * gainValue, 120, 'ui');
+      setTimeout(() => tone(330, .09, 'triangle', .045 * gainValue, 480, 'ui'), 85);
     } else if (name === 'heartbeat') {
-      tone(55, .11, 'sine', .045, 45);
+      tone(55, .11, 'sine', .045 * gainValue, 45, 'ui');
     } else if (name === 'confirm') {
-      noise(.012, .018, 2600);
-      tone(1150, .018, 'square', .018, 640);
-      setTimeout(() => tone(420, .018, 'triangle', .012, 260), 18);
+      noise(.012, .018 * gainValue, 2600, 'ui');
+      tone(1150, .018, 'square', .018 * gainValue, 640, 'ui');
+      setTimeout(() => tone(420, .018, 'triangle', .012 * gainValue, 260, 'ui'), 18);
     } else if (name === 'briefing') {
       radioStatic(.045, .07, 1200);
-      tone(1180, .025, 'square', .018, 680);
+      tone(1180, .025, 'square', .018 * gainValue, 680, 'ui');
       setTimeout(() => radioStatic(.13, .045, 2100), 34);
-      setTimeout(() => tone(330, .035, 'square', .018, 190), 128);
+      setTimeout(() => tone(330, .035, 'square', .018 * gainValue, 190, 'ui'), 128);
       setTimeout(() => radioStatic(.055, .026, 850), 168);
     } else if (name === 'perkEquip') {
-      tone(480, .055, 'triangle', .045, 720);
-      setTimeout(() => tone(960, .08, 'sine', .04, 1280), 65);
+      tone(480, .055, 'triangle', .045 * gainValue, 720, 'ui');
+      setTimeout(() => tone(960, .08, 'sine', .04 * gainValue, 1280, 'ui'), 65);
     }
   }
 
@@ -305,7 +440,7 @@
     activeOneShots++;
     setTimeout(() => {
       activeOneShots = Math.max(0, activeOneShots - 1);
-    }, name === 'land' ? 120 : 260);
+    }, name === 'land' ? 120 : name === 'footstep' ? 90 : 260);
   }
 
   function playBuffer(buffer, gainValue = 1, trimLeadingSilence = true, name = '', playbackRate = 1) {
@@ -326,7 +461,7 @@
     gain.gain.value = gainValue;
 
     src.connect(gain);
-    connectOutput(gain);
+    connectOutput(gain, busForSound(name));
 
     activeOneShots++;
     let cleaned = false;
@@ -374,6 +509,41 @@
     return false;
   }
 
+  function stopProceduralAmbience() {
+    if (proceduralAmbientTimer) clearTimeout(proceduralAmbientTimer);
+    proceduralAmbientTimer = null;
+    proceduralAmbientName = '';
+  }
+
+  function nextAmbientDelay(name) {
+    if (name === 'ambientSwamp') return rand(3.5, 8.5);
+    if (name === 'ambientForest') return rand(5, 12);
+    if (name === 'ambientDunes' || name === 'ambientTundra') return rand(4, 10);
+    if (name === 'ambientAshlands') return rand(6, 14);
+    if (name === 'ambientMenu') return rand(10, 22);
+    return rand(7, 16);
+  }
+
+  function scheduleProceduralAmbience(name, first = false) {
+    if (!ambientEnabled || !name) return;
+    if (proceduralAmbientTimer) clearTimeout(proceduralAmbientTimer);
+    const delay = first ? rand(1.2, 3.2) : nextAmbientDelay(name);
+    proceduralAmbientTimer = setTimeout(() => {
+      proceduralAmbientTimer = null;
+      if (ambientEnabled && proceduralAmbientName === name && ambientTargetName === name) {
+        synthAmbientSweetener(name);
+        scheduleProceduralAmbience(name);
+      }
+    }, delay * 1000);
+  }
+
+  function startProceduralAmbience(name) {
+    if (!ambientEnabled || !name) return;
+    if (proceduralAmbientName === name && proceduralAmbientTimer) return;
+    proceduralAmbientName = name;
+    scheduleProceduralAmbience(name, true);
+  }
+
   function stopAmbient() {
     if (ambientSource) {
       try { ambientSource.stop(); } catch (_) {}
@@ -384,6 +554,7 @@
     ambientSource = null;
     ambientGain = null;
     activeAmbientName = '';
+    stopProceduralAmbience();
   }
 
   function startAmbientBuffer(name, buffer) {
@@ -400,7 +571,7 @@
     gain.gain.value = .32;
 
     src.connect(gain);
-    connectOutput(gain);
+    connectOutput(gain, 'ambient');
 
     src.onended = () => {
       if (ambientSource === src) {
@@ -413,6 +584,7 @@
     ambientSource = src;
     ambientGain = gain;
     activeAmbientName = name;
+    startProceduralAmbience(name);
     src.start(ctx.currentTime);
   }
 
@@ -426,6 +598,7 @@
     if (activeAmbientName === name && ambientSource) return;
 
     ambientTargetName = name;
+    startProceduralAmbience(name);
 
     const hasOverride = Object.prototype.hasOwnProperty.call(soundFiles, name);
     const fileName = hasOverride ? soundFiles[name] : '';
@@ -488,7 +661,7 @@
       }));
     },
 
-    play(name, gainValue = 1, playbackRate = 1) {
+    play(name, gainValue = 1, playbackRate = 1, options = {}) {
       if (!sfxEnabled) return;
 
       const hasOverride = Object.prototype.hasOwnProperty.call(soundFiles, name);
@@ -505,7 +678,7 @@
       if (handle) return handle === true ? undefined : handle;
 
       trackSynthOneShot(name);
-      synth(name);
+      synth(name, gainValue, playbackRate, options);
       return undefined;
     },
 

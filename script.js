@@ -292,7 +292,7 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.29.06');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.29.07');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -303,6 +303,7 @@
   let dayAmount = 1;
   let soundEnabled = true;
   let ambientEnabled = true;
+  let footstepTimer = 0;
   let activeAmbientCue = '';
   let deferredInstallPrompt = null;
   let pwaUpdatePrompted = false;
@@ -591,9 +592,9 @@
     }
   }
 
-  function sound(name, gainValue = 1, playbackRate = 1) {
+  function sound(name, gainValue = 1, playbackRate = 1, options = {}) {
     if (!soundEnabled) return;
-    return window.ZomVoxSound?.play(name, gainValue, playbackRate);
+    return window.ZomVoxSound?.play(name, gainValue, playbackRate, options);
   }
 
 
@@ -1969,6 +1970,48 @@
     return getBlock(gx, y, gz) === BLOCK.ICE;
   }
 
+  function audioSurfaceForBlock(type) {
+    if (type === BLOCK.SAND) return 'sand';
+    if (type === BLOCK.MUD) return 'mud';
+    if (type === BLOCK.SNOW) return 'snow';
+    if (type === BLOCK.ICE) return 'ice';
+    if (type === BLOCK.WATER) return 'water';
+    if (type === BLOCK.STONE || type === BLOCK.BRICK || type === BLOCK.METAL || type === BLOCK.SPIRE_METAL) return 'stone';
+    if (type === BLOCK.WOOD || type === BLOCK.DEAD_WOOD || type === BLOCK.CACTUS) return 'wood';
+    if (type === BLOCK.ASH || currentBiome() === 'ashlands') return 'ash';
+    if (type === BLOCK.DIRT) return 'dirt';
+    return 'grass';
+  }
+
+  function playerAudioSurface() {
+    const gx = Math.floor(player.pos[0]), gz = Math.floor(player.pos[2]);
+    const y = Math.floor(player.pos[1] - 0.08);
+    const footBlock = getBlock(gx, y, gz);
+    if (footBlock === BLOCK.WATER || getBlock(gx, y + 1, gz) === BLOCK.WATER) return 'water';
+    return audioSurfaceForBlock(footBlock || getBlock(gx, topSolidY(gx, gz), gz));
+  }
+
+  function updateFootstepAudio(dt, movingInput, sprint, insertion) {
+    if (insertion || !player.grounded || !movingInput || deathState.active || worldRebuildState.active) {
+      footstepTimer = Math.min(footstepTimer, 0.08);
+      return;
+    }
+    const horizontalSpeed = Math.hypot(player.vel[0], player.vel[2]);
+    if (horizontalSpeed < 0.9) return;
+
+    footstepTimer -= dt;
+    if (footstepTimer > 0) return;
+
+    const surface = playerAudioSurface();
+    const gait = sprint ? 'run' : 'walk';
+    const slowSurface = surface === 'sand' || surface === 'mud' || surface === 'snow';
+    const slickSurface = surface === 'water';
+    const interval = (sprint ? 0.31 : 0.46) * (slowSurface ? 1.15 : slickSurface ? 1.08 : 1);
+    const level = Math.min(0.9, (sprint ? 0.46 : 0.32) + horizontalSpeed * 0.025);
+    footstepTimer = interval;
+    sound('footstep', level, 1, { surface, gait });
+  }
+
   function highestMissionPoint() {
     let best = { x: 0, z: 0, h: terrainHeight(0, 0), score: -Infinity };
     for (let x = WORLD_MIN + 7; x <= WORLD_MAX - 7; x++) {
@@ -2400,7 +2443,7 @@ function playerOnMachinePad() {
     player.pos[1] = Math.max(player.pos[1], mission.insertionTargetY);
     player.vel = [0, 0, 0];
     player.grounded = true;
-    sound('land');
+    sound('land', 1, 1, { surface: playerAudioSurface(), gait: 'land' });
     scorePop('TOUCHDOWN', 'pickup small');
     showToast(mission.mode === MODE_QUICK
       ? 'Boots down. Hunt the infected.'
@@ -2449,7 +2492,8 @@ function playerOnMachinePad() {
     player.grounded = false;
     moveAxis(1, player.vel[1] * dt);
     if (insertion && player.grounded) finishInsertionDrop();
-    else if (!wasGrounded && player.grounded && landingSpeed > 3.2) sound('land');
+    else if (!wasGrounded && player.grounded && landingSpeed > 3.2) sound('land', Math.min(1.2, landingSpeed / 8), 1, { surface: playerAudioSurface(), gait: 'land' });
+    updateFootstepAudio(dt, movingInput, sprint, insertion);
     clampToWorld(player.pos);
     updateCameraStepSmoothing(dt);
     ensureChunks();
