@@ -114,7 +114,7 @@ Common tuning options live in `config.js` under `window.ZOMVOX_CONFIG`. Edit tha
 
 ```js
 window.ZOMVOX_CONFIG = {
-  buildVersion: '2026.07.29.17',
+  buildVersion: '2026.07.29.18',
   initialSeed: 729641,
 
   environment: {
@@ -224,8 +224,8 @@ Procedural cue references:
 - Weapon: `shoot`, `empty`, `reloadStart`, `reloadDone`, `explosion`.
 - Impact and feedback: `hit`, `head`, `kill`, `block`, `hurt`, `death`, `toxin`, `heartbeat`.
 - Pickups and UI: `pickupAmmo`, `pickupHealth`, `pickupC4`, `pickup`, `perkEquip`, `confirm`, `briefing`, `objectiveClear`, `wave`.
-- Command voice: `voiceDrop` for drop-in radio encouragement and `voiceTriple` for triple-kill praise.
-- Foley and ambience: `footstep`, `land`, `ambientMenu`, `ambientForest`, `ambientDunes`, `ambientRocky`, `ambientSwamp`, `ambientAshlands`, `ambientTundra`.
+- Command voice: `voiceDrop` for drop-in radio encouragement and `voiceTriple` for triple-kill praise. These use browser speech when available with procedural radio texture around the line.
+- Foley and ambience: `footstep`, `land`, `ambientMenu`, `ambientForest`, `ambientDunes`, `ambientRocky`, `ambientSwamp`, `ambientAshlands`, `ambientTundra`. Ambience includes a lightweight procedural bed plus occasional biome/menu sweeteners.
 - Zombie voices: `zombieMoan` is generated per zombie type. Normal zombies use a mid-low breathy groan, speedy zombies use a shorter higher rasp, brute zombies use a deeper longer growl, and grey zombies use a hollow unnatural moan.
 
 ## Repository Layout
