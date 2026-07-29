@@ -24,6 +24,7 @@
   const bufferCache = new Map();
   const loadingCache = new Map();
   const leadInCache = new WeakMap();
+  const reverseBufferCache = new WeakMap();
 
   function getAudio() {
     const AC = window.AudioContext || window.webkitAudioContext;
@@ -273,6 +274,24 @@
     return offset;
   }
 
+  function reversedBuffer(buffer) {
+    const ctx = getAudio();
+    if (!ctx || !buffer) return buffer;
+    if (reverseBufferCache.has(buffer)) return reverseBufferCache.get(buffer);
+
+    const reversed = ctx.createBuffer(buffer.numberOfChannels, buffer.length, buffer.sampleRate);
+    for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
+      const source = buffer.getChannelData(channel);
+      const target = reversed.getChannelData(channel);
+      for (let i = 0, j = source.length - 1; i < source.length; i++, j--) {
+        target[i] = source[j];
+      }
+    }
+
+    reverseBufferCache.set(buffer, reversed);
+    return reversed;
+  }
+
   function stopLand() {
     if (!landSource) return;
     try { landSource.stop(); } catch (_) {}
@@ -297,11 +316,13 @@
     if (name === 'zombieMoan' && zombieMoanSources.length >= ZOMBIE_MOAN_MAX_OVERLAP) return true;
     if (name !== 'land') stopLand();
 
+    const requestedRate = Number(playbackRate) || 1;
+    const sourceBuffer = requestedRate < 0 ? reversedBuffer(buffer) : buffer;
     const src = ctx.createBufferSource();
     const gain = ctx.createGain();
 
-    src.buffer = buffer;
-    src.playbackRate.value = Math.max(0.5, Math.min(1.6, Number(playbackRate) || 1));
+    src.buffer = sourceBuffer;
+    src.playbackRate.value = Math.max(0.5, Math.min(1.6, Math.abs(requestedRate) || 1));
     gain.gain.value = gainValue;
 
     src.connect(gain);
@@ -320,7 +341,7 @@
     if (name === 'land') landSource = src;
     if (name === 'zombieMoan') zombieMoanSources.push(src);
 
-    src.start(ctx.currentTime, trimLeadingSilence ? leadInOffset(buffer) : 0);
+    src.start(ctx.currentTime, trimLeadingSilence ? leadInOffset(sourceBuffer) : 0);
     if (name !== 'zombieMoan' && name !== 'bite') return true;
 
     return {
