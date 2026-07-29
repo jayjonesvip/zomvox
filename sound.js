@@ -9,8 +9,8 @@
   const BUS_LEVELS = {
     weapon: 1.05,
     foley: 0.58,
-    ambient: 0.74,
-    enemy: 0.49,
+    ambient: 0.36,
+    enemy: 0.72,
     ui: 0.86,
     sfx: 0.72
   };
@@ -509,11 +509,12 @@
   }
 
   function ambientBirds(level = 1) {
-    const chirps = 2 + Math.floor(Math.random() * 4);
+    const chirps = 3 + Math.floor(Math.random() * 4);
     for (let i = 0; i < chirps; i++) {
-      const delay = i * rand(.08, .28);
-      const base = rand(2600, 4200);
-      tone(base, .055, 'sine', .012 * level, base * rand(1.18, 1.55), 'ambient', delay);
+      const delay = i * rand(.1, .32);
+      const base = rand(2800, 4800);
+      tone(base, .065, 'sine', .034 * level, base * rand(1.14, 1.48), 'ambient', delay);
+      tone(base * rand(.48, .62), .035, 'triangle', .016 * level, base * rand(.7, .9), 'ambient', delay + .035);
     }
   }
 
@@ -527,7 +528,7 @@
   }
 
   function ambientWind(level = 1, cold = false) {
-    noise(rand(.35, .75), (cold ? .03 : .022) * level, cold ? rand(900, 1500) : rand(420, 840), 'ambient', cold ? 'bandpass' : 'lowpass', 0, cold ? 2.2 : .7);
+    noise(rand(.38, .82), (cold ? .018 : .012) * level, cold ? rand(980, 1700) : rand(520, 980), 'ambient', cold ? 'bandpass' : 'lowpass', 0, cold ? 2.0 : .62);
   }
 
   function ambientInsects(level = 1) {
@@ -596,12 +597,14 @@
     connectOutput(bedOut, 'ambient');
     nodes.push(bedOut);
 
-    function addNoiseLayer({ gainValue, filterType = 'lowpass', freq = 700, q = .8, lfoRate = .04, lfoDepth = .018 }) {
+    function addNoiseLayer({ gainValue, filterType = 'lowpass', freq = 700, q = .8, lfoRate = .04, lfoDepth = .018, freqDepth = 0 }) {
       const src = ctx.createBufferSource();
       const filt = ctx.createBiquadFilter();
       const layerGain = ctx.createGain();
       const lfo = ctx.createOscillator();
       const lfoGain = ctx.createGain();
+      const freqLfo = ctx.createOscillator();
+      const freqLfoGain = ctx.createGain();
 
       src.buffer = createNoiseBuffer(ctx, 2.4);
       src.loop = true;
@@ -614,13 +617,19 @@
       lfoGain.gain.setValueAtTime(lfoDepth, now);
       lfo.connect(lfoGain);
       lfoGain.connect(layerGain.gain);
+      freqLfo.type = 'sine';
+      freqLfo.frequency.setValueAtTime(Math.max(.01, lfoRate * rand(.45, .75)), now);
+      freqLfoGain.gain.setValueAtTime(freqDepth, now);
+      freqLfo.connect(freqLfoGain);
+      freqLfoGain.connect(filt.frequency);
       src.connect(filt);
       filt.connect(layerGain);
       layerGain.connect(bedOut);
       src.start(now);
       lfo.start(now);
-      sources.push(src, lfo);
-      nodes.push(filt, layerGain, lfoGain);
+      freqLfo.start(now);
+      sources.push(src, lfo, freqLfo);
+      nodes.push(filt, layerGain, lfoGain, freqLfoGain);
     }
 
     function addToneLayer({ freq = 54, gainValue = .02, type = 'sine', lfoRate = .035, lfoDepth = .006 }) {
@@ -644,25 +653,25 @@
     }
 
     if (name === 'ambientMenu') {
-      addNoiseLayer({ gainValue: .095, filterType: 'lowpass', freq: 780, q: .55, lfoRate: .05, lfoDepth: .026 });
-      addNoiseLayer({ gainValue: .026, filterType: 'bandpass', freq: 1850, q: 1.4, lfoRate: .08, lfoDepth: .012 });
-      addToneLayer({ freq: 46, gainValue: .024, lfoRate: .025, lfoDepth: .008 });
+      addNoiseLayer({ gainValue: .042, filterType: 'lowpass', freq: 680, q: .5, lfoRate: .075, lfoDepth: .02, freqDepth: 280 });
+      addNoiseLayer({ gainValue: .012, filterType: 'bandpass', freq: 1700, q: 1.2, lfoRate: .11, lfoDepth: .008, freqDepth: 420 });
+      addToneLayer({ freq: 43, gainValue: .012, lfoRate: .028, lfoDepth: .006 });
     } else if (name === 'ambientForest') {
-      addNoiseLayer({ gainValue: .055, filterType: 'lowpass', freq: 920, q: .6, lfoRate: .07, lfoDepth: .017 });
+      addNoiseLayer({ gainValue: .022, filterType: 'lowpass', freq: 780, q: .58, lfoRate: .08, lfoDepth: .012, freqDepth: 260 });
     } else if (name === 'ambientSwamp') {
-      addNoiseLayer({ gainValue: .052, filterType: 'lowpass', freq: 560, q: .75, lfoRate: .045, lfoDepth: .016 });
-      addNoiseLayer({ gainValue: .018, filterType: 'bandpass', freq: 2600, q: 4.5, lfoRate: .11, lfoDepth: .008 });
+      addNoiseLayer({ gainValue: .024, filterType: 'lowpass', freq: 520, q: .75, lfoRate: .06, lfoDepth: .011, freqDepth: 170 });
+      addNoiseLayer({ gainValue: .012, filterType: 'bandpass', freq: 2600, q: 4.5, lfoRate: .13, lfoDepth: .006, freqDepth: 380 });
     } else if (name === 'ambientDunes') {
-      addNoiseLayer({ gainValue: .078, filterType: 'bandpass', freq: 980, q: 1.1, lfoRate: .055, lfoDepth: .024 });
+      addNoiseLayer({ gainValue: .03, filterType: 'bandpass', freq: 1040, q: 1.05, lfoRate: .075, lfoDepth: .018, freqDepth: 460 });
     } else if (name === 'ambientRocky') {
-      addNoiseLayer({ gainValue: .066, filterType: 'bandpass', freq: 1180, q: .9, lfoRate: .045, lfoDepth: .019 });
+      addNoiseLayer({ gainValue: .026, filterType: 'bandpass', freq: 1120, q: .9, lfoRate: .065, lfoDepth: .014, freqDepth: 360 });
     } else if (name === 'ambientAshlands') {
-      addNoiseLayer({ gainValue: .084, filterType: 'lowpass', freq: 620, q: .58, lfoRate: .038, lfoDepth: .026 });
-      addToneLayer({ freq: 52, gainValue: .018, lfoRate: .021, lfoDepth: .006 });
+      addNoiseLayer({ gainValue: .034, filterType: 'lowpass', freq: 620, q: .58, lfoRate: .055, lfoDepth: .019, freqDepth: 210 });
+      addToneLayer({ freq: 52, gainValue: .01, lfoRate: .021, lfoDepth: .005 });
     } else if (name === 'ambientTundra') {
-      addNoiseLayer({ gainValue: .074, filterType: 'bandpass', freq: 1320, q: 1.8, lfoRate: .052, lfoDepth: .022 });
+      addNoiseLayer({ gainValue: .03, filterType: 'bandpass', freq: 1420, q: 1.8, lfoRate: .07, lfoDepth: .017, freqDepth: 520 });
     } else {
-      addNoiseLayer({ gainValue: .048, filterType: 'lowpass', freq: 760, q: .65 });
+      addNoiseLayer({ gainValue: .02, filterType: 'lowpass', freq: 760, q: .65, freqDepth: 240 });
     }
 
     ambientBed = { name, sources, nodes };
@@ -670,8 +679,8 @@
 
   function synthAmbientSweetener(cue) {
     if (cue === 'ambientForest') {
-      if (Math.random() < .7) ambientBirds(.9);
-      else ambientWind(.75);
+      if (Math.random() < .86) ambientBirds(1.15);
+      else ambientWind(.55);
     } else if (cue === 'ambientSwamp') {
       if (Math.random() < .58) ambientFrogs(1);
       else ambientInsects(.9);
@@ -688,11 +697,11 @@
       else ambientBirds(.45);
     } else if (cue === 'ambientMenu') {
       const roll = Math.random();
-      ambientWind(.95);
-      if (roll < .18) ambientDistantExplosion(.9);
-      else if (roll < .42) ambientDistantGunfire(.85);
-      else if (roll < .66) ambientDistantZombie(.75);
-      else ambientRumble(.65);
+      ambientWind(.5);
+      if (roll < .18) ambientDistantExplosion(.72);
+      else if (roll < .42) ambientDistantGunfire(.68);
+      else if (roll < .66) ambientDistantZombie(.48);
+      else ambientRumble(.42);
     }
   }
 
@@ -785,7 +794,7 @@
 
   function nextAmbientDelay(name) {
     if (name === 'ambientSwamp') return rand(2.8, 6.2);
-    if (name === 'ambientForest') return rand(3.6, 8);
+    if (name === 'ambientForest') return rand(2.0, 4.2);
     if (name === 'ambientDunes' || name === 'ambientTundra') return rand(3.2, 7);
     if (name === 'ambientAshlands') return rand(4.4, 9);
     if (name === 'ambientMenu') return rand(2.4, 5.6);
