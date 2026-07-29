@@ -37,6 +37,8 @@
   const healthStatus = $('healthStatus');
   const healthBigText = $('healthBigText');
   const healthBigFill = $('healthBigFill');
+  const fieldSignal = $('fieldSignal');
+  const fieldStatusText = $('fieldStatusText');
   const objectiveText = $('objectiveText');
   const objectiveMeta = $('objectiveMeta');
   const killHud = $('killHud');
@@ -3684,8 +3686,41 @@ function playerOnMachinePad() {
     healthBigFill.style.width = Math.max(0, player.health) + '%';
     updateAmmoDisplay();
     updateMissionHud();
+    updateFieldStatus(hpNow);
     updateShootButtonState();
     updateC4ButtonState();
+  }
+
+  function updateFieldStatus(hpNow) {
+    if (!fieldSignal || !fieldStatusText) return;
+    let label = 'STANDBY';
+    let tone = '';
+    if (deathState.active || hpNow <= 0) {
+      label = 'OPERATOR OFFLINE';
+      tone = 'danger';
+    } else if (hpNow < LOW_HEALTH_THRESHOLD) {
+      label = 'VITALS CRITICAL';
+      tone = 'danger';
+    } else if (worldRebuildState.active) {
+      label = 'WORLD REBUILD';
+      tone = 'warn';
+    } else if (player.reloading) {
+      label = 'RELOADING';
+      tone = 'warn';
+    } else if (mission.insertionActive) {
+      label = 'INSERTION ACTIVE';
+      tone = 'warn';
+    } else if (mission.completed) {
+      label = 'SECTOR SECURED';
+    } else if (mission.phase === PHASE_ZOMBIE_THREAT) {
+      label = 'INFECTED CONTACT';
+      tone = 'danger';
+    } else if (mission.objectiveAcknowledged) {
+      label = 'TOXIN ALERT';
+      tone = 'warn';
+    }
+    fieldStatusText.textContent = label;
+    fieldSignal.className = 'fieldSignal' + (tone ? ' ' + tone : '');
   }
 
   function bindVoxelMesh(mesh) {
