@@ -94,6 +94,8 @@
   const settingSound = $('settingSound');
   const settingAmbient = $('settingAmbient');
   const settingFullscreen = $('settingFullscreen');
+  const updatePrompt = $('updatePrompt');
+  const updateReload = $('updateReload');
   const quickBiomeButtons = quickBiomePanel ? Array.from(quickBiomePanel.querySelectorAll('[data-biome]')) : [];
 
   const CONFIG = window.ZOMVOX_CONFIG || {};
@@ -290,7 +292,7 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.24.04');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.29.05');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -303,6 +305,7 @@
   let ambientEnabled = true;
   let activeAmbientCue = '';
   let deferredInstallPrompt = null;
+  let pwaUpdatePrompted = false;
   const INSTALLED_ONCE_KEY = 'zomvoxInstalledOnce';
   let waterDamageTimer = 0;
   let hordeLevel = 0;
@@ -1317,10 +1320,35 @@
     updatePortraitInstall();
   }
 
+  function showPwaUpdatePrompt() {
+    if (!updatePrompt || pwaUpdatePrompted) return;
+    pwaUpdatePrompted = true;
+    updatePrompt.hidden = false;
+  }
+
+  function reloadForPwaUpdate() {
+    if (updateReload) updateReload.disabled = true;
+    window.location.reload();
+  }
+
   function registerPwaHooks() {
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js').catch(() => {});
+        let hadServiceWorkerController = !!navigator.serviceWorker.controller;
+        navigator.serviceWorker.register('sw.js').then(registration => {
+          if (registration.waiting && navigator.serviceWorker.controller) showPwaUpdatePrompt();
+          registration.addEventListener('updatefound', () => {
+            const worker = registration.installing;
+            if (!worker) return;
+            worker.addEventListener('statechange', () => {
+              if (worker.state === 'installed' && navigator.serviceWorker.controller) showPwaUpdatePrompt();
+            });
+          });
+        }).catch(() => {});
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (hadServiceWorkerController && navigator.serviceWorker.controller) showPwaUpdatePrompt();
+          hadServiceWorkerController = !!navigator.serviceWorker.controller;
+        });
       });
     }
     window.addEventListener('beforeinstallprompt', event => {
@@ -4359,6 +4387,7 @@ function currentWaterIsDangerous() {
     if (event.target === settingsModal) closeSettingsModal();
   });
   if (portraitInstallCallout) portraitInstallCallout.addEventListener('click', installZomVox);
+  if (updateReload) updateReload.addEventListener('click', reloadForPwaUpdate);
   if (quickBack) quickBack.addEventListener('click', closeQuickBiomeScreen);
   for (const btn of quickBiomeButtons) {
     btn.addEventListener('click', () => startSurvivalGame(btn.dataset.biome));

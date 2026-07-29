@@ -224,7 +224,7 @@
     <div class="menuReadout" aria-label="Game features">
       <span><b>06</b> HOSTILE BIOMES</span>
       <span><b>03</b> FIELD MODES</span>
-      <span><b>∞</b> INFECTED</span>
+      <span><b>&infin;</b> INFECTED</span>
     </div>
     <div class="startActions">
       <button id="play" class="startBtn primaryStart" type="button"><span>Story Mode</span><small>Begin operation</small></button>
@@ -290,6 +290,13 @@
       <button id="settingsClose" class="quickBackBtn" type="button">Done</button>
     </div>
   </div>
+</div>
+<div id="updatePrompt" role="status" aria-live="polite" hidden>
+  <div>
+    <b>New Build Ready</b>
+    <span>Reload to update ZomVox.</span>
+  </div>
+  <button id="updateReload" type="button">Reload</button>
 </div>
 <script src="config.js"></script>
 <script src="sound.js"></script>
