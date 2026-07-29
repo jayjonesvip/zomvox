@@ -37,7 +37,7 @@ ZomVox is listed on [IGDB](https://www.igdb.com/) and [DEAD.ARMY](https://dead.a
 - Mission-based opening loop with military-style objective briefings, cinematic insertion drops, a no-gun exploration phase, metal-spire shutdown objective, explosive supply crate reward, delayed zombie threat, drop-beacon extraction, triple-kill perk drops, and escalating redeployment objectives across five seeded islands.
 - Quick Hunt island unlocks stored locally per device: Forest and Dunes start open, then Rocky, Swamp, Ashlands, and Tundra unlock through survival, kills, triple-kill, total-kill challenges, or Story Mode island clears.
 - Center combat HUD with a voxel zombie head counter: Quick Hunt shows kills, while Story combat counts down infected remaining.
-- Compact ammo HUD on desktop and mobile, plus a six-round blaster magazine with staged reloads, reserve ammo, recoil, and fire-rate cooldown.
+- Compact ammo HUD on desktop and mobile, plus a six-round blaster magazine with staged per-round reloads, reserve ammo, recoil, and fire-rate cooldown.
 - Camo ammo pickups that add six rounds at a time, plus low-ammo mercy caches when reserve ammo hits zero.
 - Flat silver C4 proximity charges with blinking red dots, yellow hazard strips, one starting charge, and rare zombie drops.
 - Blue-accent perk crates awarded by triple kills; each run starts clean and never repeats an equipped perk.
@@ -144,7 +144,7 @@ Common tuning options live in `config.js` under `window.ZOMVOX_CONFIG`. Edit tha
 
 ```js
 window.ZOMVOX_CONFIG = {
-  buildVersion: '2026.07.29.15',
+  buildVersion: '2026.07.29.16',
   initialSeed: 729641,
 
   environment: {
