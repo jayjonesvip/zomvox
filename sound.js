@@ -375,6 +375,7 @@
     nodes.push(breathFilter, breathGain);
 
     const handle = {
+      duration: profile.dur,
       stop() {
         if (cleaned) return;
         cleaned = true;

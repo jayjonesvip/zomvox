@@ -34,12 +34,13 @@ ZomVox is listed on [IGDB](https://www.igdb.com/) and [DEAD.ARMY](https://dead.a
 - Fixed-size chunk generation so the game area stays bounded and performance remains predictable.
 - Player movement is clamped inside the generated world.
 - Targeted mesh rebuilding for mission set pieces and world updates.
-- Mission-based opening loop with military-style objective briefings, cinematic insertion drops, a no-gun exploration phase, metal-spire shutdown objective, explosive supply crate reward, delayed zombie threat, drop-beacon extraction, upgrade choices, and escalating redeployment objectives across five seeded islands.
+- Mission-based opening loop with military-style objective briefings, cinematic insertion drops, a no-gun exploration phase, metal-spire shutdown objective, explosive supply crate reward, delayed zombie threat, drop-beacon extraction, triple-kill perk drops, and escalating redeployment objectives across five seeded islands.
 - Quick Hunt island unlocks stored locally per device: Forest and Dunes start open, then Rocky, Swamp, Ashlands, and Tundra unlock through survival, kills, triple-kill, total-kill challenges, or Story Mode island clears.
 - Center combat HUD with a voxel zombie head counter: Quick Hunt shows kills, while Story combat counts down infected remaining.
-- Compact ammo HUD on desktop and mobile, plus a six-round blaster magazine with reserve ammo, recoil, and fire-rate cooldown.
+- Compact ammo HUD on desktop and mobile, plus a six-round blaster magazine with staged reloads, reserve ammo, recoil, and fire-rate cooldown.
 - Camo ammo pickups that add six rounds at a time, plus low-ammo mercy caches when reserve ammo hits zero.
 - Flat silver C4 proximity charges with blinking red dots, yellow hazard strips, one starting charge, and rare zombie drops.
+- Blue-accent perk crates awarded by triple kills; each run starts clean and never repeats an equipped perk.
 - Zombie spawning, ground-emerge entrances, pursuit steering around water/trees, attack cooldowns, retreat steps after attacks, deaths, score popups, and pickup drops.
 - Weighted zombie variants: normal, speedy one-shot runners, slower brute attackers, and rare grey stalkers.
 - Mobile-only landscape gate.
@@ -74,18 +75,23 @@ flowchart TD
     M -->|Yes| N[Return to drop beacon]
     N --> O[Extraction meter]
     O --> P{More islands?}
-    P -->|Yes| Q[Perk choice]
-    Q --> D
+    P -->|Yes| D
     P -->|No| R[Final mission clear]
 
-    C -->|Quick Hunt| S[Choose island]
-    S --> T[Choose one perk]
-    T --> U[Insertion drop]
+    C -->|Survival Mode| S[Choose island]
+    S --> U[Insertion drop]
     U --> V[Gun unlocked immediately]
     V --> W[Survive endless infected]
 
+    C -->|Quick Hunt| AD[Random island and target]
+    AD --> AE[Insertion drop]
+    AE --> AF[Gun unlocked immediately]
+    AF --> AG[Clear 20 to 40 infected]
+    AG --> B
+
     L --> X{Player dies?}
     W --> X
+    AG --> X
     X -->|Story| Y[Mission failure]
     Y --> Z{Continue?}
     Z -->|Continue| AA[Remote revive]
@@ -138,7 +144,7 @@ Common tuning options live in `config.js` under `window.ZOMVOX_CONFIG`. Edit tha
 
 ```js
 window.ZOMVOX_CONFIG = {
-  buildVersion: '2026.07.06.11',
+  buildVersion: '2026.07.29.15',
   initialSeed: 729641,
 
   environment: {
@@ -235,7 +241,7 @@ Other sections in `config.js` expose safe defaults for:
 
 - `world`: chunk size, fixed map radius, max terrain height, water level, and terrain roughness/depression tuning.
 - `player`: collision size, one-block terrain auto-step height, camera step smoothing, starting health, starting ammo reserve, starting C4, respawn reserve floor, and low-health heartbeat threshold.
-- `weapon`: magazine size, reload time, fire cooldown, recoil, upgrade multipliers, and long-range kill distance.
+- `weapon`: magazine size, staged reload time, fire cooldown, recoil, perk multipliers, and long-range kill distance.
 - `enemies`: base enemy cap, horde escalation values, and close-range zombie moan radius/voice/timing controls.
 - `mission`: five island seeds, per-island biomes, toxin drain, source disable timing, insertion drop tuning, per-island infected objectives, fallback infected objective, and first wave size.
 - `pickups`: ammo, health, and C4 pickup amounts/drop chances.
