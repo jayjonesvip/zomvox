@@ -21,6 +21,7 @@
   let activeAmbientName = '';
   let proceduralAmbientName = '';
   let proceduralAmbientTimer = null;
+  let ambientBed = null;
   let activeOneShots = 0;
   let zombieMoanSources = [];
 
@@ -263,101 +264,51 @@
     tone(1320, .09, 'sine', .026 * level, 1680, 'ui', .158);
   }
 
-  const VOICE_VOWELS = {
-    uh: [420, 980, 2380],
-    ah: [720, 1180, 2480],
-    eh: [540, 1780, 2520],
-    ih: [310, 2180, 2960],
-    oh: [500, 850, 2350],
-    er: [470, 1340, 1800],
-    oo: [330, 720, 2480]
-  };
+  function speakCommandLine(text, level = 1, rate = .9, pitch = .72) {
+    const synth = window.speechSynthesis;
+    if (!synth || typeof window.SpeechSynthesisUtterance !== 'function') return false;
 
-  function voiceSyllable(delay, dur, vowel = 'ah', pitch = 110, level = 1, onset = '') {
-    const ctx = getAudio();
-    if (!ctx) return 0;
-    const now = ctx.currentTime + Math.max(0, delay);
-    const end = now + dur;
-    const formants = VOICE_VOWELS[vowel] || VOICE_VOWELS.ah;
-    const out = ctx.createGain();
-    const hp = ctx.createBiquadFilter();
-    const lp = ctx.createBiquadFilter();
-    const presence = ctx.createBiquadFilter();
+    try {
+      const utterance = new SpeechSynthesisUtterance(text);
+      const voices = typeof synth.getVoices === 'function' ? synth.getVoices() : [];
+      const englishVoices = voices.filter(voice => /^en[-_]/i.test(voice.lang || ''));
+      const preferredVoice = englishVoices.find(voice => /male|david|mark|george|daniel|alex|guy/i.test(voice.name || '')) || englishVoices[0];
+      if (preferredVoice) utterance.voice = preferredVoice;
+      utterance.lang = preferredVoice?.lang || 'en-US';
+      utterance.rate = rate;
+      utterance.pitch = pitch;
+      utterance.volume = Math.max(0, Math.min(1, .82 * level));
 
-    out.gain.setValueAtTime(0.0001, now);
-    out.gain.exponentialRampToValueAtTime(Math.max(0.0002, .16 * level), now + .018);
-    out.gain.setTargetAtTime(.09 * level, now + dur * .42, .035);
-    out.gain.exponentialRampToValueAtTime(0.001, end + .04);
-    hp.type = 'highpass';
-    hp.frequency.setValueAtTime(380, now);
-    lp.type = 'lowpass';
-    lp.frequency.setValueAtTime(3150, now);
-    presence.type = 'peaking';
-    presence.frequency.setValueAtTime(1850, now);
-    presence.Q.setValueAtTime(1.3, now);
-    presence.gain.setValueAtTime(4.5, now);
-    out.connect(hp);
-    hp.connect(lp);
-    lp.connect(presence);
-    connectOutput(presence, 'ui');
-
-    const osc = ctx.createOscillator();
-    const srcGain = ctx.createGain();
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(pitch * rand(.96, 1.04), now);
-    osc.frequency.setTargetAtTime(pitch * rand(.82, .94), now + dur * .45, .05);
-    srcGain.gain.setValueAtTime(.12 * level, now);
-    osc.connect(srcGain);
-    for (let i = 0; i < formants.length; i++) {
-      const bp = ctx.createBiquadFilter();
-      const fg = ctx.createGain();
-      bp.type = 'bandpass';
-      bp.frequency.setValueAtTime(formants[i] * rand(.97, 1.03), now);
-      bp.Q.setValueAtTime([7.5, 9, 11][i], now);
-      fg.gain.setValueAtTime([1.0, .48, .22][i], now);
-      srcGain.connect(bp);
-      bp.connect(fg);
-      fg.connect(out);
+      radioStatic(.06, .065 * level, 1550, 'ui');
+      synth.speak(utterance);
+      return true;
+    } catch (_) {
+      return false;
     }
-    osc.start(now);
-    osc.stop(end + .08);
-
-    if (onset) {
-      const burstDur = onset === 'f' ? .055 : .028;
-      noise(burstDur, (onset === 'f' ? .035 : .05) * level, onset === 'f' ? 3900 : 1800, 'ui', onset === 'f' ? 'bandpass' : 'highpass', Math.max(0, delay - .012), onset === 'f' ? 2.8 : 1.4);
-    }
-    noise(dur * .72, .018 * level, 1600, 'ui', 'bandpass', delay + .012, 1.8);
-    return dur;
   }
 
-  function commandVoice(parts, level = 1) {
-    radioStatic(.055, .05 * level, 1500, 'ui');
-    let t = .035;
-    for (const part of parts) {
-      t += voiceSyllable(t, part.d, part.v, part.p, level * (part.a || 1), part.on || '') + (part.g || .025);
+  function commandFallback(level = 1, chirps = 2) {
+    radioStatic(.06, .055 * level, 1550, 'ui');
+    for (let i = 0; i < chirps; i++) {
+      tone(720 + i * 220, .045, 'square', .026 * level, 480 + i * 150, 'ui', .08 + i * .085);
     }
-    radioStatic(.08, .035 * level, 2100, 'ui', t + .02);
-    radioStatic(.07, .026 * level, 900, 'ui', t + .09);
-    return t;
+    radioStatic(.08, .032 * level, 2150, 'ui', .18 + chirps * .08);
   }
 
   function voiceDropSynth(level = 1) {
-    // Radio-flavored command chatter: "good luck, soldier."
-    commandVoice([
-      { v: 'oo', d: .11, p: 118, on: 'g', g: .02 },
-      { v: 'uh', d: .12, p: 104, on: 'p', g: .055 },
-      { v: 'oh', d: .15, p: 112, on: 'f', g: .018 },
-      { v: 'er', d: .18, p: 92, on: 'p', g: 0 }
-    ], level);
+    if (speakCommandLine('Good luck, soldier.', level, .88, .68)) {
+      radioStatic(.08, .035 * level, 2100, 'ui', 1.16);
+      return;
+    }
+    commandFallback(level, 2);
   }
 
   function voiceTripleSynth(level = 1) {
-    // Short congratulatory command bark: "impressive!"
-    commandVoice([
-      { v: 'ih', d: .10, p: 142, on: 'n', g: .012 },
-      { v: 'eh', d: .16, p: 154, on: 'p', g: .012 },
-      { v: 'ih', d: .13, p: 132, on: 'f', g: 0 }
-    ], level);
+    if (speakCommandLine('Impressive!', level, .92, .78)) {
+      radioStatic(.07, .032 * level, 2200, 'ui', .74);
+      return;
+    }
+    commandFallback(level, 3);
   }
 
   function zombieMoanProfile(variant = 'normal', playbackRate = 1) {
@@ -572,6 +523,116 @@
     noise(.38, .018 * level, rand(460, 900), 'ambient', 'bandpass', .035, 2.2);
   }
 
+  function createNoiseBuffer(ctx, seconds = 2) {
+    const len = Math.max(1, Math.floor(ctx.sampleRate * seconds));
+    const buffer = ctx.createBuffer(1, len, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    let last = 0;
+    for (let i = 0; i < len; i++) {
+      last = last * .72 + (Math.random() * 2 - 1) * .28;
+      data[i] = last;
+    }
+    return buffer;
+  }
+
+  function stopAmbientBed() {
+    if (!ambientBed) return;
+    for (const source of ambientBed.sources) {
+      try { source.stop(); } catch (_) {}
+      try { source.disconnect(); } catch (_) {}
+    }
+    for (const node of ambientBed.nodes) {
+      try { node.disconnect(); } catch (_) {}
+    }
+    ambientBed = null;
+  }
+
+  function startAmbientBed(name) {
+    const ctx = getAudio();
+    if (!ctx || !ambientEnabled || !name) return;
+    if (ambientBed?.name === name) return;
+    stopAmbientBed();
+
+    const now = ctx.currentTime;
+    const nodes = [];
+    const sources = [];
+    const bedOut = ctx.createGain();
+    bedOut.gain.setValueAtTime(1, now);
+    connectOutput(bedOut, 'ambient');
+    nodes.push(bedOut);
+
+    function addNoiseLayer({ gainValue, filterType = 'lowpass', freq = 700, q = .8, lfoRate = .04, lfoDepth = .018 }) {
+      const src = ctx.createBufferSource();
+      const filt = ctx.createBiquadFilter();
+      const layerGain = ctx.createGain();
+      const lfo = ctx.createOscillator();
+      const lfoGain = ctx.createGain();
+
+      src.buffer = createNoiseBuffer(ctx, 2.4);
+      src.loop = true;
+      filt.type = filterType;
+      filt.frequency.setValueAtTime(freq, now);
+      filt.Q.setValueAtTime(q, now);
+      layerGain.gain.setValueAtTime(gainValue, now);
+      lfo.type = 'sine';
+      lfo.frequency.setValueAtTime(lfoRate, now);
+      lfoGain.gain.setValueAtTime(lfoDepth, now);
+      lfo.connect(lfoGain);
+      lfoGain.connect(layerGain.gain);
+      src.connect(filt);
+      filt.connect(layerGain);
+      layerGain.connect(bedOut);
+      src.start(now);
+      lfo.start(now);
+      sources.push(src, lfo);
+      nodes.push(filt, layerGain, lfoGain);
+    }
+
+    function addToneLayer({ freq = 54, gainValue = .02, type = 'sine', lfoRate = .035, lfoDepth = .006 }) {
+      const osc = ctx.createOscillator();
+      const layerGain = ctx.createGain();
+      const lfo = ctx.createOscillator();
+      const lfoGain = ctx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, now);
+      layerGain.gain.setValueAtTime(gainValue, now);
+      lfo.frequency.setValueAtTime(lfoRate, now);
+      lfoGain.gain.setValueAtTime(lfoDepth, now);
+      lfo.connect(lfoGain);
+      lfoGain.connect(layerGain.gain);
+      osc.connect(layerGain);
+      layerGain.connect(bedOut);
+      osc.start(now);
+      lfo.start(now);
+      sources.push(osc, lfo);
+      nodes.push(layerGain, lfoGain);
+    }
+
+    if (name === 'ambientMenu') {
+      addNoiseLayer({ gainValue: .095, filterType: 'lowpass', freq: 780, q: .55, lfoRate: .05, lfoDepth: .026 });
+      addNoiseLayer({ gainValue: .026, filterType: 'bandpass', freq: 1850, q: 1.4, lfoRate: .08, lfoDepth: .012 });
+      addToneLayer({ freq: 46, gainValue: .024, lfoRate: .025, lfoDepth: .008 });
+    } else if (name === 'ambientForest') {
+      addNoiseLayer({ gainValue: .055, filterType: 'lowpass', freq: 920, q: .6, lfoRate: .07, lfoDepth: .017 });
+    } else if (name === 'ambientSwamp') {
+      addNoiseLayer({ gainValue: .052, filterType: 'lowpass', freq: 560, q: .75, lfoRate: .045, lfoDepth: .016 });
+      addNoiseLayer({ gainValue: .018, filterType: 'bandpass', freq: 2600, q: 4.5, lfoRate: .11, lfoDepth: .008 });
+    } else if (name === 'ambientDunes') {
+      addNoiseLayer({ gainValue: .078, filterType: 'bandpass', freq: 980, q: 1.1, lfoRate: .055, lfoDepth: .024 });
+    } else if (name === 'ambientRocky') {
+      addNoiseLayer({ gainValue: .066, filterType: 'bandpass', freq: 1180, q: .9, lfoRate: .045, lfoDepth: .019 });
+    } else if (name === 'ambientAshlands') {
+      addNoiseLayer({ gainValue: .084, filterType: 'lowpass', freq: 620, q: .58, lfoRate: .038, lfoDepth: .026 });
+      addToneLayer({ freq: 52, gainValue: .018, lfoRate: .021, lfoDepth: .006 });
+    } else if (name === 'ambientTundra') {
+      addNoiseLayer({ gainValue: .074, filterType: 'bandpass', freq: 1320, q: 1.8, lfoRate: .052, lfoDepth: .022 });
+    } else {
+      addNoiseLayer({ gainValue: .048, filterType: 'lowpass', freq: 760, q: .65 });
+    }
+
+    ambientBed = { name, sources, nodes };
+  }
+
   function synthAmbientSweetener(cue) {
     if (cue === 'ambientForest') {
       if (Math.random() < .7) ambientBirds(.9);
@@ -718,6 +779,7 @@
 
   function stopAmbient() {
     stopProceduralAmbience();
+    stopAmbientBed();
     activeAmbientName = '';
     ambientTargetName = '';
   }
@@ -732,8 +794,18 @@
 
     ambientTargetName = name;
     activeAmbientName = name;
+    startAmbientBed(name);
     startProceduralAmbience(name);
   }
+
+  function resumeAudioFromGesture() {
+    const ctx = getAudio();
+    if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {});
+    if (ambientEnabled && ambientTargetName) startAmbientBed(ambientTargetName);
+  }
+
+  window.addEventListener('pointerdown', resumeAudioFromGesture, { passive: true });
+  window.addEventListener('keydown', resumeAudioFromGesture);
 
   window.ZomVoxSound = {
     setEnabled(value) {
