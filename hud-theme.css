@@ -377,14 +377,47 @@ body::after{
   #missionPanel{top:calc(8px + env(safe-area-inset-top));min-width:140px;max-width:34vw;padding:4px 7px}
   .missionLabel,#objectiveMeta{display:none}
   #objectiveText{font-size:9px;white-space:normal}
-  #menu{justify-content:center;padding:8px;background:linear-gradient(rgba(2,6,7,.75),rgba(2,6,7,.88)),url("assets/zomvox-splash.png") center/cover}
+  #menu{
+    justify-content:center;
+    padding:8px;
+    background:
+      radial-gradient(circle at 50% 42%,rgba(8,24,22,.5),rgba(1,4,5,.9) 54%,rgba(0,0,0,.96)),
+      url("assets/zomvox-splash.png") center 68%/cover no-repeat;
+  }
   #menu::before{display:none}
-  #mainMenuCard{width:min(600px,94vw);text-align:center}
-  #mainMenuCard h1{font-size:clamp(50px,12vw,82px);margin:10px 0}
-  .menuClassification,.menuTagline,.menuReadout,.menuFieldGuide{display:none}
-  .startActions{width:76%;margin:0 auto}
-  .startBtn{min-height:39px;padding:7px 10px}
-  .startBtn span{font-size:13px}.startBtn small{font-size:6px}
+  #mainMenuCard{
+    width:min(540px,88vw);
+    min-height:min(78svh,360px);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    transform:translateY(22px);
+  }
+  #mainMenuCard::before{
+    content:"";
+    position:absolute;
+    z-index:-1;
+    inset:10px -34px 2px;
+    border-radius:26px;
+    background:radial-gradient(ellipse at 50% 52%,rgba(0,0,0,.7),rgba(0,0,0,.42) 45%,rgba(0,0,0,0) 74%);
+    pointer-events:none;
+  }
+  .menuClassification{display:block;margin-bottom:5px;font-size:7px;letter-spacing:.22em;color:rgba(145,243,110,.78)}
+  #mainMenuCard h1{font-size:clamp(40px,9.2vw,68px);margin:0 0 9px;line-height:.78;letter-spacing:-.065em}
+  .menuTagline{display:block;margin:0 0 10px;width:min(430px,78vw);font-size:clamp(9px,1.9vw,12px);line-height:1.2;letter-spacing:.1em;color:#f1fff4}
+  .menuTagline span{color:#9dff82}
+  .menuReadout{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;width:min(430px,78vw);margin:0 0 13px}
+  .menuReadout span{min-width:0;padding:5px 4px;border-left:0;border-top:1px solid rgba(145,243,110,.28);background:rgba(2,8,8,.46);font-size:6px;line-height:1.05;color:#a8b8b1}
+  .menuReadout b{font-size:13px;margin-bottom:2px;color:#fff}
+  .menuFieldGuide{display:none}
+  .startActions{width:min(430px,78vw);margin:0 auto}
+  .startBtn{min-height:43px;padding:8px 12px;border-radius:9px}
+  .startBtn span{font-size:clamp(12px,2.2vw,15px)}.startBtn small{font-size:6px}
+  .settingsGear,.controlsButton{width:38px;height:38px;bottom:calc(13px + env(safe-area-inset-bottom));font-size:20px}
+  .settingsGear{right:calc(13px + env(safe-area-inset-right))}
+  .controlsButton{left:calc(13px + env(safe-area-inset-left));font-size:18px}
   #objectiveBriefing,#upgradeOverlay{justify-content:center;padding:12px}
   .briefingCard,.upgradeCard{width:min(600px,92vw);padding:16px;border-left:1px solid var(--tactical-green);background:rgba(4,10,10,.9)}
   .briefingObjective{font-size:clamp(26px,7vw,44px)}
