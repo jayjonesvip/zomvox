@@ -1,9 +1,10 @@
-const CACHE_NAME = 'zomvox-pwa-2026-07-24-04';
+const CACHE_NAME = 'zomvox-pwa-2026-07-28-01';
 
 const APP_SHELL = [
   './',
   './index.html',
   './styles.css',
+  './hud-theme.css',
   './config.js',
   './sound.js',
   './script.js',

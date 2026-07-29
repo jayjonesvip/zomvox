@@ -1,0 +1,255 @@
+:root{
+  --tactical-green:#91f36e;
+  --tactical-amber:#ffd45d;
+  --tactical-red:#ff5151;
+  --tactical-ink:#05090a;
+  --tactical-panel:rgba(5,11,12,.84);
+  --tactical-line:rgba(188,224,195,.2);
+}
+
+/* Portable BLACKSITE-inspired presentation layer. Gameplay HUD IDs and state
+   remain owned by the original game; this file only changes their treatment. */
+body::after{
+  content:"";
+  position:fixed;
+  inset:0;
+  z-index:40;
+  pointer-events:none;
+  opacity:.1;
+  mix-blend-mode:soft-light;
+  background:repeating-linear-gradient(0deg,transparent 0 2px,rgba(255,255,255,.12) 3px);
+}
+
+#fieldHeader{
+  position:fixed;
+  z-index:9;
+  top:0;
+  left:0;
+  right:0;
+  height:78px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 28px;
+  pointer-events:none;
+  background:linear-gradient(180deg,rgba(2,5,6,.9),rgba(2,5,6,.48) 58%,transparent);
+  letter-spacing:.12em;
+}
+.fieldBrand{display:flex;align-items:center;gap:11px}
+.fieldBrandMark{
+  width:38px;height:38px;display:grid;place-items:center;
+  border:1px solid var(--tactical-green);color:var(--tactical-green);
+  font-size:15px;font-weight:1000;
+  clip-path:polygon(0 0,78% 0,100% 22%,100% 100%,22% 100%,0 78%);
+}
+.fieldBrand b,.fieldBrand small{display:block}
+.fieldBrand b{font-size:13px;line-height:1}
+.fieldBrand small{margin-top:5px;color:#8e9d97;font-size:7px;letter-spacing:.18em}
+.fieldOperation{position:absolute;left:50%;top:13px;transform:translateX(-50%);text-align:center}
+.fieldOperation span{display:block;color:var(--tactical-green);font-size:7px;letter-spacing:.28em}
+.fieldOperation b{display:block;margin-top:4px;font-size:10px;color:#ced8d2}
+.fieldSignal{display:flex;align-items:center;gap:8px;color:#b8c3bd;font-size:9px}
+.fieldSignal i{width:7px;height:7px;border-radius:50%;background:var(--tactical-green);box-shadow:0 0 8px var(--tactical-green)}
+.fieldSignal.warn i{background:var(--tactical-amber);box-shadow:0 0 8px var(--tactical-amber)}
+.fieldSignal.danger i{background:var(--tactical-red);box-shadow:0 0 9px var(--tactical-red)}
+
+#healthStatus,#weaponPanel{
+  top:auto;
+  bottom:28px;
+  border-radius:0;
+  background:linear-gradient(135deg,rgba(8,15,16,.9),rgba(2,6,7,.82));
+  border:0;
+  border-bottom:2px solid rgba(145,243,110,.55);
+  box-shadow:0 18px 48px rgba(0,0,0,.42),inset 0 1px rgba(255,255,255,.08);
+  clip-path:polygon(0 0,calc(100% - 13px) 0,100% 13px,100% 100%,13px 100%,0 calc(100% - 13px));
+  backdrop-filter:blur(8px);
+}
+#healthStatus{left:28px;width:230px;padding:10px 14px}
+#healthStatus::before{content:"VITALS";position:absolute;left:14px;top:9px;color:#8fa29a;font-size:7px;letter-spacing:.22em}
+#healthStatus .healthLabel{opacity:0}
+#healthBigText{font-size:27px;font-weight:700}
+.bigHealthBar{height:4px;border:0;border-radius:0;background:rgba(255,255,255,.13)}
+#weaponPanel{right:28px;min-width:205px;padding:9px 14px;border-bottom-color:rgba(255,212,93,.62)}
+#weaponPanel .label{display:block;color:#97a49f;font-size:7px;letter-spacing:.15em}
+#bulletRack{display:none}
+#ammoReadout{justify-content:flex-end}
+#clipText{font-size:42px;font-weight:600}
+#reserveText{font-size:14px;color:#95a49e}
+.ammoSlash{font-size:15px;color:#718079}
+.ammoIcon{width:14px;height:31px;opacity:.75}
+
+#missionPanel{
+  top:47px;
+  left:50%;
+  right:auto;
+  bottom:auto;
+  transform:translateX(-50%);
+  min-width:290px;
+  padding:8px 16px 10px;
+  text-align:center;
+  border:0;
+  border-top:1px solid rgba(145,243,110,.35);
+  border-radius:0;
+  background:linear-gradient(180deg,rgba(5,10,11,.72),rgba(5,10,11,.18));
+  box-shadow:none;
+  clip-path:polygon(8px 0,calc(100% - 8px) 0,100% 8px,calc(100% - 8px) 100%,8px 100%,0 8px);
+}
+.missionLabel{display:block;color:var(--tactical-green);font-size:7px;letter-spacing:.25em;margin-bottom:4px}
+#objectiveText{font-size:12px;letter-spacing:.08em}
+#objectiveMeta{display:block;color:#98a9a1;font-size:8px;letter-spacing:.12em;text-transform:uppercase;margin-top:4px}
+.killHud{justify-content:center}
+
+#reticle{width:44px;height:44px;filter:drop-shadow(0 1px 2px #000)}
+#reticle::before{inset:20px;border:0;width:4px;height:4px;background:var(--tactical-amber);border-radius:0;box-shadow:0 0 5px rgba(255,212,93,.55)}
+#reticle::after{display:none}
+.tick{background:rgba(241,246,242,.92);box-shadow:0 0 0 1px rgba(0,0,0,.55)}
+.tick.t{left:21px;height:8px}.tick.b{left:21px;height:8px}.tick.l{top:21px;width:8px}.tick.r{top:21px;width:8px}
+
+#c4Hud{
+  left:28px;
+  bottom:106px;
+  top:auto;
+  border-radius:0;
+  border:1px solid rgba(255,212,93,.35);
+  background:var(--tactical-panel);
+  clip-path:polygon(0 0,calc(100% - 8px) 0,100% 8px,100% 100%,8px 100%,0 calc(100% - 8px));
+}
+
+#menu{
+  justify-content:flex-start;
+  padding:8vh 7.5vw;
+  background:
+    linear-gradient(90deg,rgba(2,5,6,.98) 0 37%,rgba(2,5,6,.72) 58%,rgba(2,5,6,.15)),
+    linear-gradient(0deg,rgba(2,5,6,.75),transparent 60%),
+    url("assets/zomvox-splash.png") center/cover no-repeat;
+}
+#menu::before{
+  content:"";
+  position:absolute;
+  left:5.4vw;
+  top:16%;
+  bottom:16%;
+  width:2px;
+  background:linear-gradient(transparent,var(--tactical-green),transparent);
+  box-shadow:0 0 16px rgba(145,243,110,.24);
+}
+#menu::after{
+  content:"";
+  position:absolute;inset:0;pointer-events:none;opacity:.07;
+  background-image:linear-gradient(rgba(145,243,110,.5) 1px,transparent 1px),linear-gradient(90deg,rgba(145,243,110,.5) 1px,transparent 1px);
+  background-size:54px 54px;
+  mask-image:linear-gradient(90deg,#000,transparent 65%);
+}
+.card{position:relative;z-index:1}
+#mainMenuCard{
+  width:min(620px,48vw);
+  padding:0;
+  text-align:left;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+  backdrop-filter:none;
+}
+.menuClassification{color:var(--tactical-green);font-size:9px;font-weight:900;letter-spacing:.3em}
+#mainMenuCard h1{
+  margin:18px 0 8px;
+  font-size:clamp(70px,9vw,132px);
+  line-height:.72;
+  letter-spacing:-.08em;
+  text-transform:uppercase;
+  text-shadow:0 12px 36px rgba(0,0,0,.65);
+}
+#mainMenuCard h1 b{
+  color:transparent;
+  -webkit-text-stroke:1px rgba(145,243,110,.85);
+  text-shadow:0 0 28px rgba(145,243,110,.12);
+}
+.menuTagline{margin:24px 0 18px;color:#dce5df;font-size:14px;font-weight:700;line-height:1.35;letter-spacing:.12em}
+.menuTagline span{color:#8d9d95}
+.menuReadout{display:flex;gap:8px;margin:0 0 18px}
+.menuReadout span{min-width:120px;padding:8px;border-left:1px solid rgba(145,243,110,.38);color:#87958e;font-size:7px;letter-spacing:.13em}
+.menuReadout b{display:block;color:#e5eee8;font-size:20px;line-height:1;margin-bottom:4px}
+.startActions{width:min(430px,100%);margin:0;gap:7px}
+.startBtn{
+  min-height:52px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:10px 16px;
+  border:1px solid rgba(145,243,110,.35);
+  color:#e8f1eb;
+  background:rgba(8,16,17,.78);
+  box-shadow:inset 0 1px rgba(255,255,255,.07),0 12px 30px rgba(0,0,0,.2);
+  clip-path:polygon(0 0,calc(100% - 11px) 0,100% 11px,100% 100%,11px 100%,0 calc(100% - 11px));
+}
+.startBtn span{font-size:15px;letter-spacing:.1em}
+.startBtn small{color:#7f8e87;font-size:7px;letter-spacing:.14em}
+.primaryStart{color:#061009;background:linear-gradient(90deg,#91f36e,#c8ff81);border-color:#b9ff9e}
+.primaryStart small{color:#31582c}
+.survivalStart{background:rgba(10,27,27,.84);border-color:rgba(95,209,196,.4)}
+.secondaryStart{background:rgba(30,20,10,.8);border-color:rgba(255,212,93,.4)}
+.menuFieldGuide{display:flex;flex-wrap:wrap;gap:12px 18px;margin-top:17px;color:#83918a;font-size:7px;letter-spacing:.12em}
+.menuFieldGuide span{display:flex;align-items:center;gap:6px}
+.menuFieldGuide kbd{padding:4px 6px;border:1px solid #3b4742;background:#0c1212;color:#dce7df;font-family:inherit}
+.settingsGear,.controlsButton{bottom:24px;background:rgba(5,11,12,.84);border-color:rgba(145,243,110,.28)}
+
+#objectiveBriefing,#upgradeOverlay{
+  justify-content:flex-start;
+  padding-left:10vw;
+  background:linear-gradient(90deg,rgba(3,7,8,.97) 0 44%,rgba(3,7,8,.72) 65%,rgba(3,7,8,.28)),repeating-linear-gradient(0deg,rgba(255,255,255,.02) 0 1px,transparent 1px 4px);
+}
+.briefingCard,.upgradeCard{
+  width:min(620px,48vw);
+  padding:24px 0 24px 26px;
+  border:0;
+  border-left:2px solid var(--tactical-green);
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+}
+.briefingCard::before,.upgradeCard::before{display:none}
+.briefingTopline{font-size:9px;letter-spacing:.3em}
+.briefingMeta{font-size:9px}
+.briefingObjective{font-size:clamp(38px,6vw,72px);letter-spacing:-.04em}
+.briefingBody{max-width:540px;color:#aab9b1;font-size:14px;border-left:0;padding-left:0}
+#briefingOk,.shareRunBtn,.quickBackBtn{
+  border-radius:0;
+  clip-path:polygon(0 0,calc(100% - 9px) 0,100% 9px,100% 100%,9px 100%,0 calc(100% - 9px));
+}
+
+#deathOverlay{background:linear-gradient(90deg,rgba(8,2,2,.94),rgba(3,5,6,.86)),repeating-linear-gradient(0deg,rgba(255,255,255,.025) 0 1px,transparent 1px 5px)}
+.deathCard{transform:none}
+.deathTitle{font-size:clamp(64px,12vw,150px);letter-spacing:-.07em}
+.deathText{color:#9ca8a1}
+.deathMeter{height:4px;border-radius:0}
+#commandBanner{border-radius:0;clip-path:polygon(0 0,calc(100% - 12px) 0,100% 12px,100% 100%,12px 100%,0 calc(100% - 12px))}
+
+@media(max-width:820px){
+  body::after{display:none}
+  #fieldHeader{height:50px;padding:0 9px}
+  .fieldBrandMark{width:29px;height:29px;font-size:11px}
+  .fieldBrand b{font-size:10px}.fieldBrand small,.fieldOperation{display:none}
+  .fieldSignal{font-size:7px}
+  #healthStatus,#weaponPanel{top:8px;bottom:auto;clip-path:none;border-radius:4px}
+  #healthStatus{left:8px;width:128px;padding:7px 8px}
+  #healthStatus::before{display:none}
+  #weaponPanel{right:8px;min-width:112px;padding:6px 8px}
+  #weaponPanel .label{display:none}
+  #clipText{font-size:28px}
+  #missionPanel{top:8px;min-width:150px;max-width:34vw;padding:5px 7px}
+  .missionLabel,#objectiveMeta{display:none}
+  #objectiveText{font-size:10px;white-space:normal}
+  #fieldHeader{background:none}.fieldBrand,.fieldSignal{display:none}
+  #menu{justify-content:center;padding:8px;background:linear-gradient(rgba(2,6,7,.75),rgba(2,6,7,.88)),url("assets/zomvox-splash.png") center/cover}
+  #menu::before{display:none}
+  #mainMenuCard{width:min(600px,94vw);text-align:center}
+  #mainMenuCard h1{font-size:clamp(50px,12vw,82px);margin:10px 0}
+  .menuClassification,.menuTagline,.menuReadout,.menuFieldGuide{display:none}
+  .startActions{width:76%;margin:0 auto}
+  .startBtn{min-height:39px;padding:7px 10px}
+  .startBtn span{font-size:13px}.startBtn small{font-size:6px}
+  #objectiveBriefing,#upgradeOverlay{justify-content:center;padding:12px}
+  .briefingCard,.upgradeCard{width:min(600px,92vw);padding:16px;border-left:1px solid var(--tactical-green);background:rgba(4,10,10,.9)}
+  .briefingObjective{font-size:clamp(26px,7vw,44px)}
+}

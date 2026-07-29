@@ -51,6 +51,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700;800;900&display=swap" rel="stylesheet" />
 <link rel="preload" as="image" href="assets/zomvox-splash.png" />
 <link rel="stylesheet" href="styles.css" />
+<link rel="stylesheet" href="hud-theme.css" />
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -76,6 +77,14 @@
 </head>
 <body>
 <canvas id="game"></canvas>
+<header id="fieldHeader" aria-label="Mission status">
+  <div class="fieldBrand">
+    <span class="fieldBrandMark">ZV</span>
+    <span><b>ZOMVOX</b><small>ISLAND CONTAINMENT UNIT</small></span>
+  </div>
+  <div class="fieldOperation"><span>OPERATION</span><b>HOSTILE FRONTIER</b></div>
+  <div class="fieldSignal" id="fieldSignal"><i></i><span id="fieldStatusText">STANDBY</span></div>
+</header>
 <div id="vignette"></div>
 <div id="atmosphereVignette"></div>
 <div id="damageFlash"></div>
@@ -209,11 +218,22 @@
 </div>
 <div id="menu">
   <div id="mainMenuCard" class="card">
+    <div class="menuClassification">FIELD BUILD // ZV-01</div>
     <h1>Zom<b>Vox</b></h1>
+    <p class="menuTagline">DROP INTO THE FRONTIER.<br><span>CONTAIN THE INFECTION.</span></p>
+    <div class="menuReadout" aria-label="Game features">
+      <span><b>06</b> HOSTILE BIOMES</span>
+      <span><b>03</b> FIELD MODES</span>
+      <span><b>∞</b> INFECTED</span>
+    </div>
     <div class="startActions">
-      <button id="play" class="startBtn primaryStart" type="button">Story Mode</button>
-      <button id="survivalStart" class="startBtn survivalStart" type="button">Survival Mode</button>
-      <button id="quickStart" class="startBtn secondaryStart" type="button">Quick Hunt</button>
+      <button id="play" class="startBtn primaryStart" type="button"><span>Story Mode</span><small>Begin operation</small></button>
+      <button id="survivalStart" class="startBtn survivalStart" type="button"><span>Survival Mode</span><small>Hold the island</small></button>
+      <button id="quickStart" class="startBtn secondaryStart" type="button"><span>Quick Hunt</span><small>Immediate contact</small></button>
+    </div>
+    <div class="menuFieldGuide">
+      <span><kbd>WASD</kbd> MOVE</span><span><kbd>MOUSE</kbd> AIM</span>
+      <span><kbd>LMB</kbd> FIRE</span><span><kbd>R</kbd> RELOAD</span>
     </div>
   </div>
   <div id="quickBiomePanel" class="card quickBiomePanel" hidden>
