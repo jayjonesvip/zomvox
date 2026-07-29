@@ -9,7 +9,7 @@
   const SILENCE_TRIM_PREROLL_SECONDS = 0.006;
   const ZOMBIE_MOAN_MAX_OVERLAP = Math.max(1, Math.floor(Number(enemyConfig.zombieMoanMaxVoices) || 3));
   const BUS_LEVELS = {
-    weapon: 0.95,
+    weapon: 1.05,
     foley: 0.58,
     ambient: 0.46,
     enemy: 0.49,
@@ -186,13 +186,13 @@
 
   function rifleShot(level = 1) {
     const pitch = rand(0.94, 1.08);
-    noise(.014, .24 * level, 5200 * pitch, 'weapon', 'highpass', 0, .85);
-    noise(.06, .18 * level, 2300 * pitch, 'weapon', 'bandpass', 0, 1.05);
-    noise(.22, .07 * level, 1150 * pitch, 'weapon', 'lowpass', .012, .7);
-    noise(.34, .045 * level, 620 * pitch, 'weapon', 'lowpass', .055, .65);
-    tone(142 * pitch, .095, 'sine', .09 * level, 56 * pitch, 'weapon');
-    tone(62 * pitch, .13, 'triangle', .06 * level, 34 * pitch, 'weapon', .006);
-    tone(1900 * pitch, .026, 'square', .026 * level, 1320 * pitch, 'weapon', .03);
+    noise(.014, .31 * level, 5400 * pitch, 'weapon', 'highpass', 0, .85);
+    noise(.065, .23 * level, 2350 * pitch, 'weapon', 'bandpass', 0, 1.05);
+    noise(.24, .092 * level, 1180 * pitch, 'weapon', 'lowpass', .012, .7);
+    noise(.36, .058 * level, 650 * pitch, 'weapon', 'lowpass', .055, .65);
+    tone(142 * pitch, .105, 'sine', .118 * level, 56 * pitch, 'weapon');
+    tone(62 * pitch, .145, 'triangle', .078 * level, 34 * pitch, 'weapon', .006);
+    tone(1900 * pitch, .028, 'square', .034 * level, 1320 * pitch, 'weapon', .03);
     tone(3450 * pitch, .02, 'triangle', .016 * level, 2200 * pitch, 'weapon', .075);
   }
 
