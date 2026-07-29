@@ -17,7 +17,7 @@ window.ZOMVOX_CONFIG = {
     Bump this when you make visible changes so you can tell the browser
     loaded the newest version.
   */
-  buildVersion: '2026.07.29.07',
+  buildVersion: '2026.07.29.08',
 
   /*
     Seed used for deterministic world generation.
@@ -437,7 +437,7 @@ window.ZOMVOX_CONFIG = {
       bite: 'bite.mp3',
       hurt: 'hurt.mp3',
       toxin: 'toxin.mp3',
-      land: 'land.mp3',
+      land: null,
       footstep: null,
       objectiveClear: 'objectiveClear.mp3',
       wave: null,
@@ -449,17 +449,18 @@ window.ZOMVOX_CONFIG = {
       zombieMoan: 'zombiemoan.wav',
 
       /*
-        Ambient loops are file-based, with subtle procedural sweeteners layered
-        in while a cue is active. Leave as '' to keep that area silent.
+        Ambient loops can use either files or procedural sweeteners.
+        Use null for procedural-only ambience.
+        Use '' to keep that area silent.
         Drop mp3/wav loops into assets/ and set the matching file name here.
       */
-      ambientMenu: 'ambientMenu.mp3',
-      ambientForest: 'ambientForest.mp3',
-      ambientDunes: 'ambientDunes.mp3',
-      ambientRocky: 'ambientRocky.mp3',
-      ambientSwamp: 'ambientSwamp.mp3',
-      ambientAshlands: 'ambientAshlands.mp3',
-      ambientTundra: 'ambientRocky.mp3'
+      ambientMenu: null,
+      ambientForest: null,
+      ambientDunes: null,
+      ambientRocky: null,
+      ambientSwamp: null,
+      ambientAshlands: null,
+      ambientTundra: null
     }
   }
 };

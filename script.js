@@ -292,7 +292,7 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.29.07');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.29.08');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -2006,8 +2006,8 @@
     const gait = sprint ? 'run' : 'walk';
     const slowSurface = surface === 'sand' || surface === 'mud' || surface === 'snow';
     const slickSurface = surface === 'water';
-    const interval = (sprint ? 0.31 : 0.46) * (slowSurface ? 1.15 : slickSurface ? 1.08 : 1);
-    const level = Math.min(0.9, (sprint ? 0.46 : 0.32) + horizontalSpeed * 0.025);
+    const interval = (sprint ? 0.32 : 0.48) * (slowSurface ? 1.15 : slickSurface ? 1.08 : 1);
+    const level = Math.min(1.1, (sprint ? 0.7 : 0.52) + horizontalSpeed * 0.04);
     footstepTimer = interval;
     sound('footstep', level, 1, { surface, gait });
   }
