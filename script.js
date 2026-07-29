@@ -263,6 +263,11 @@
     c4: STARTING_C4,
     reloading: false,
     reloadTimer: 0,
+    reloadDuration: 0,
+    reloadSteps: 0,
+    reloadStep: 0,
+    reloadTotal: 0,
+    reloadInitialMag: 0,
     shotCooldown: 0,
     invuln: 0,
     kills: 0,
@@ -292,7 +297,7 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.29.14');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.29.15');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -482,6 +487,31 @@
     return PERK_CHOICES
       .filter(choice => activePerks[choice.id])
       .map(choice => choice.name);
+  }
+
+  function availablePerkChoices() {
+    return PERK_CHOICES.filter(choice => !activePerks[choice.id]);
+  }
+
+  function nextPerkId(x = 0, z = 0) {
+    const available = availablePerkChoices();
+    if (!available.length) return null;
+    const index = Math.floor(seededHash(x * 7.7 + player.kills, z * 3.9 - player.score) * available.length) % available.length;
+    return available[index].id;
+  }
+
+  function equipPerk(id) {
+    const choice = PERK_CHOICES.find(item => item.id === id);
+    if (!choice || activePerks[id]) return false;
+    activePerks[id] = true;
+    if (id === 'doubleMag') {
+      cancelReload();
+      setPlayerMagSize(effectiveMagSize(), true);
+    }
+    scorePop(choice.name.toUpperCase(), 'pickup small');
+    showToast('Perk equipped: ' + choice.name);
+    sound('perkEquip');
+    return true;
   }
 
   function runShareUrl() {
@@ -929,11 +959,8 @@
     worldFill.style.width = '0%';
     worldOverlay.classList.add('show');
     player.vel = [0, 0, 0];
-    player.reloading = false;
-    player.reloadTimer = 0;
+    cancelReload();
     player.shotCooldown = 0;
-    reloadOverlay.classList.remove('show');
-    reloadOverlayFill.style.width = '0%';
   }
 
   function currentIslandLabel() {
@@ -1211,7 +1238,7 @@
   }
 
   function openPerkChoice(afterChoice, options = {}) {
-    const available = PERK_CHOICES.filter(choice => !activePerks[choice.id]);
+    const available = availablePerkChoices();
     if (!upgradeOverlay || !upgradeOptions || !available.length) {
       if (afterChoice) afterChoice();
       return;
@@ -1241,13 +1268,7 @@
   }
 
   function choosePerk(id) {
-    const choice = PERK_CHOICES.find(item => item.id === id);
-    if (!choice || activePerks[id]) return;
-    activePerks[id] = true;
-    if (id === 'doubleMag') setPlayerMagSize(effectiveMagSize(), true);
-    scorePop(choice.name.toUpperCase(), 'pickup small');
-    showToast('Perk installed: ' + choice.name);
-    sound('perkEquip');
+    if (!equipPerk(id)) return;
     mission.upgradeActive = false;
     upgradeOverlay.classList.remove('show');
     document.body.classList.remove('upgrade-open');
@@ -1490,6 +1511,7 @@
       if(t < 39.5) return vec3(0.015, 0.025, 0.014); /* zombie mouth */
       if(t < 40.5) return vec3(0.82, 0.86, 0.72); /* zombie teeth */
       if(t < 41.5) return vec3(0.68, 0.74, 0.76) * (0.78 + (sin(uTime * 2.4) * 0.5 + 0.5) * 0.20); /* active spire metal */
+      if(t < 42.5) return vec3(0.24, 0.62, 1.00); /* perk blue */
       return vec3(1.0, 0.45, 0.18); /* particles */
     }
     void main(){
@@ -1713,12 +1735,15 @@
     const pz = Math.max(WORLD_MIN, Math.min(WORLD_MAX, Math.floor(z)));
     const py = pickupAirY(px, pz);
     if (py <= WATER_LEVEL + 1) return;
+    const perkId = kind === 'perk' ? nextPerkId(px, pz) : null;
+    if (kind === 'perk' && !perkId) return;
     pickups.push({
       x: px + .5,
       y: py + .35,
       z: pz + .5,
       kind,
-      amount: kind === 'health' ? HEALTH_PICKUP_AMOUNT : (kind === 'c4' ? 1 : AMMO_PICKUP_ROUNDS),
+      amount: kind === 'health' ? HEALTH_PICKUP_AMOUNT : (kind === 'c4' || kind === 'perk' ? 1 : AMMO_PICKUP_ROUNDS),
+      perkId,
       bob: seededHash(px * 5.1, pz * 9.3) * 10
     });
   }
@@ -2762,10 +2787,7 @@ function playerOnMachinePad() {
     document.body.classList.remove('low-health');
     player.health = 0;
     player.vel = [0, 0, 0];
-    player.reloading = false;
-    player.reloadTimer = 0;
-    reloadOverlay.classList.remove('show');
-    reloadOverlayFill.style.width = '0%';
+    cancelReload();
     sound('death');
     document.body.classList.toggle('story-death', mission.mode === MODE_STORY);
     if (mission.mode === MODE_STORY) {
@@ -2819,8 +2841,7 @@ function playerOnMachinePad() {
     player.health = STARTING_HEALTH;
     player.mag = player.magSize;
     player.reserve = Math.max(player.reserve, RESPAWN_RESERVE_FLOOR);
-    player.reloading = false;
-    player.reloadTimer = 0;
+    cancelReload();
     player.shotCooldown = 0;
     mission.disableProgress = 0;
     mission.toxinRemainder = 0;
@@ -2842,8 +2863,6 @@ function playerOnMachinePad() {
     deathTitle.textContent = 'YOU DIED!';
     deathText.textContent = 'Respawning...';
     deathFill.style.width = '0%';
-    reloadOverlay.classList.remove('show');
-    reloadOverlayFill.style.width = '0%';
     const sx = 0, sz = 0;
     cameraStepOffsetY = 0;
     player.pos = [sx + .5, topSolidY(sx, sz) + 2.2, sz + .5];
@@ -2939,22 +2958,76 @@ function playerOnMachinePad() {
     if (!gunUnlocked()) return;
     if (deathState.active || worldRebuildState.active) return;
     if (player.reloading || player.mag >= player.magSize || player.reserve <= 0) return;
+    const need = player.magSize - player.mag;
+    const total = Math.min(need, player.reserve);
+    if (total <= 0) return;
     player.reloading = true;
-    player.reloadTimer = currentReloadTime();
+    player.reloadTimer = 0;
+    player.reloadDuration = currentReloadTime();
+    player.reloadTotal = total;
+    player.reloadSteps = Math.min(6, total);
+    player.reloadStep = 0;
+    player.reloadInitialMag = player.mag;
     reloadOverlay.classList.add('show');
     reloadOverlayFill.style.width = '0%';
-    sound('reloadStart');
+    if (gunSprite) gunSprite.classList.add('reloading');
   }
+
+  function applyReloadStep(targetStep) {
+    const clamped = Math.max(0, Math.min(player.reloadSteps, targetStep));
+    while (player.reloadStep < clamped) {
+      player.reloadStep++;
+      const loaded = Math.ceil(player.reloadTotal * player.reloadStep / player.reloadSteps);
+      const currentLoaded = player.mag - player.reloadInitialMag;
+      const add = Math.max(0, Math.min(player.reserve, loaded - currentLoaded));
+      if (add > 0) {
+        player.mag += add;
+        player.reserve -= add;
+        sound('reloadStart');
+        updateAmmoDisplay();
+      }
+    }
+    reloadOverlayFill.style.width = player.reloadSteps
+      ? Math.max(0, Math.min(100, (player.reloadStep / player.reloadSteps) * 100)) + '%'
+      : '0%';
+  }
+
   function finishReload() {
-    const need = player.magSize - player.mag;
-    const take = Math.min(need, player.reserve);
-    player.mag += take;
-    player.reserve -= take;
+    applyReloadStep(player.reloadSteps);
     player.reloading = false;
     player.reloadTimer = 0;
+    player.reloadDuration = 0;
+    player.reloadTotal = 0;
+    player.reloadSteps = 0;
+    player.reloadStep = 0;
+    player.reloadInitialMag = player.mag;
     reloadOverlay.classList.remove('show');
     reloadOverlayFill.style.width = '0%';
-    sound('reloadDone');
+    if (gunSprite) gunSprite.classList.remove('reloading');
+    updateAmmoDisplay();
+  }
+
+  function cancelReload() {
+    player.reloading = false;
+    player.reloadTimer = 0;
+    player.reloadDuration = 0;
+    player.reloadTotal = 0;
+    player.reloadSteps = 0;
+    player.reloadStep = 0;
+    player.reloadInitialMag = player.mag;
+    reloadOverlay.classList.remove('show');
+    reloadOverlayFill.style.width = '0%';
+    if (gunSprite) gunSprite.classList.remove('reloading');
+    updateAmmoDisplay();
+  }
+
+  function updateWeaponReload(dt) {
+    if (!player.reloading) return;
+    player.reloadTimer += dt;
+    const duration = Math.max(0.01, player.reloadDuration || currentReloadTime());
+    const targetStep = Math.floor((player.reloadTimer / duration) * player.reloadSteps);
+    applyReloadStep(targetStep);
+    if (player.reloadTimer >= duration) finishReload();
   }
 
   function applyShotRecoil() {
@@ -3084,6 +3157,7 @@ function playerOnMachinePad() {
     } else if (killComboCount === 3) {
       player.score += 300;
       scorePop('+300 TRIPLE KILL', 'combo');
+      spawnPickupAt(enemy.x, enemy.y, enemy.z, 'perk');
     }
     lastKillTime = now;
     sound('kill');
@@ -3303,6 +3377,15 @@ function playerOnMachinePad() {
           scorePop('+' + p.amount + ' C4', 'pickup');
           sound('pickupC4');
           spawnParticles(p.x, p.y + .2, p.z, 10, 24);
+        } else if (p.kind === 'perk') {
+          const perkId = p.perkId && !activePerks[p.perkId] ? p.perkId : nextPerkId(p.x, p.z);
+          p.collected = true;
+          if (perkId) {
+            equipPerk(perkId);
+            spawnParticles(p.x, p.y + .28, p.z, 14, 42);
+          } else {
+            showToast('All perks already equipped.');
+          }
         } else {
           player.reserve += p.amount;
           p.collected = true;
@@ -3378,11 +3461,8 @@ function playerOnMachinePad() {
       player.shotCooldown = 0;
       updateAmmoDisplay();
     } else {
-      player.reloading = false;
-      player.reloadTimer = 0;
+      cancelReload();
       player.shotCooldown = 0;
-      reloadOverlay.classList.remove('show');
-      reloadOverlayFill.style.width = '0%';
     }
   }
 
@@ -3477,11 +3557,7 @@ function playerOnMachinePad() {
       shareSummary: buildRunSummary('Mission cleared'),
       hudTitle: 'Island breach contained',
       hudMeta: 'Redeploying',
-      afterOk: () => openPerkChoice(() => beginWorldRebuild(nextMissionSeed()), {
-        meta: currentIslandLabel() + ' // ' + currentBiomeLabel() + ' // Perk Selection',
-        title: 'Choose Perk',
-        body: 'Pick one perk before redeploy.'
-      })
+      afterOk: () => beginWorldRebuild(nextMissionSeed())
     });
     if (storyUnlocks.length) {
       showToast('Quick Hunt island unlocked: ' + storyUnlocks.map(quickBiomeLabel).join(' + '), true);
@@ -3824,11 +3900,7 @@ function playerOnMachinePad() {
     }
     if (player.invuln > 0) player.invuln -= dt;
     if (player.shotCooldown > 0) player.shotCooldown -= dt;
-    if (player.reloading) {
-      player.reloadTimer -= dt;
-      reloadOverlayFill.style.width = Math.max(0, Math.min(100, (1 - player.reloadTimer / currentReloadTime()) * 100)) + '%';
-      if (player.reloadTimer <= 0) finishReload();
-    }
+    updateWeaponReload(dt);
     updateMovement(dt);
     updateDisableInteraction(dt);
     updateExtractionBeacon(dt);
@@ -3957,6 +4029,20 @@ function playerOnMachinePad() {
     pushBox(arr, x - .05, y + .50, z - .24, .10, .08, .48, 13);
   }
 
+  function pushPerkPickup(arr, p, y) {
+    const x = p.x, z = p.z;
+    pushBox(arr, x - .34, y, z - .34, .68, .38, .68, 37);
+    pushBox(arr, x - .30, y + .38, z - .30, .60, .12, .60, 38);
+    pushBox(arr, x - .36, y + .16, z - .06, .72, .10, .12, 14);
+    pushBox(arr, x - .06, y + .16, z - .36, .12, .10, .72, 14);
+    pushBox(arr, x - .27, y + .08, z - .355, .20, .12, .03, 42);
+    pushBox(arr, x + .08, y + .21, z - .356, .18, .11, .03, 42);
+    pushBox(arr, x - .355, y + .20, z + .06, .03, .10, .22, 42);
+    pushBox(arr, x + .325, y + .06, z - .28, .03, .12, .24, 42);
+    pushBox(arr, x - .20, y + .50, z - .20, .40, .07, .40, 42);
+    pushBox(arr, x - .11, y + .57, z - .11, .22, .06, .22, 14);
+  }
+
   function pushC4Charge(arr, p, y) {
     const x = p.x, z = p.z;
     pushBox(arr, x - .38, y, z - .38, .76, .14, .76, 14);
@@ -4025,6 +4111,8 @@ function playerOnMachinePad() {
         pushHealthPickup(arr, p, y);
       } else if (p.kind === 'c4') {
         pushC4Pickup(arr, p, y);
+      } else if (p.kind === 'perk') {
+        pushPerkPickup(arr, p, y);
       } else {
         pushAmmoPickup(arr, p, y);
       }
@@ -4206,13 +4294,13 @@ function currentWaterIsDangerous() {
     player.health = STARTING_HEALTH;
     player.reserve = STARTING_RESERVE;
     player.c4 = STARTING_C4;
+    resetActivePerks();
     setPlayerMagSize(effectiveMagSize(), true);
     player.kills = 0;
     player.headshots = 0;
     player.score = 0;
     player.deaths = 0;
-    player.reloading = false;
-    player.reloadTimer = 0;
+    cancelReload();
     player.shotCooldown = 0;
     mission.mode = activeMode;
     mission.quickBiome = activeQuickBiome;
@@ -4270,8 +4358,6 @@ function currentWaterIsDangerous() {
     deathTitle.textContent = 'YOU DIED!';
     deathText.textContent = 'Respawning...';
     deathFill.style.width = '0%';
-    reloadOverlay.classList.remove('show');
-    reloadOverlayFill.style.width = '0%';
     disableOverlay.classList.remove('show');
     disableFill.style.width = '0%';
     disablePercent.textContent = '0%';
@@ -4306,16 +4392,10 @@ function currentWaterIsDangerous() {
         showToast('Quick Hunt: clear ' + currentInfectedGoal() + ' infected.');
         return;
       }
-      openPerkChoice(() => {
-        startInsertionDrop();
-        spawnInitialWave();
-        showCommandBanner('SURVIVAL MODE', currentBiomeLabel() + ' Island', 2.8);
-        showToast('Survival Mode: survive the infected.');
-      }, {
-        meta: 'Survival Mode // ' + currentBiomeLabel() + ' Island // Perk Selection',
-        title: 'Choose Perk',
-        body: 'Pick one perk before the drop.'
-      });
+      startInsertionDrop();
+      spawnInitialWave();
+      showCommandBanner('SURVIVAL MODE', currentBiomeLabel() + ' Island', 2.8);
+      showToast('Survival Mode: survive the infected.');
       return;
     }
     queueObjectiveBriefing({
