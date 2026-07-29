@@ -292,7 +292,7 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.29.09');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.29.10');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -365,7 +365,7 @@
     { id: 'premiumGrip', name: 'Premium Grip', desc: 'Stabilized handle. Shot recoil is heavily reduced.' },
     { id: 'hairTrigger', name: 'Hair Trigger', desc: 'Tuned trigger group. Fire cooldown is cut in half.' },
     { id: 'fleetFeet', name: 'Fleet Feet', desc: 'Move 25% faster across hostile terrain.' },
-    { id: 'bodyArmor', name: 'Body Armor', desc: 'Zombie bite damage reduced by 20%.' }
+    { id: 'bodyArmor', name: 'Body Armor', desc: 'Zombie damage reduced by 20%.' }
   ];
 
   function syncBulletRack(size) {
@@ -2640,17 +2640,8 @@ function playerOnMachinePad() {
   function stopEnemySounds(enemy) {
     if (!enemy) return;
     stopSoundHandle(enemy.moanHandle);
-    stopSoundHandle(enemy.biteHandle);
     enemy.moanHandle = null;
-    enemy.biteHandle = null;
     enemy.mouthOpenTimer = 0;
-  }
-
-  function playEnemyBite(enemy) {
-    if (!enemy) return;
-    stopSoundHandle(enemy.biteHandle);
-    const handle = sound('bite');
-    enemy.biteHandle = handle && typeof handle.stop === 'function' ? handle : null;
   }
 
   function canPlayZombieMoan() {
@@ -2729,10 +2720,7 @@ function playerOnMachinePad() {
       const attackRange = e.big ? 1.82 : (stats.kind === 'speedy' ? 1.42 : 1.58);
       const attackDist = Math.hypot(player.pos[0] - e.x, player.pos[2] - e.z) || 1;
       if (attackDist < attackRange && Math.abs(player.pos[1] - e.y) < 2.25 && e.attack <= 0) {
-        if (canDamagePlayer()) {
-          playEnemyBite(e);
-          damagePlayer(currentZombieDamage(stats.damage));
-        }
+        if (canDamagePlayer()) damagePlayer(currentZombieDamage(stats.damage));
         e.attack = stats.attackCooldown;
         e.attackPose = .34;
         e.retreat = stats.retreat;
@@ -3310,7 +3298,7 @@ function playerOnMachinePad() {
           p.collected = true;
           showToast('C4 +' + p.amount);
           scorePop('+' + p.amount + ' C4', 'pickup');
-          sound('pickupAmmo');
+          sound('pickupC4');
           spawnParticles(p.x, p.y + .2, p.z, 10, 24);
         } else {
           player.reserve += p.amount;
@@ -3645,7 +3633,7 @@ function playerOnMachinePad() {
       return;
     }
     // Toxin damage is a slow environmental drain during the opening drop,
-    // separate from bite/lava hits so it does not constantly restart invuln.
+    // separate from direct enemy/lava hits so it does not constantly restart invuln.
     mission.toxinRemainder += TOXIN_DAMAGE_PER_SECOND * dt;
     if (mission.toxinRemainder < 1) return;
     const amount = Math.floor(mission.toxinRemainder);

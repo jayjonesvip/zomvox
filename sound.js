@@ -9,10 +9,10 @@
   const SILENCE_TRIM_PREROLL_SECONDS = 0.006;
   const ZOMBIE_MOAN_MAX_OVERLAP = Math.max(1, Math.floor(Number(enemyConfig.zombieMoanMaxVoices) || 3));
   const BUS_LEVELS = {
-    weapon: 0.9,
+    weapon: 0.95,
     foley: 0.58,
     ambient: 0.46,
-    enemy: 0.82,
+    enemy: 0.49,
     ui: 0.86,
     sfx: 0.72
   };
@@ -75,7 +75,7 @@
   function busForSound(name) {
     if (name === 'shoot' || name === 'empty' || name === 'reloadStart' || name === 'reloadDone' || name === 'explosion') return 'weapon';
     if (name === 'land' || name === 'footstep' || name === 'block') return 'foley';
-    if (name === 'bite' || name === 'zombieMoan') return 'enemy';
+    if (name === 'zombieMoan') return 'enemy';
     if (name && name.startsWith('ambient')) return 'ambient';
     if (name === 'hurt' || name === 'death') return 'sfx';
     if (name === 'confirm' || name === 'briefing' || name === 'perkEquip' || name === 'objectiveClear' || name === 'wave' || name === 'heartbeat') return 'ui';
@@ -246,6 +246,36 @@
     setTimeout(() => noise(.24, .04 * level, 390, 'sfx', 'lowpass', 0, .7), 125);
   }
 
+  function pickupSparkle(level = 1, base = 520, busName = 'sfx') {
+    tone(base, .052, 'triangle', .034 * level, base * 1.45, busName);
+    tone(base * 1.9, .055, 'sine', .024 * level, base * 2.25, busName, .055);
+    noise(.025, .012 * level, base * 4, busName, 'bandpass', .018, 2.2);
+  }
+
+  function pickupAmmoSynth(level = 1) {
+    noise(.026, .026 * level, 1900, 'sfx', 'bandpass', 0, 1.4);
+    tone(440, .045, 'triangle', .034 * level, 620, 'sfx', .006);
+    tone(780, .052, 'square', .018 * level, 520, 'sfx', .058);
+  }
+
+  function pickupHealthSynth(level = 1) {
+    pickupSparkle(level, 620);
+    tone(930, .065, 'sine', .03 * level, 1320, 'sfx', .105);
+  }
+
+  function pickupC4Synth(level = 1) {
+    noise(.032, .026 * level, 900, 'sfx', 'bandpass', 0, 1.2);
+    tone(172, .06, 'triangle', .033 * level, 120, 'sfx', .006);
+    tone(740, .03, 'square', .022 * level, 520, 'sfx', .07);
+    tone(980, .025, 'square', .017 * level, 1320, 'sfx', .125);
+  }
+
+  function perkEquipSynth(level = 1) {
+    pickupSparkle(level, 560, 'ui');
+    tone(880, .07, 'triangle', .035 * level, 1180, 'ui', .082);
+    tone(1320, .09, 'sine', .026 * level, 1680, 'ui', .158);
+  }
+
   function surfaceFoleySurface(options = {}) {
     return String(options.surface || 'grass').toLowerCase();
   }
@@ -343,7 +373,9 @@
       noise(.055, .075 * gainValue, 520, 'foley');
       tone(165, .045, 'square', .035 * gainValue, 110, 'foley');
     } else if (name === 'hit') {
-      tone(470, .055, 'triangle', .055 * gainValue, 260);
+      noise(.018, .034 * gainValue, 2400, 'sfx', 'bandpass', 0, 1.7);
+      tone(510, .045, 'triangle', .052 * gainValue, 290, 'sfx');
+      tone(920, .028, 'square', .018 * gainValue, 620, 'sfx', .035);
     } else if (name === 'head') {
       noise(.025, .06 * gainValue, 1900);
       tone(980, .045, 'square', .065 * gainValue, 1450);
@@ -352,13 +384,11 @@
       tone(260, .075, 'square', .055 * gainValue, 390);
       setTimeout(() => tone(520, .08, 'triangle', .05 * gainValue, 780), 80);
     } else if (name === 'pickup' || name === 'pickupAmmo') {
-      tone(520, .06, 'triangle', .045 * gainValue, 780);
+      pickupAmmoSynth(gainValue);
     } else if (name === 'pickupHealth') {
-      tone(660, .07, 'sine', .04 * gainValue, 880);
-      setTimeout(() => tone(990, .08, 'triangle', .035 * gainValue, 1320), 70);
-    } else if (name === 'bite') {
-      noise(.08, .08 * gainValue, 430, 'enemy');
-      tone(72, .09, 'sawtooth', .045 * gainValue, 38, 'enemy');
+      pickupHealthSynth(gainValue);
+    } else if (name === 'pickupC4') {
+      pickupC4Synth(gainValue);
     } else if (name === 'hurt') {
       playerPainSynth(gainValue);
     } else if (name === 'death') {
@@ -392,8 +422,7 @@
       setTimeout(() => tone(330, .035, 'square', .018 * gainValue, 190, 'ui'), 128);
       setTimeout(() => radioStatic(.055, .026, 850), 168);
     } else if (name === 'perkEquip') {
-      tone(480, .055, 'triangle', .045 * gainValue, 720, 'ui');
-      setTimeout(() => tone(960, .08, 'sine', .04 * gainValue, 1280, 'ui'), 65);
+      perkEquipSynth(gainValue);
     } else if (name === 'explosion') {
       explosionSynth(gainValue);
     }
@@ -534,7 +563,7 @@
     if (name === 'zombieMoan') zombieMoanSources.push(src);
 
     src.start(ctx.currentTime, trimLeadingSilence ? leadInOffset(sourceBuffer) : 0);
-    if (name !== 'zombieMoan' && name !== 'bite') return true;
+    if (name !== 'zombieMoan') return true;
 
     return {
       stop() {
@@ -734,7 +763,7 @@
       const hasOverride = Object.prototype.hasOwnProperty.call(soundFiles, name);
       const fileName = hasOverride
         ? soundFiles[name]
-        : ((name === 'pickupAmmo' || name === 'pickupHealth') ? soundFiles.pickup : null);
+        : ((name === 'pickupAmmo' || name === 'pickupHealth' || name === 'pickupC4') ? soundFiles.pickup : null);
 
       if (fileName === '') return;
 
