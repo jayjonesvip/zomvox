@@ -225,8 +225,8 @@ Procedural cue references:
 
 - Weapon: `shoot`, `empty`, `reloadStart`, `reloadStep`, `reloadDone`, `explosion`.
 - Impact and feedback: `hit`, `head`, `kill`, `block`, `hurt`, `death`, `toxin`, `heartbeat`.
-- Pickups and UI: `pickupAmmo`, `pickupHealth`, `pickupC4`, `pickup`, `perkEquip`, `confirm`, `briefing`, `objectiveClear`, `wave`, `carePackage`.
-- Command voice: `voiceDrop` for drop-in orders, `voiceTriple` for care package calls, `voiceFewMore` for late-objective pressure, `voiceLowHealth` for wound warnings, and `voiceLongRange` for the first long-range kill. These use browser speech when available with procedural radio clicks, squelch, and a faint live static bed under the spoken line. The actual voice depends on the device/browser, but `config.js` can prefer a named voice and tune pitch/rate/static.
+- Pickups and UI: `pickupAmmo`, `pickupHealth`, `pickupC4`, `pickup`, `perkEquip`, `confirm`, `briefing`, `objectiveClear`, `wave`.
+- Command voice: `voiceDrop` for drop-in orders, `voiceFewMore` for late-objective pressure, `voiceLowHealth` for wound warnings, and `voiceLongRange` for the first long-range kill. These use browser speech when available with procedural radio clicks, squelch, and a faint live static bed under the spoken line. The actual voice depends on the device/browser, but `config.js` can prefer a named voice and tune pitch/rate/static.
 - Foley and ambience: `footstep`, `land`, `ambientMenu`, `ambientForest`, `ambientDunes`, `ambientRocky`, `ambientSwamp`, `ambientAshlands`, `ambientTundra`. Footsteps use lightweight heel/toe contacts, surface scuff, grit, splash, and ice/wood accents. Ambience includes procedural beds plus occasional biome/menu sweeteners, mixed below zombie voices so nearby threats stay readable.
 - Zombie voices: `zombieMoan` can use `assets/zombiemoan.wav` with per-type playback speed/reverse behavior, or fall back to procedural per-type moans if the file is unavailable.
 
