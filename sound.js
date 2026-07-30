@@ -10,6 +10,10 @@
   const DEFAULT_FILE_CUES = {
     shoot: 'shoot.mp3'
   };
+  const FILE_CUE_VOLUME = {
+    shoot: 0.8,
+    zombieMoan: 0.8
+  };
   const BUS_LEVELS = {
     weapon: 1.08,
     foley: 0.58,
@@ -213,7 +217,7 @@
 
     source.buffer = buffer;
     source.playbackRate.setValueAtTime(rate, now);
-    gain.gain.setValueAtTime(Math.max(0, gainValue), now);
+    gain.gain.setValueAtTime(Math.max(0, gainValue * (FILE_CUE_VOLUME[name] || 1)), now);
 
     source.connect(gain);
     const panNode = connectOutput(gain, busForSound(name), pan);
