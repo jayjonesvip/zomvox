@@ -17,7 +17,7 @@ window.ZOMVOX_CONFIG = {
     Bump this when you make visible changes so you can tell the browser
     loaded the newest version.
   */
-  buildVersion: '2026.07.30.02',
+  buildVersion: '2026.07.30.03',
 
   /*
     Seed used for deterministic world generation.
@@ -439,12 +439,10 @@ window.ZOMVOX_CONFIG = {
       preferredVoice: '',
 
       /*
-        Lower pitch/rate reads less feminine and less cheerful.
-
-        Browser support varies, but these are safe SpeechSynthesis values.
+        1.00 uses the browser's natural/default speech pacing and tone.
       */
-      pitch: 0.45,
-      rate: 0.80,
+      pitch: 1.00,
+      rate: 1.00,
       volume: 0.90,
 
       /*
