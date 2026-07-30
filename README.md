@@ -114,7 +114,7 @@ Common tuning options live in `config.js` under `window.ZOMVOX_CONFIG`. Edit tha
 
 ```js
 window.ZOMVOX_CONFIG = {
-  buildVersion: '2026.07.30.05',
+  buildVersion: '2026.07.30.06',
   initialSeed: 729641,
 
   environment: {
@@ -219,13 +219,13 @@ Other sections in `config.js` expose safe defaults for:
 - `audio.files`: optional file-backed overrides for `shoot` and `zombieMoan`; both fall back to procedural audio if the files are missing or disabled.
 - `audio.commandVoice`: browser speech tuning for command callouts, including preferred voice name, pitch, rate, volume, and under-voice radio static.
 
-Audio is handled in `sound.js` with procedural Web Audio synthesis plus optional file-backed playback for the gunshot and zombie moan cues. The procedural cues use short ADSR-style envelopes, layered filtered noise, detuned shimmer tones for pickups, oscillators, soft-limited buses, and crossfaded ambience beds. If `assets/shoot.mp3` or `assets/zombiemoan.wav` are present, those cues use the files; otherwise they fall back to procedural audio.
+Audio is handled through `sound.js`, which loads the no-build classic scripts in `audio/`. The engine uses procedural Web Audio synthesis plus optional file-backed playback for the gunshot and zombie moan cues. The procedural cues use short ADSR-style envelopes, layered filtered noise, detuned shimmer tones for pickups, oscillators, soft-limited buses, and crossfaded ambience beds. If `assets/shoot.mp3` or `assets/zombiemoan.wav` are present, those cues use the files; otherwise they fall back to procedural audio.
 
 Procedural cue references:
 
 - Weapon: `shoot`, `empty`, `reloadStart`, `reloadStep`, `reloadDone`, `explosion`.
 - Impact and feedback: `hit`, `head`, `kill`, `block`, `hurt`, `death`, `toxin`, `heartbeat`.
-- Pickups and UI: `pickupAmmo`, `pickupHealth`, `pickupC4`, `pickup`, `perkEquip`, `confirm`, `briefing`, `objectiveClear`, `wave`.
+- Pickups and UI: `pickupAmmo`, `pickupHealth`, `pickupC4`, `pickup`, `perkEquip`, `confirm`, `briefing`, `objectiveClear`, `wave`, `carePackage`.
 - Command voice: `voiceDrop` for drop-in orders, `voiceTriple` for care package calls, `voiceFewMore` for late-objective pressure, `voiceLowHealth` for wound warnings, and `voiceLongRange` for the first long-range kill. These use browser speech when available with procedural radio clicks, squelch, and a faint live static bed under the spoken line. The actual voice depends on the device/browser, but `config.js` can prefer a named voice and tune pitch/rate/static.
 - Foley and ambience: `footstep`, `land`, `ambientMenu`, `ambientForest`, `ambientDunes`, `ambientRocky`, `ambientSwamp`, `ambientAshlands`, `ambientTundra`. Footsteps use lightweight heel/toe contacts, surface scuff, grit, splash, and ice/wood accents. Ambience includes procedural beds plus occasional biome/menu sweeteners, mixed below zombie voices so nearby threats stay readable.
 - Zombie voices: `zombieMoan` can use `assets/zombiemoan.wav` with per-type playback speed/reverse behavior, or fall back to procedural per-type moans if the file is unavailable.
@@ -240,6 +240,15 @@ Procedural cue references:
 |-- manifest.webmanifest
 |-- sw.js
 |-- sound.js
+|-- audio/
+|   |-- audio-config.js
+|   |-- dsp.js
+|   |-- weapons.js
+|   |-- foley.js
+|   |-- voice.js
+|   |-- mixer-runtime.js
+|   |-- ambience.js
+|   `-- index.js
 |-- styles.css
 |-- script.js
 `-- assets/
@@ -256,7 +265,8 @@ Procedural cue references:
 - `config.js`: future-dev friendly tuning values for environment, world, player, weapon, enemies, pickups, timers, seed, and build version.
 - `manifest.webmanifest`: install metadata, app icons, fullscreen display, and landscape orientation request.
 - `sw.js`: lightweight service worker for app shell caching and home-screen launch reliability.
-- `sound.js`: pure procedural Web Audio effects, ambience sweeteners, foley, weapon sounds, UI cues, and per-type zombie voices.
+- `sound.js`: tiny compatibility loader that keeps the old script entry point while loading the split audio engine in order.
+- `audio/`: pure procedural Web Audio effects split by responsibility: config/RNG, DSP helpers, weapons, foley/UI, formant voices, mixer/runtime routing, ambience, and cue dispatch.
 - `styles.css`: visual styling, responsive mobile layout, splash screen, health/ammo HUD, death overlay, world rebuild overlay, and touch controls.
 - `script.js`: WebGL setup, procedural terrain, fixed world chunks, movement, combat, enemy behavior, pickups, world rebuilding, HUD updates, and game loop.
 - `assets/`: splash screen, favicon files, title/social images, weapon sprite sheet, and optional `shoot.mp3` / `zombiemoan.wav` audio files.

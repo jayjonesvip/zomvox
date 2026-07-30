@@ -1,4 +1,4 @@
-const CACHE_NAME = 'zomvox-pwa-2026-07-30-05';
+const CACHE_NAME = 'zomvox-pwa-2026-07-30-06';
 
 const APP_SHELL = [
   './',
@@ -7,6 +7,14 @@ const APP_SHELL = [
   './hud-theme.css',
   './config.js',
   './sound.js',
+  './audio/audio-config.js',
+  './audio/dsp.js',
+  './audio/weapons.js',
+  './audio/foley.js',
+  './audio/voice.js',
+  './audio/mixer-runtime.js',
+  './audio/ambience.js',
+  './audio/index.js',
   './script.js',
   './manifest.webmanifest',
   './assets/favicon.ico',
