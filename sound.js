@@ -4,8 +4,13 @@
   const config = window.ZOMVOX_CONFIG || {};
   const enemyConfig = config.enemies || {};
   const audioConfig = config.audio || {};
+  const audioFileConfig = audioConfig.files || {};
   const commandVoiceConfig = audioConfig.commandVoice || {};
   const ZOMBIE_MOAN_MAX_OVERLAP = Math.max(1, Math.floor(Number(enemyConfig.zombieMoanMaxVoices) || 3));
+  const DEFAULT_FILE_CUES = {
+    shoot: 'shoot.mp3',
+    zombieMoan: 'zombiemoan.wav'
+  };
   const BUS_LEVELS = {
     weapon: 1.08,
     foley: 0.58,
@@ -24,6 +29,8 @@
   let proceduralAmbientName = '';
   let proceduralAmbientTimer = null;
   let ambientBed = null;
+  let audioBuffers = new Map();
+  let audioLoadPromises = new Map();
   let activeOneShots = 0;
   let zombieMoanSources = [];
 
@@ -121,6 +128,116 @@
       return panner;
     }
     node.connect(out);
+  }
+
+  function configuredFileName(name) {
+    if (Object.prototype.hasOwnProperty.call(audioFileConfig, name)) return audioFileConfig[name];
+    return DEFAULT_FILE_CUES[name] || '';
+  }
+
+  function fileCueUrl(fileName) {
+    if (!fileName || typeof fileName !== 'string') return '';
+    if (/^(https?:|data:|blob:)/i.test(fileName)) return fileName;
+    return fileName.startsWith('assets/') ? fileName : 'assets/' + fileName;
+  }
+
+  function reverseBuffer(ctx, buffer) {
+    const reversed = ctx.createBuffer(buffer.numberOfChannels, buffer.length, buffer.sampleRate);
+    for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
+      const src = buffer.getChannelData(channel);
+      const dst = reversed.getChannelData(channel);
+      for (let i = 0, j = src.length - 1; i < src.length; i++, j--) {
+        dst[i] = src[j];
+      }
+    }
+    return reversed;
+  }
+
+  async function loadFileCue(name) {
+    const ctx = getAudio();
+    const fileName = configuredFileName(name);
+    if (!ctx || !fileName) return { name, fileName, ok: false };
+    if (audioBuffers.has(name)) return { name, fileName, ok: !!audioBuffers.get(name) };
+    if (audioLoadPromises.has(name)) return audioLoadPromises.get(name);
+
+    const promise = fetch(fileCueUrl(fileName), { cache: 'force-cache' })
+      .then(response => {
+        if (!response.ok) throw new Error(response.status + ' ' + response.statusText);
+        return response.arrayBuffer();
+      })
+      .then(data => ctx.decodeAudioData(data))
+      .then(buffer => {
+        audioBuffers.set(name, buffer);
+        return { name, fileName, ok: true };
+      })
+      .catch(err => {
+        audioBuffers.set(name, null);
+        console.warn('ZomVox audio file unavailable, using procedural fallback:', fileName, err);
+        return { name, fileName, ok: false };
+      });
+
+    audioLoadPromises.set(name, promise);
+    return promise;
+  }
+
+  function fileBufferForPlayback(ctx, name, playbackRate = 1) {
+    const buffer = audioBuffers.get(name);
+    if (!buffer) {
+      loadFileCue(name);
+      return null;
+    }
+
+    if (Number(playbackRate) >= 0) return buffer;
+
+    const reversedKey = name + ':reverse';
+    if (!audioBuffers.has(reversedKey)) {
+      audioBuffers.set(reversedKey, reverseBuffer(ctx, buffer));
+    }
+    return audioBuffers.get(reversedKey);
+  }
+
+  function playFileCue(name, gainValue = 1, playbackRate = 1, options = {}) {
+    const ctx = getAudio();
+    if (!ctx || !configuredFileName(name)) return null;
+    if (name === 'zombieMoan' && zombieMoanSources.length >= ZOMBIE_MOAN_MAX_OVERLAP) return null;
+
+    const buffer = fileBufferForPlayback(ctx, name, playbackRate);
+    if (!buffer) return null;
+
+    const source = ctx.createBufferSource();
+    const gain = ctx.createGain();
+    const now = ctx.currentTime;
+    const rate = Math.max(0.25, Math.min(2, Math.abs(Number(playbackRate) || 1)));
+    const pan = clamp(options.pan, -0.65, 0.65, 0);
+    const nodes = [gain];
+    let cleaned = false;
+
+    source.buffer = buffer;
+    source.playbackRate.setValueAtTime(rate, now);
+    gain.gain.setValueAtTime(Math.max(0, gainValue), now);
+
+    source.connect(gain);
+    const panNode = connectOutput(gain, busForSound(name), pan);
+    if (panNode) nodes.push(panNode);
+
+    const handle = {
+      duration: buffer.duration / rate,
+      stop() {
+        if (cleaned) return;
+        cleaned = true;
+        if (name === 'zombieMoan') zombieMoanSources = zombieMoanSources.filter(item => item !== handle);
+        try { source.stop(); } catch (_) {}
+        try { source.disconnect(); } catch (_) {}
+        for (const node of nodes) {
+          try { node.disconnect(); } catch (_) {}
+        }
+      }
+    };
+
+    source.onended = handle.stop;
+    if (name === 'zombieMoan') zombieMoanSources.push(handle);
+    source.start(now);
+    return handle;
   }
 
   function shapeImpulseGain(param, now, peak, attack, decay) {
@@ -1082,10 +1199,24 @@
 
     prime(onProgress) {
       getAudio();
-      if (typeof onProgress === 'function') {
-        onProgress({ loaded: 1, total: 1, fileName: 'procedural-synth', ok: true, progress: 1 });
+      const fileCueNames = Object.keys(DEFAULT_FILE_CUES).filter(name => configuredFileName(name));
+      const total = Math.max(1, fileCueNames.length + 1);
+      let loaded = 0;
+
+      function report(fileName, ok = true) {
+        loaded++;
+        if (typeof onProgress === 'function') {
+          onProgress({ loaded, total, fileName, ok, progress: loaded / total });
+        }
       }
-      return Promise.resolve(['procedural-synth']);
+
+      const loads = fileCueNames.map(name => loadFileCue(name).then(result => {
+        report(result.fileName || name, result.ok);
+        return result;
+      }));
+
+      report('procedural-synth', true);
+      return Promise.all(loads).then(results => ['procedural-synth', ...results.filter(item => item.ok).map(item => item.fileName)]);
     },
 
     play(name, gainValue = 1, playbackRate = 1, options = {}) {
@@ -1094,6 +1225,10 @@
       if (name === 'land' && activeOneShots > 0) return;
 
       if (name !== 'footstep') trackSynthOneShot(name);
+      if (name === 'shoot' || name === 'zombieMoan') {
+        const handle = playFileCue(name, gainValue, playbackRate, options);
+        if (handle) return handle;
+      }
       return synth(name, gainValue, playbackRate, options);
     },
 

@@ -17,7 +17,7 @@ window.ZOMVOX_CONFIG = {
     Bump this when you make visible changes so you can tell the browser
     loaded the newest version.
   */
-  buildVersion: '2026.07.29.24',
+  buildVersion: '2026.07.29.25',
 
   /*
     Seed used for deterministic world generation.
@@ -415,6 +415,18 @@ window.ZOMVOX_CONFIG = {
   },
 
   audio: {
+    /*
+      Optional file-backed sounds.
+
+      Put mp3/wav files in assets/ and set the file name here.
+      These two cues can use files while the rest of the game stays procedural.
+      Use null or '' to force the procedural fallback.
+    */
+    files: {
+      shoot: 'shoot.mp3',
+      zombieMoan: 'zombiemoan.wav'
+    },
+
     commandVoice: {
       /*
         Browser speech settings for radio command callouts.
