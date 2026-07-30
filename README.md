@@ -114,7 +114,7 @@ Common tuning options live in `config.js` under `window.ZOMVOX_CONFIG`. Edit tha
 
 ```js
 window.ZOMVOX_CONFIG = {
-  buildVersion: '2026.07.29.25',
+  buildVersion: '2026.07.30.01',
   initialSeed: 729641,
 
   environment: {
@@ -223,7 +223,7 @@ Audio is handled in `sound.js` with procedural Web Audio synthesis plus optional
 
 Procedural cue references:
 
-- Weapon: `shoot`, `empty`, `reloadStart`, `reloadDone`, `explosion`.
+- Weapon: `shoot`, `empty`, `reloadStart`, `reloadStep`, `reloadDone`, `explosion`.
 - Impact and feedback: `hit`, `head`, `kill`, `block`, `hurt`, `death`, `toxin`, `heartbeat`.
 - Pickups and UI: `pickupAmmo`, `pickupHealth`, `pickupC4`, `pickup`, `perkEquip`, `confirm`, `briefing`, `objectiveClear`, `wave`.
 - Command voice: `voiceDrop` for drop-in radio encouragement and `voiceTriple` for triple-kill praise. These use browser speech when available with procedural radio texture around the line. The actual voice depends on the device/browser, but `config.js` can prefer a named voice and tune pitch/rate.

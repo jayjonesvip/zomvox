@@ -297,7 +297,7 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.29.25');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.30.01');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -2978,6 +2978,7 @@ function playerOnMachinePad() {
     reloadOverlay.classList.add('show');
     reloadOverlayFill.style.width = '0%';
     if (gunSprite) gunSprite.classList.add('reloading');
+    sound('reloadStart');
   }
 
   function applyReloadStep(targetStep) {
@@ -2990,7 +2991,7 @@ function playerOnMachinePad() {
       if (add > 0) {
         player.mag += add;
         player.reserve -= add;
-        sound('reloadStart');
+        sound('reloadStep');
         updateAmmoDisplay();
       }
     }
@@ -3011,6 +3012,7 @@ function playerOnMachinePad() {
     reloadOverlay.classList.remove('show');
     reloadOverlayFill.style.width = '0%';
     if (gunSprite) gunSprite.classList.remove('reloading');
+    sound('reloadDone');
     updateAmmoDisplay();
   }
 
