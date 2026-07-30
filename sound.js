@@ -922,30 +922,77 @@
     return String(options.surface || 'grass').toLowerCase();
   }
 
+  function surfaceFoleyProfile(surface) {
+    return {
+      sand: { body: 70, tex: 1450, filter: 'bandpass', q: .45, texGain: .050, bodyGain: .030, decay: .06, scuff: .070, scuffF: 1500, grit: 2 },
+      snow: { body: 84, tex: 980, filter: 'bandpass', q: .55, texGain: .043, bodyGain: .032, decay: .06, scuff: .055, scuffF: 1200, grit: 1 },
+      ice: { body: 118, tex: 2400, filter: 'bandpass', q: 1.4, texGain: .050, bodyGain: .030, decay: .045, scuff: .026, scuffF: 3200, grit: 2, ping: true },
+      stone: { body: 102, tex: 1850, filter: 'bandpass', q: .9, texGain: .046, bodyGain: .033, decay: .045, scuff: .025, scuffF: 2600, grit: 3, chip: true },
+      rock: { body: 102, tex: 1850, filter: 'bandpass', q: .9, texGain: .048, bodyGain: .034, decay: .046, scuff: .024, scuffF: 2500, grit: 3, chip: true },
+      mud: { body: 76, tex: 520, filter: 'lowpass', q: .7, texGain: .052, bodyGain: .036, decay: .075, scuff: .065, scuffF: 620, grit: 0 },
+      water: { body: 88, tex: 1350, filter: 'bandpass', q: .8, texGain: .060, bodyGain: .030, decay: .052, scuff: .040, scuffF: 900, grit: 0, splash: true },
+      ash: { body: 70, tex: 640, filter: 'lowpass', q: .6, texGain: .046, bodyGain: .030, decay: .07, scuff: .060, scuffF: 760, grit: 1 },
+      wood: { body: 112, tex: 1250, filter: 'bandpass', q: .9, texGain: .038, bodyGain: .035, decay: .058, scuff: .025, scuffF: 1450, grit: 1, wood: true },
+      grass: { body: 86, tex: 1120, filter: 'bandpass', q: .65, texGain: .040, bodyGain: .032, decay: .055, scuff: .048, scuffF: 1550, grit: 2 },
+      dirt: { body: 78, tex: 740, filter: 'lowpass', q: .7, texGain: .046, bodyGain: .034, decay: .065, scuff: .052, scuffF: 780, grit: 3 }
+    }[surface] || { body: 86, tex: 1120, filter: 'bandpass', q: .65, texGain: .040, bodyGain: .032, decay: .055, scuff: .044, scuffF: 1300, grit: 2 };
+  }
+
+  function foleyGrit(profile, level, baseDelay = 0) {
+    for (let i = 0; i < profile.grit; i++) {
+      if (Math.random() > .66) continue;
+      const delay = baseDelay + rand(.004, .075);
+      const pan = rand(-.18, .18);
+      pannedNoise(rand(.008, .018), rand(.006, .014) * level, rand(2300, profile.chip ? 7600 : 5200), 'foley', 'bandpass', delay, rand(1.4, 3.2), pan);
+      if (profile.chip && Math.random() < .55) {
+        tone(rand(760, 1600), rand(.016, .032), 'triangle', rand(.004, .009) * level, rand(420, 820), 'foley', delay + .003);
+      }
+    }
+  }
+
   function synthFootstep(options = {}, level = 1) {
     const surface = surfaceFoleySurface(options);
     const gait = options.gait || 'walk';
     const land = gait === 'land';
-    const heavy = land ? 1.55 : gait === 'run' ? 1.08 : 0.72;
-    const body = {
-      sand: [72, 760, 'bandpass', .6],
-      snow: [84, 980, 'bandpass', .55],
-      ice: [118, 2400, 'bandpass', 1.4],
-      stone: [102, 1850, 'bandpass', .9],
-      rock: [102, 1850, 'bandpass', .9],
-      mud: [76, 520, 'lowpass', .7],
-      water: [88, 1350, 'bandpass', .8],
-      ash: [70, 640, 'lowpass', .6],
-      wood: [112, 1250, 'bandpass', .9],
-      grass: [86, 1120, 'bandpass', .65],
-      dirt: [78, 740, 'lowpass', .7]
-    }[surface] || [86, 1120, 'bandpass', .65];
-    const [thump, textureFreq, filter, q] = body;
-    const textureGain = (surface === 'ice' || surface === 'stone' || surface === 'rock') ? .052 : .04;
-    tone(thump * rand(.92, 1.08), land ? .07 : .045, 'sine', .035 * heavy * level, thump * .62, 'foley');
-    noise(land ? .09 : .055, textureGain * heavy * level, textureFreq * rand(.86, 1.14), 'foley', filter, .004, q);
-    if (surface === 'water') noise(.12, .04 * heavy * level, 900, 'foley', 'bandpass', .035, .8);
-    if (surface === 'ice') tone(720 * rand(.9, 1.12), .05, 'triangle', .019 * heavy * level, 1180, 'foley', .024);
+    const profile = surfaceFoleyProfile(surface);
+    const gaitWeight = land ? 1.55 : gait === 'run' ? 1.08 : gait === 'sprint' ? 1.22 : .72;
+    const scaled = Math.max(.05, level) * gaitWeight;
+    const contacts = land ? 1 : 2;
+
+    // Heel/toe contact makes footsteps read as feet instead of a repeated tap.
+    for (let c = 0; c < contacts; c++) {
+      const delay = c === 0 ? 0 : rand(.015, .034);
+      const contact = c === 0 ? 1 : rand(.38, .62);
+      const pitch = rand(.9, 1.11);
+      const pan = rand(-.12, .12);
+      tone(profile.body * pitch, land ? .082 : profile.decay, 'sine', profile.bodyGain * scaled * contact, profile.body * .58 * pitch, 'foley', delay);
+      pannedNoise(land ? .105 : .055, profile.texGain * scaled * contact, profile.tex * rand(.82, 1.2), 'foley', profile.filter, delay + .003, profile.q, pan);
+      if (profile.wood && c === 0) {
+        tone(340 * pitch, .045, 'triangle', .010 * scaled, 230 * pitch, 'foley', delay + .008);
+        tone(720 * pitch, .035, 'triangle', .007 * scaled, 520 * pitch, 'foley', delay + .018);
+      }
+    }
+
+    if (profile.scuff > 0 && !land) {
+      const scuffDur = (gait === 'run' || gait === 'sprint') ? rand(.08, .13) : rand(.045, .085);
+      pannedNoise(scuffDur, profile.scuff * scaled, profile.scuffF * rand(.82, 1.18), 'foley', profile.filter, rand(.012, .038), Math.max(.45, profile.q * .75), rand(-.16, .16));
+    }
+
+    if (land) {
+      pannedNoise(.12, profile.scuff * scaled * .9, profile.scuffF * rand(.75, 1.05), 'foley', profile.filter, .022, Math.max(.42, profile.q * .75), rand(-.1, .1));
+    }
+
+    foleyGrit(profile, scaled, land ? .018 : 0);
+
+    if (profile.splash) {
+      pannedNoise(land ? .18 : .12, .044 * scaled, 900, 'foley', 'bandpass', .028, .75, rand(-.12, .12));
+      tone(rand(420, 900), .045, 'sine', .010 * scaled, rand(900, 1600), 'foley', .055);
+    }
+
+    if (profile.ping) {
+      tone(720 * rand(.9, 1.12), .05, 'triangle', .018 * scaled, 1180, 'foley', .024);
+      if (land) tone(1120 * rand(.92, 1.08), .08, 'sine', .014 * scaled, 760, 'foley', .052);
+    }
   }
 
   function ambientBirds(level = 1) {
