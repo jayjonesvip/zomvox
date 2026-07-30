@@ -1561,6 +1561,43 @@ const BARKS = {
       { v: 'ehr', d: 0.42, a: 0.6, p: 0.62, g: 0 },
     ],
   },
+  /* infected moans: longer, breathier and deliberately less speech-like */
+  zombieMoan: {
+    f0: 0.94, drive: 0.82, breath: 1.18, breathFreq: 920, breathQ: 0.48,
+    voiced: 0.62, tremolo: 5.2, tremoloDepth: 0.16, wanderCents: 42,
+    growl: 0.58, formantJitter: 0.045, presenceDb: 1.5, throatDb: 6,
+    lowpass: 3600, release: 0.18, innerRelease: 0.08, loopNoise: true, syl: [
+      { v: 'ohh', d: 0.62, a: 1.0, p: 1.03, g: 0.035 },
+      { v: 'ehr', d: 0.72, a: 0.72, p: 0.72, g: 0 },
+    ],
+  },
+  zombieWail: {
+    f0: 1.04, drive: 0.74, breath: 1.36, breathFreq: 1050, breathQ: 0.44,
+    voiced: 0.52, tremolo: 6.4, tremoloDepth: 0.13, wanderCents: 58,
+    growl: 0.34, formantJitter: 0.055, presenceDb: 1, throatDb: 5,
+    lowpass: 3900, release: 0.24, innerRelease: 0.1, loopNoise: true, dying: true, syl: [
+      { v: 'ah', d: 0.55, a: 0.9, p: 1.08, g: 0.04 },
+      { v: 'ohh', d: 0.68, a: 0.72, p: 0.66, g: 0 },
+    ],
+  },
+  zombieBrute: {
+    f0: 0.82, drive: 0.92, breath: 0.96, breathFreq: 720, breathQ: 0.5,
+    voiced: 0.7, tremolo: 4.3, tremoloDepth: 0.15, wanderCents: 30,
+    growl: 0.95, formantJitter: 0.04, presenceDb: 0.5, throatDb: 8,
+    lowpass: 3100, release: 0.22, innerRelease: 0.1, loopNoise: true, syl: [
+      { v: 'u', d: 0.72, a: 1.05, p: 0.98, g: 0.05 },
+      { v: 'ehr', d: 0.66, a: 0.8, p: 0.7, g: 0 },
+    ],
+  },
+  zombieRunner: {
+    f0: 1.14, drive: 0.76, breath: 1.42, breathFreq: 1180, breathQ: 0.46,
+    voiced: 0.48, tremolo: 7.2, tremoloDepth: 0.12, wanderCents: 66,
+    growl: 0.28, formantJitter: 0.06, presenceDb: 1.5, throatDb: 4,
+    lowpass: 4100, release: 0.14, innerRelease: 0.07, loopNoise: true, syl: [
+      { v: 'ah', d: 0.42, a: 0.92, p: 1.12, g: 0.025 },
+      { v: 'ehr', d: 0.5, a: 0.66, p: 0.76, g: 0 },
+    ],
+  },
   /* short affirmative, for squad chatter */
   copy: {
     f0: 1.0, drive: 0.9, syl: [
@@ -1611,8 +1648,9 @@ function bark(actx, bank, rng, o = {}) {
 
   // Aspiration: always a little, a lot when hurt or dying.
   const breathLevel = (spec.breath ?? 0.16) * rng.range(0.8, 1.25);
-  const noise = bank.source('white', rng, rng.range(0.9, 1.2));
-  const noiseBP = biquad(actx, 'bandpass', 1400, 0.6);
+  const voicedLevel = clamp(spec.voiced ?? 1, 0.15, 1.2);
+  const noise = bank.source('white', rng, rng.range(0.9, 1.2), spec.loopNoise === true);
+  const noiseBP = biquad(actx, 'bandpass', spec.breathFreq ?? 1400, spec.breathQ ?? 0.6);
   const noiseGain = gain(actx, 0);
   series(noise, noiseBP, noiseGain);
 
@@ -1634,13 +1672,26 @@ function bark(actx, bank, rng, o = {}) {
   }
 
   /* ---- vocal tract output shaping -------------------------------- */
-  const throat = biquad(actx, 'peaking', 480, 1.1, 4);      // chest resonance
-  const presence = biquad(actx, 'peaking', 2600, 1.4, 5);   // shout presence
-  const hp = biquad(actx, 'highpass', 150, 0.7);
-  const lp = biquad(actx, 'lowpass', 5200, 0.7);
+  const throat = biquad(actx, 'peaking', 480, 1.1, spec.throatDb ?? 4);      // chest resonance
+  const presence = biquad(actx, 'peaking', 2600, 1.4, spec.presenceDb ?? 5);   // shout presence
+  const hp = biquad(actx, 'highpass', spec.highpass ?? 150, 0.7);
+  const lp = biquad(actx, 'lowpass', spec.lowpass ?? 5200, 0.7);
   const drv = shaper(actx, saturationCurve(1.6 * (spec.drive ?? 1), 0.35), '2x');
   const bodyGain = gain(actx, 1.5 * level);
   for (const f of fs) f.g.connect(throat);
+
+  // Low, filtered turbulence gives infected voices chest and throat texture
+  // without turning the clean command-radio voices into noise.
+  let growl = null;
+  if (spec.growl) {
+    growl = bank.source('brown', rng, rng.range(0.58, 0.86), true);
+    const growlBP = biquad(actx, 'bandpass', rng.range(180, 310) * tract, 0.72);
+    const growlLP = biquad(actx, 'lowpass', 900, 0.65);
+    const growlGain = gain(actx, 0);
+    series(growl, growlBP, growlLP, growlGain).connect(throat);
+    ad(growlGain.gain, t0, 0.2 * spec.growl * level, 0.06, total + 0.2);
+  }
+
   series(throat, presence, hp, lp, drv, bodyGain).connect(out);
 
   /* ---- tremolo (pain / death gargle) ----------------------------- */
@@ -1649,7 +1700,7 @@ function bark(actx, bank, rng, o = {}) {
     trem = actx.createOscillator();
     trem.type = 'sine';
     trem.frequency.value = spec.tremolo * rng.range(0.85, 1.15);
-    const tg = gain(actx, 0.35);
+    const tg = gain(actx, (spec.tremoloDepth ?? 0.35) * level);
     trem.connect(tg);
     tg.connect(bodyGain.gain);
     trem.start(t0);
@@ -1659,6 +1710,19 @@ function bark(actx, bank, rng, o = {}) {
   /* ---- per-syllable automation ----------------------------------- */
   let t = t0;
   src.frequency.setValueAtTime(f0 * spec.syl[0].p, t0);
+
+  // Slow, irregular pitch drift removes the fixed oscillator/robot impression.
+  if (spec.wanderCents) {
+    let wt = t0 + 0.04;
+    while (wt < t0 + total) {
+      src.detune.setTargetAtTime(
+        rng.range(-spec.wanderCents, spec.wanderCents),
+        wt,
+        rng.range(0.035, 0.085)
+      );
+      wt += rng.range(0.08, 0.18);
+    }
+  }
   for (let i = 0; i < spec.syl.length; i++) {
     const s = spec.syl[i];
     const v = VOWELS[s.v] ?? VOWELS.a;
@@ -1690,7 +1754,8 @@ function bark(actx, bank, rng, o = {}) {
 
     /* formant glide into this vowel — 35 ms transition reads as articulation */
     for (let k = 0; k < 3; k++) {
-      const f = v[k] * tract * (1 + rng.range(-0.02, 0.02));
+      const jitter = spec.formantJitter ?? 0.02;
+      const f = v[k] * tract * (1 + rng.range(-jitter, jitter));
       const bw = v[k + 3];
       fs[k].bp.frequency.setTargetAtTime(f, Math.max(t - 0.03, t0), 0.014);
       fs[k].bp.Q.setTargetAtTime(clamp(f / bw, 1.5, 14), Math.max(t - 0.03, t0), 0.02);
@@ -1707,8 +1772,10 @@ function bark(actx, bank, rng, o = {}) {
 
     /* amplitude: fast onset, held, quick release; last syllable decays longer */
     const last = i === spec.syl.length - 1;
-    const rel = last ? (spec.dying ? s.d * 0.9 : 0.055) : 0.028;
-    adsr(srcGain.gain, t, amp * level, 0.014, s.d * 0.22, s.d * 0.5, 0.72, rel);
+    const rel = last
+      ? (spec.dying ? s.d * 0.9 : (spec.release ?? 0.055))
+      : (spec.innerRelease ?? 0.028);
+    adsr(srcGain.gain, t, amp * level * voicedLevel, 0.014, s.d * 0.22, s.d * 0.5, 0.72, rel);
     ad(noiseGain.gain, t, amp * breathLevel * level, 0.02, s.d + rel);
 
     t += s.d + (s.g ?? 0);
@@ -1731,7 +1798,16 @@ function bark(actx, bank, rng, o = {}) {
   const srcStart = Math.max(t0 - 0.01, 0);
   src.start(srcStart);
   src.stop(end);
-  noise.start(srcStart, noise._offset, end - srcStart + 0.05);
+  if (spec.loopNoise) {
+    noise.start(srcStart, noise._offset);
+    noise.stop(end + 0.05);
+  } else {
+    noise.start(srcStart, noise._offset, end - srcStart + 0.05);
+  }
+  if (growl) {
+    growl.start(srcStart, growl._offset);
+    growl.stop(end + 0.05);
+  }
 
   /* ---- radio treatment (squad comms) ----------------------------- */
   if (o.radio) {
@@ -2286,13 +2362,26 @@ function ambientOneShot(actx, bank, rng, kind, o = {}) {
     zombieMoanHandles = zombieMoanHandles.filter(h => h.expiresAt > performance.now());
     if (zombieMoanHandles.length >= ZOMBIE_MOAN_MAX_OVERLAP) return null;
     const variant = String(options.variant || 'normal').toLowerCase();
-    const base = variant.includes('brute') ? 50 : variant.includes('runner') ? 76 : 62;
-    const kind = rng.float() < 0.72 ? 'pain' : 'death';
+    const roll = rng.float();
+    let kind = roll < 0.58 ? 'zombieMoan' : 'zombieWail';
+    let base = 58;
+    let voiceLevel = 0.94;
+
+    if (variant.includes('brute')) {
+      kind = roll < 0.76 ? 'zombieBrute' : 'zombieMoan';
+      base = 46;
+      voiceLevel = 1.18;
+    } else if (variant.includes('runner')) {
+      kind = roll < 0.7 ? 'zombieRunner' : roll < 0.9 ? 'zombieMoan' : 'zombieWail';
+      base = 72;
+      voiceLevel = 0.88;
+    }
+
     const voice = bark(ctx, bank, rng.fork(), {
       bark: kind,
-      f0: base * clamp(Math.abs(Number(playbackRate) || 1), 0.65, 1.4),
-      tract: rng.range(0.86, 1.12),
-      level: level * (variant.includes('brute') ? 1.2 : 0.92)
+      f0: base * clamp(Math.abs(Number(playbackRate) || 1), 0.72, 1.28),
+      tract: rng.range(0.88, 1.08),
+      level: level * voiceLevel
     });
     const handle = routeVoice(voice, 'enemy', { pan: options.pan, sendScale: 1.15 });
     if (handle) zombieMoanHandles.push(handle);
