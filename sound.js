@@ -415,6 +415,83 @@
     src.stop(now + dur + .02);
   }
 
+  function createRadioStaticBed(level = .035, center = 1450) {
+    const ctx = getAudio();
+    if (!ctx) return null;
+
+    const len = Math.max(1, Math.floor(ctx.sampleRate * 1.8));
+    const buffer = ctx.createBuffer(1, len, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < len; i++) {
+      const flutter = 0.72 + Math.sin(i * 0.017) * 0.16 + Math.random() * 0.18;
+      data[i] = (Math.random() * 2 - 1) * flutter;
+    }
+
+    const source = ctx.createBufferSource();
+    const band = ctx.createBiquadFilter();
+    const gain = ctx.createGain();
+    const lfo = ctx.createOscillator();
+    const lfoGain = ctx.createGain();
+    const freqLfo = ctx.createOscillator();
+    const freqLfoGain = ctx.createGain();
+    const now = ctx.currentTime;
+    const nodes = [source, band, gain, lfo, lfoGain, freqLfo, freqLfoGain];
+    let stopped = false;
+
+    source.buffer = buffer;
+    source.loop = true;
+    band.type = 'bandpass';
+    band.frequency.setValueAtTime(center, now);
+    band.Q.setValueAtTime(1.55, now);
+
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.linearRampToValueAtTime(Math.max(0.0001, level), now + .055);
+
+    // Slow amplitude and filter wobble keep the bed radio-like instead of plain pink noise.
+    lfo.type = 'sine';
+    lfo.frequency.setValueAtTime(rand(8, 13), now);
+    lfoGain.gain.setValueAtTime(level * .38, now);
+    lfo.connect(lfoGain);
+    lfoGain.connect(gain.gain);
+
+    freqLfo.type = 'sine';
+    freqLfo.frequency.setValueAtTime(rand(1.8, 3.4), now);
+    freqLfoGain.gain.setValueAtTime(rand(110, 260), now);
+    freqLfo.connect(freqLfoGain);
+    freqLfoGain.connect(band.frequency);
+
+    source.connect(band);
+    band.connect(gain);
+    const outputNode = connectOutput(gain, 'ui');
+    if (outputNode) nodes.push(outputNode);
+
+    source.start(now);
+    lfo.start(now);
+    freqLfo.start(now);
+
+    return {
+      stop(fade = .09) {
+        if (stopped) return;
+        stopped = true;
+        const stopAt = ctx.currentTime + Math.max(.025, fade);
+        try {
+          gain.gain.cancelScheduledValues(ctx.currentTime);
+          gain.gain.setValueAtTime(Math.max(0.0001, gain.gain.value), ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, stopAt);
+        } catch (_) {}
+
+        setTimeout(() => {
+          for (const node of [source, lfo, freqLfo]) {
+            try { node.stop(); } catch (_) {}
+          }
+          for (const node of nodes) {
+            try { node.disconnect(); } catch (_) {}
+          }
+        }, Math.ceil((fade + .04) * 1000));
+      }
+    };
+  }
+
   function rand(min, max) {
     return min + Math.random() * (max - min);
   }
@@ -594,6 +671,15 @@
 
     try {
       const utterance = new SpeechSynthesisUtterance(text);
+      let staticBed = null;
+      const staticLevel = clamp(commandVoiceSetting('staticLevel', .032), 0, .12, .032) * Math.max(0, Math.min(1, level));
+      const staticCenter = clamp(commandVoiceSetting('staticFrequency', 1450), 550, 2600, 1450);
+      const stopStatic = () => {
+        if (staticBed) {
+          staticBed.stop(.1);
+          staticBed = null;
+        }
+      };
       const voices = typeof synth.getVoices === 'function' ? synth.getVoices() : [];
       const preferredVoice = selectCommandVoice(voices);
       if (preferredVoice) utterance.voice = preferredVoice;
@@ -602,7 +688,21 @@
       utterance.pitch = clamp(commandVoiceSetting('pitch', pitch), 0, 2, pitch);
       utterance.volume = clamp(commandVoiceSetting('volume', .9), 0, 1, .9) * Math.max(0, Math.min(1, level));
 
-      radioStatic(.06, .065 * level, 1550, 'ui');
+      utterance.onstart = () => {
+        radioStatic(.12, .22 * level, 960, 'ui');
+        staticBed = createRadioStaticBed(staticLevel, staticCenter);
+      };
+      utterance.onend = () => {
+        stopStatic();
+        radioStatic(.26, .14 * level, 760, 'ui');
+      };
+      utterance.onerror = () => {
+        stopStatic();
+        radioStatic(.18, .11 * level, 680, 'ui');
+      };
+
+      // Tiny pre-key click gives immediate feedback even if speech starts a few frames later.
+      radioStatic(.035, .04 * level, 1800, 'ui');
       synth.speak(utterance);
       return true;
     } catch (_) {
@@ -619,18 +719,12 @@
   }
 
   function voiceDropSynth(level = 1) {
-    if (speakCommandLine('Good luck, soldier.', level, .8, .45)) {
-      radioStatic(.08, .035 * level, 2100, 'ui', 1.16);
-      return;
-    }
+    if (speakCommandLine('Good luck, soldier.', level, .8, .45)) return;
     commandFallback(level, 2);
   }
 
   function voiceTripleSynth(level = 1) {
-    if (speakCommandLine('Impressive!', level, .86, .52)) {
-      radioStatic(.07, .032 * level, 2200, 'ui', .74);
-      return;
-    }
+    if (speakCommandLine('Impressive!', level, .86, .52)) return;
     commandFallback(level, 3);
   }
 
