@@ -110,7 +110,7 @@
     if (name === 'zombieMoan') return 'enemy';
     if (name && name.startsWith('ambient')) return 'ambient';
     if (name === 'hurt' || name === 'death') return 'sfx';
-    if (name === 'confirm' || name === 'briefing' || name === 'perkEquip' || name === 'objectiveClear' || name === 'wave' || name === 'heartbeat' || name === 'voiceDrop' || name === 'voiceTriple') return 'ui';
+    if (name === 'confirm' || name === 'briefing' || name === 'perkEquip' || name === 'objectiveClear' || name === 'wave' || name === 'heartbeat' || name === 'voiceDrop' || name === 'voiceTriple' || name === 'voiceFewMore' || name === 'voiceLowHealth' || name === 'voiceLongRange') return 'ui';
     return 'sfx';
   }
 
@@ -644,6 +644,13 @@
     return Object.prototype.hasOwnProperty.call(commandVoiceConfig, name) ? commandVoiceConfig[name] : fallback;
   }
 
+  function commandRadioClick(level = 1, delay = 0) {
+    const pitch = rand(.94, 1.08);
+    noise(.012, .04 * level, 3600 * pitch, 'ui', 'highpass', delay, 2.2);
+    physicalTone(1120 * pitch, .018, 'square', .028 * level, 650 * pitch, 'ui', delay + .002, 2400 * pitch, 'bandpass', .008 * level, 1.8);
+    physicalTone(260 * pitch, .026, 'triangle', .014 * level, 170 * pitch, 'ui', delay + .014, 850 * pitch, 'bandpass', .005 * level, 1.1);
+  }
+
   function selectCommandVoice(voices) {
     const englishVoices = voices.filter(voice => /^en[-_]/i.test(voice.lang || ''));
     const candidates = englishVoices.length ? englishVoices : voices;
@@ -664,7 +671,7 @@
       .sort((a, b) => b.score - a.score)[0]?.voice || candidates[0];
   }
 
-  function speakCommandLine(text, level = 1, rate = .9, pitch = .72) {
+  function speakCommandLine(text, level = 1, rate = 1, pitch = 1) {
     if (commandVoiceSetting('enabled', true) === false) return false;
     const synth = window.speechSynthesis;
     if (!synth || typeof window.SpeechSynthesisUtterance !== 'function') return false;
@@ -689,20 +696,22 @@
       utterance.volume = clamp(commandVoiceSetting('volume', .9), 0, 1, .9) * Math.max(0, Math.min(1, level));
 
       utterance.onstart = () => {
-        radioStatic(.12, .22 * level, 960, 'ui');
+        radioStatic(.08, .11 * level, 960, 'ui', .012);
         staticBed = createRadioStaticBed(staticLevel, staticCenter);
       };
       utterance.onend = () => {
         stopStatic();
-        radioStatic(.26, .14 * level, 760, 'ui');
+        commandRadioClick(level);
+        radioStatic(.14, .065 * level, 760, 'ui', .018);
       };
       utterance.onerror = () => {
         stopStatic();
-        radioStatic(.18, .11 * level, 680, 'ui');
+        commandRadioClick(level);
+        radioStatic(.11, .06 * level, 680, 'ui', .018);
       };
 
       // Tiny pre-key click gives immediate feedback even if speech starts a few frames later.
-      radioStatic(.035, .04 * level, 1800, 'ui');
+      commandRadioClick(.55 * level);
       synth.speak(utterance);
       return true;
     } catch (_) {
@@ -719,13 +728,28 @@
   }
 
   function voiceDropSynth(level = 1) {
-    if (speakCommandLine('Good luck, soldier.', level, .8, .45)) return;
+    if (speakCommandLine('Follow your objective, over.', level, 1, 1)) return;
     commandFallback(level, 2);
   }
 
   function voiceTripleSynth(level = 1) {
-    if (speakCommandLine('Impressive!', level, .86, .52)) return;
+    if (speakCommandLine('Incoming care package.', level, 1, 1)) return;
     commandFallback(level, 3);
+  }
+
+  function voiceFewMoreSynth(level = 1) {
+    if (speakCommandLine('Just a few more.', level, 1, 1)) return;
+    commandFallback(level, 2);
+  }
+
+  function voiceLowHealthSynth(level = 1) {
+    if (speakCommandLine('Retreat and treat your wounds.', level, 1, 1)) return;
+    commandFallback(level, 2);
+  }
+
+  function voiceLongRangeSynth(level = 1) {
+    if (speakCommandLine('Nice shot.', level, 1, 1)) return;
+    commandFallback(level, 2);
   }
 
   function zombieMoanProfile(variant = 'normal', playbackRate = 1) {
@@ -1233,6 +1257,12 @@
       voiceDropSynth(gainValue);
     } else if (name === 'voiceTriple') {
       voiceTripleSynth(gainValue);
+    } else if (name === 'voiceFewMore') {
+      voiceFewMoreSynth(gainValue);
+    } else if (name === 'voiceLowHealth') {
+      voiceLowHealthSynth(gainValue);
+    } else if (name === 'voiceLongRange') {
+      voiceLongRangeSynth(gainValue);
     }
   }
 

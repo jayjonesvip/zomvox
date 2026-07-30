@@ -297,7 +297,7 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.30.02');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.30.03');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -353,7 +353,10 @@
     beaconMessageCooldown: 0,
     beaconReminderTimer: 0,
     commandBannerTimer: 0,
-    toastLockTimer: 0
+    toastLockTimer: 0,
+    fewMoreVoicePlayed: false,
+    lowHealthVoicePlayed: false,
+    longRangeVoicePlayed: false
   };
 
   const activePerks = {
@@ -1154,6 +1157,29 @@
     return MISSION_INFECTED_GOALS[mission.islandIndex] || MISSION_INFECTED_GOALS[MISSION_INFECTED_GOALS.length - 1] || FALLBACK_INFECTED_GOAL;
   }
 
+  function maybeVoiceFewMore() {
+    if (mission.fewMoreVoicePlayed || mission.phase !== PHASE_ZOMBIE_THREAT) return;
+    const remaining = currentInfectedGoal() - player.kills;
+    if (remaining > 0 && remaining <= 3) {
+      mission.fewMoreVoicePlayed = true;
+      sound('voiceFewMore', .78);
+    }
+  }
+
+  function maybeVoiceLowHealth() {
+    if (mission.lowHealthVoicePlayed || deathState.active || player.health <= 0) return;
+    if (player.health <= STARTING_HEALTH * .33) {
+      mission.lowHealthVoicePlayed = true;
+      sound('voiceLowHealth', .82);
+    }
+  }
+
+  function maybeVoiceLongRangeKill(dist) {
+    if (mission.longRangeVoicePlayed || dist < LONG_RANGE_KILL_DIST) return;
+    mission.longRangeVoicePlayed = true;
+    sound('voiceLongRange', .78);
+  }
+
   function missionSeedIndex(seed) {
     const idx = MISSION_SEEDS.indexOf(seed);
     return idx >= 0 ? idx : 0;
@@ -1754,6 +1780,41 @@
       perkId,
       bob: seededHash(px * 5.1, pz * 9.3) * 10
     });
+  }
+
+  function spawnCarePackagePerk() {
+    const perkId = nextPerkId(player.pos[0], player.pos[2]);
+    if (!perkId) return false;
+
+    for (let i = 0; i < 18; i++) {
+      const angle = player.yaw + rand(-1.0, 1.0);
+      const radius = 5 + Math.random() * 3.5;
+      const px = Math.floor(player.pos[0] + Math.sin(angle) * radius);
+      const pz = Math.floor(player.pos[2] + Math.cos(angle) * radius);
+      if (!inWorldXZ(px, pz)) continue;
+      generateChunk(chunkCoord(px), chunkCoord(pz));
+      const py = pickupAirY(px, pz);
+      if (py <= WATER_LEVEL + 1) continue;
+      pickups.push({
+        x: px + .5,
+        y: py + 11 + Math.random() * 4,
+        z: pz + .5,
+        vx: (Math.random() - .5) * .6,
+        vy: -1.4,
+        vz: (Math.random() - .5) * .6,
+        kind: 'perk',
+        amount: 1,
+        perkId,
+        bob: seededHash(px * 5.1, pz * 9.3) * 10
+      });
+      spawnParticles(px + .5, py + 4, pz + .5, 10, 42);
+      scorePop('CARE PACKAGE INBOUND', 'pickup perk small');
+      return true;
+    }
+
+    spawnPickupAt(player.pos[0] + 4, player.pos[1], player.pos[2] + 4, 'perk');
+    scorePop('CARE PACKAGE INBOUND', 'pickup perk small');
+    return true;
   }
 
   function nearbyAmmoPickup(radius = 20) {
@@ -2782,7 +2843,10 @@ function playerOnMachinePad() {
     shakeScreen();
     if (impactSound) sound(impactSound);
     if (player.health <= 0) beginDeathSequence();
-    else sound('hurt');
+    else {
+      maybeVoiceLowHealth();
+      sound('hurt');
+    }
     return true;
   }
   function beginDeathSequence() {
@@ -3156,6 +3220,7 @@ function playerOnMachinePad() {
     if (dist >= LONG_RANGE_KILL_DIST) {
       player.score += 200;
       scorePop('+200 LONG RANGE', 'range small');
+      maybeVoiceLongRangeKill(dist);
     }
     const now = performance.now() / 1000;
     killComboCount = now - lastKillTime < 2.0 ? killComboCount + 1 : 1;
@@ -3166,11 +3231,11 @@ function playerOnMachinePad() {
     } else if (killComboCount === 3) {
       player.score += 300;
       scorePop('+300 TRIPLE KILL', 'combo');
-      sound('voiceTriple', .86);
-      spawnPickupAt(enemy.x, enemy.y, enemy.z, 'perk');
+      if (spawnCarePackagePerk()) sound('voiceTriple', .86);
     }
     lastKillTime = now;
     sound('kill');
+    maybeVoiceFewMore();
     checkHordeLevel();
     spawnEnemyDrop(enemy);
     return true;
@@ -3735,6 +3800,7 @@ function playerOnMachinePad() {
       sound('toxin');
     }
     if (player.health <= 0) beginDeathSequence();
+    else maybeVoiceLowHealth();
   }
 
   function updateMachineSmoke(dt) {
@@ -4341,6 +4407,9 @@ function currentWaterIsDangerous() {
     mission.beaconReminderTimer = 0;
     mission.commandBannerTimer = 0;
     mission.toastLockTimer = 0;
+    mission.fewMoreVoicePlayed = false;
+    mission.lowHealthVoicePlayed = false;
+    mission.longRangeVoicePlayed = false;
     resetLifeStats();
     nextSpawnTimer = 3.5;
     hordeLevel = 0;
