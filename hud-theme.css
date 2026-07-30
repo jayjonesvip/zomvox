@@ -298,6 +298,103 @@ body::after{
   }
 }
 
+@media(pointer:coarse) and (orientation:landscape){
+  #deathOverlay{
+    align-items:center;
+    justify-content:center;
+    padding:calc(8px + env(safe-area-inset-top)) calc(10px + env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) calc(10px + env(safe-area-inset-left));
+    overflow:hidden;
+  }
+  .deathCard{
+    width:min(560px,76vw);
+    max-height:calc(100svh - 18px);
+    display:grid;
+    grid-template-columns:auto auto;
+    align-content:center;
+    justify-content:center;
+    justify-items:center;
+    column-gap:8px;
+    transform:none;
+  }
+  .deathTitle,.deathText,.deathStats,.deathMeter,.deathUnlocks,.shareRunBtn{
+    grid-column:1/-1;
+  }
+  .deathTitle{
+    font-size:clamp(42px,13svh,82px);
+    line-height:.76;
+    letter-spacing:-.055em;
+    text-shadow:0 4px 0 rgba(0,0,0,.78),0 0 22px rgba(255,0,0,.42);
+  }
+  .deathText{
+    max-width:360px;
+    margin:8px 0 7px;
+    font-size:9px;
+    line-height:1.18;
+    letter-spacing:.15em;
+  }
+  .deathStats{
+    width:min(500px,72vw);
+    gap:5px;
+    margin-bottom:6px;
+  }
+  .deathStats span{
+    min-height:31px;
+    padding:4px 5px;
+    font-size:8px;
+    line-height:1.05;
+  }
+  .deathStats b{font-size:10px}
+  .deathMeter{
+    width:min(360px,54vw);
+    height:4px;
+    margin:0 auto 2px;
+  }
+  .shareRunBtn{
+    margin:0 4px 7px;
+    padding:7px 13px;
+    font-size:10px;
+  }
+  #deathContinue,#deathGiveUp{
+    position:relative;
+    z-index:2;
+    margin:8px 4px 0;
+    padding:8px 14px;
+    font-size:11px;
+    border-radius:8px;
+  }
+  #deathContinue{justify-self:end}
+  #deathGiveUp{
+    justify-self:start;
+    color:#f7fbff;
+    background:linear-gradient(180deg,rgba(93,108,124,.96),rgba(29,37,47,.98));
+    border:1px solid rgba(238,248,255,.62);
+    box-shadow:0 12px 34px rgba(0,0,0,.4),0 0 18px rgba(170,210,255,.12),inset 0 2px 0 rgba(255,255,255,.2);
+    text-shadow:0 2px 0 rgba(0,0,0,.72);
+  }
+  #deathOverlay.ready #deathContinue,
+  #deathOverlay.ready #deathGiveUp{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+  }
+}
+
+@media(pointer:coarse) and (orientation:landscape) and (max-height:390px){
+  .deathCard{width:min(620px,84vw)}
+  .deathTitle{font-size:clamp(34px,12svh,54px)}
+  .deathText{margin:5px 0;font-size:8px}
+  .deathStats{
+    width:min(540px,78vw);
+    grid-template-columns:repeat(5,minmax(0,1fr));
+    gap:4px;
+    margin-bottom:5px;
+  }
+  .deathStats span{min-height:28px;padding:3px 4px;font-size:7px}
+  .deathStats b{font-size:9px}
+  .shareRunBtn{padding:6px 11px;font-size:9px;margin-bottom:5px}
+  #deathContinue,#deathGiveUp{padding:6px 11px;font-size:10px;margin-top:6px}
+}
+
 @media(orientation:portrait){
   #portraitBlock{
     background:#020607;
