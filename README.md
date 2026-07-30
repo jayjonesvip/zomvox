@@ -114,7 +114,7 @@ Common tuning options live in `config.js` under `window.ZOMVOX_CONFIG`. Edit tha
 
 ```js
 window.ZOMVOX_CONFIG = {
-  buildVersion: '2026.07.30.01',
+  buildVersion: '2026.07.30.02',
   initialSeed: 729641,
 
   environment: {
@@ -217,7 +217,7 @@ Other sections in `config.js` expose safe defaults for:
 - `pickups`: ammo, health, and C4 pickup amounts/drop chances.
 - `timers`: death overlay delay, world rebuild meter duration, heartbeat interval, and day/night cycle length.
 - `audio.files`: optional file-backed overrides for `shoot` and `zombieMoan`; both fall back to procedural audio if the files are missing or disabled.
-- `audio.commandVoice`: browser speech tuning for command callouts, including preferred voice name, pitch, rate, and volume.
+- `audio.commandVoice`: browser speech tuning for command callouts, including preferred voice name, pitch, rate, volume, and under-voice radio static.
 
 Audio is handled in `sound.js` with procedural Web Audio synthesis plus optional file-backed playback for the gunshot and zombie moan cues. The procedural cues use short ADSR-style envelopes, layered filtered noise, detuned shimmer tones for pickups, oscillators, soft-limited buses, and crossfaded ambience beds. If `assets/shoot.mp3` or `assets/zombiemoan.wav` are present, those cues use the files; otherwise they fall back to procedural audio.
 
@@ -226,7 +226,7 @@ Procedural cue references:
 - Weapon: `shoot`, `empty`, `reloadStart`, `reloadStep`, `reloadDone`, `explosion`.
 - Impact and feedback: `hit`, `head`, `kill`, `block`, `hurt`, `death`, `toxin`, `heartbeat`.
 - Pickups and UI: `pickupAmmo`, `pickupHealth`, `pickupC4`, `pickup`, `perkEquip`, `confirm`, `briefing`, `objectiveClear`, `wave`.
-- Command voice: `voiceDrop` for drop-in radio encouragement and `voiceTriple` for triple-kill praise. These use browser speech when available with procedural radio texture around the line. The actual voice depends on the device/browser, but `config.js` can prefer a named voice and tune pitch/rate.
+- Command voice: `voiceDrop` for drop-in radio encouragement and `voiceTriple` for triple-kill praise. These use browser speech when available with procedural squelch plus a faint live static bed under the spoken line. The actual voice depends on the device/browser, but `config.js` can prefer a named voice and tune pitch/rate/static.
 - Foley and ambience: `footstep`, `land`, `ambientMenu`, `ambientForest`, `ambientDunes`, `ambientRocky`, `ambientSwamp`, `ambientAshlands`, `ambientTundra`. Ambience includes lightweight procedural beds plus occasional biome/menu sweeteners, mixed below zombie voices so nearby threats stay readable.
 - Zombie voices: `zombieMoan` can use `assets/zombiemoan.wav` with per-type playback speed/reverse behavior, or fall back to procedural per-type moans if the file is unavailable.
 

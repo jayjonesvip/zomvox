@@ -17,7 +17,7 @@ window.ZOMVOX_CONFIG = {
     Bump this when you make visible changes so you can tell the browser
     loaded the newest version.
   */
-  buildVersion: '2026.07.30.01',
+  buildVersion: '2026.07.30.02',
 
   /*
     Seed used for deterministic world generation.
@@ -445,7 +445,20 @@ window.ZOMVOX_CONFIG = {
       */
       pitch: 0.45,
       rate: 0.80,
-      volume: 0.90
+      volume: 0.90,
+
+      /*
+        Faint radio bed that plays under command voice lines.
+
+        staticLevel:
+        - 0.00 = no under-voice static
+        - 0.03 = subtle field-radio texture
+        - 0.08+ = very noisy transmission
+
+        staticFrequency controls the bandpass center of the static.
+      */
+      staticLevel: 0.032,
+      staticFrequency: 1450
     }
   }
 };
