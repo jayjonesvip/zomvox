@@ -8,8 +8,7 @@
   const commandVoiceConfig = audioConfig.commandVoice || {};
   const ZOMBIE_MOAN_MAX_OVERLAP = Math.max(1, Math.floor(Number(enemyConfig.zombieMoanMaxVoices) || 3));
   const DEFAULT_FILE_CUES = {
-    shoot: 'shoot.mp3',
-    zombieMoan: 'zombiemoan.wav'
+    shoot: 'shoot.mp3'
   };
   const BUS_LEVELS = {
     weapon: 1.08,
@@ -728,27 +727,30 @@
   }
 
   function voiceDropSynth(level = 1) {
-    if (speakCommandLine('Follow your objective, over.', level, 1, 1)) return;
+    // Steady, low commander cadence for objective callouts.
+    if (speakCommandLine('Follow your objective, over.', level, rand(.86, .94), rand(.78, .86))) return;
     commandFallback(level, 2);
   }
 
   function voiceTripleSynth(level = 1) {
-    if (speakCommandLine('Incoming care package.', level, 1, 1)) return;
+    // Quicker, brighter — this one's meant to land like good news.
+    if (speakCommandLine('Incoming care package.', level, rand(1.02, 1.1), rand(1.05, 1.14))) return;
     commandFallback(level, 3);
   }
 
   function voiceFewMoreSynth(level = 1) {
-    if (speakCommandLine('Just a few more.', level, 1, 1)) return;
+    if (speakCommandLine('Just a few more.', level, rand(.94, 1.02), rand(.9, .98))) return;
     commandFallback(level, 2);
   }
 
   function voiceLowHealthSynth(level = 1) {
-    if (speakCommandLine('Retreat and treat your wounds.', level, 1, 1)) return;
+    // Urgent — faster and a touch higher, this is a warning line.
+    if (speakCommandLine('Retreat and treat your wounds.', level, rand(1.05, 1.16), rand(1.0, 1.1))) return;
     commandFallback(level, 2);
   }
 
   function voiceLongRangeSynth(level = 1) {
-    if (speakCommandLine('Nice shot.', level, 1, 1)) return;
+    if (speakCommandLine('Nice shot.', level, rand(.96, 1.06), rand(.92, 1.02))) return;
     commandFallback(level, 2);
   }
 
