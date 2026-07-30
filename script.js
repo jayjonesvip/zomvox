@@ -297,7 +297,7 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.30.05');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.30.06');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -1768,9 +1768,9 @@
     const px = Math.max(WORLD_MIN, Math.min(WORLD_MAX, Math.floor(x)));
     const pz = Math.max(WORLD_MIN, Math.min(WORLD_MAX, Math.floor(z)));
     const py = pickupAirY(px, pz);
-    if (py <= WATER_LEVEL + 1) return;
+    if (py <= WATER_LEVEL + 1) return false;
     const perkId = kind === 'perk' ? nextPerkId(px, pz) : null;
-    if (kind === 'perk' && !perkId) return;
+    if (kind === 'perk' && !perkId) return false;
     pickups.push({
       x: px + .5,
       y: py + .35,
@@ -1780,41 +1780,67 @@
       perkId,
       bob: seededHash(px * 5.1, pz * 9.3) * 10
     });
+    return true;
   }
 
   function spawnCarePackagePerk() {
     const perkId = nextPerkId(player.pos[0], player.pos[2]);
     if (!perkId) return false;
 
-    for (let i = 0; i < 18; i++) {
-      const angle = player.yaw + rand(-1.0, 1.0);
-      const radius = 5 + Math.random() * 3.5;
-      const px = Math.floor(player.pos[0] + Math.sin(angle) * radius);
-      const pz = Math.floor(player.pos[2] + Math.cos(angle) * radius);
+    // Triple-kill perks should read like a nearby supply drop, not a random
+    // pickup somewhere in the brush. Bias the crate a few blocks in front of
+    // the player, then widen the search only if terrain/water blocks the spot.
+    const forwardX = Math.sin(player.yaw);
+    const forwardZ = Math.cos(player.yaw);
+    const rightX = Math.cos(player.yaw);
+    const rightZ = -Math.sin(player.yaw);
+    const candidates = [
+      [4.0, 0],
+      [3.3, -1.6],
+      [3.3, 1.6],
+      [5.0, -1.2],
+      [5.0, 1.2],
+      [2.8, 0],
+      [4.4, -2.4],
+      [4.4, 2.4]
+    ];
+
+    for (let i = 0; i < candidates.length + 18; i++) {
+      const planned = candidates[i];
+      const forward = planned ? planned[0] : 3.2 + Math.random() * 3.8;
+      const side = planned ? planned[1] : rand(-3.0, 3.0);
+      const px = Math.floor(player.pos[0] + forwardX * forward + rightX * side);
+      const pz = Math.floor(player.pos[2] + forwardZ * forward + rightZ * side);
       if (!inWorldXZ(px, pz)) continue;
       generateChunk(chunkCoord(px), chunkCoord(pz));
       const py = pickupAirY(px, pz);
       if (py <= WATER_LEVEL + 1) continue;
+      if (blocksMovement(getBlock(px, py, pz)) || blocksMovement(getBlock(px, py + 1, pz))) continue;
       pickups.push({
         x: px + .5,
-        y: py + 11 + Math.random() * 4,
+        y: py + 5.5 + Math.random() * 1.8,
         z: pz + .5,
-        vx: (Math.random() - .5) * .6,
-        vy: -1.4,
-        vz: (Math.random() - .5) * .6,
+        vx: rightX * rand(-.2, .2),
+        vy: -2.2,
+        vz: rightZ * rand(-.2, .2),
         kind: 'perk',
         amount: 1,
         perkId,
         bob: seededHash(px * 5.1, pz * 9.3) * 10
       });
-      spawnParticles(px + .5, py + 4, pz + .5, 10, 42);
+      spawnParticles(px + .5, py + 2.2, pz + .5, 18, 42);
       scorePop('CARE PACKAGE INBOUND', 'pickup perk small');
       return true;
     }
 
-    spawnPickupAt(player.pos[0] + 4, player.pos[1], player.pos[2] + 4, 'perk');
-    scorePop('CARE PACKAGE INBOUND', 'pickup perk small');
-    return true;
+    const spawned = spawnPickupAt(
+      player.pos[0] + forwardX * 3.5,
+      player.pos[1],
+      player.pos[2] + forwardZ * 3.5,
+      'perk'
+    );
+    if (spawned) scorePop('CARE PACKAGE INBOUND', 'pickup perk small');
+    return spawned;
   }
 
   function nearbyAmmoPickup(radius = 20) {
@@ -3228,10 +3254,13 @@ function playerOnMachinePad() {
     if (killComboCount === 2) {
       player.score += 150;
       scorePop('+150 DOUBLE KILL', 'combo small');
-    } else if (killComboCount === 3) {
+    } else if (killComboCount >= 3 && killComboCount % 3 === 0) {
       player.score += 300;
       scorePop('+300 TRIPLE KILL', 'combo');
-      if (spawnCarePackagePerk()) sound('voiceTriple', .86);
+      if (spawnCarePackagePerk()) {
+        sound('carePackage', .74);
+        sound('voiceTriple', .86);
+      }
     }
     lastKillTime = now;
     sound('kill');
@@ -3418,6 +3447,7 @@ function playerOnMachinePad() {
 
   function updatePickups(dt) {
     for (const p of pickups) {
+      if (p.kind === 'perk') emitCarePackageSmoke(p, dt, !!(p.vx || p.vy || p.vz));
       if (p.vx || p.vy || p.vz) {
         p.x += (p.vx || 0) * dt;
         p.y += (p.vy || 0) * dt;
@@ -3471,6 +3501,25 @@ function playerOnMachinePad() {
       }
     }
     pickups = pickups.filter(p => !p.collected && Math.hypot(p.x - player.pos[0], p.z - player.pos[2]) < 120);
+  }
+
+  function emitCarePackageSmoke(p, dt, airborne = false) {
+    p.smokeTimer = (p.smokeTimer || 0) - dt;
+    if (p.smokeTimer > 0) return;
+    p.smokeTimer = airborne ? .04 + Math.random() * .025 : .10 + Math.random() * .08;
+    const count = airborne ? 3 : 1;
+    for (let i = 0; i < count; i++) {
+      particles.push({
+        x: p.x + (Math.random() - .5) * .32,
+        y: p.y + .12 + Math.random() * .18,
+        z: p.z + (Math.random() - .5) * .32,
+        vx: (Math.random() - .5) * (airborne ? .75 : .32),
+        vy: (airborne ? .35 : .55) + Math.random() * .65,
+        vz: (Math.random() - .5) * (airborne ? .75 : .32),
+        life: (airborne ? .55 : .8) + Math.random() * .45,
+        type: 42
+      });
+    }
   }
 
 
