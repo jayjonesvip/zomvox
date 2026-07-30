@@ -520,7 +520,10 @@ function ambientOneShot(actx, bank, rng, kind, o = {}) {
     }
     case 'heli': {
       // Rotor thump: an amplitude-modulated dark noise bed, no sample needed.
-      const dur = rng.range(6, 12);
+      // Ambient helicopter passes fade in slowly; care-package drops need a
+      // fast attack so players hear the reward immediately after a triple kill.
+      const carePackage = o.carePackage === true;
+      const dur = carePackage ? rng.range(2.8, 4.0) : rng.range(6, 12);
       const src = bank.source('brown', rng, rng.range(0.8, 1.1));
       const lp = biquad(actx, 'lowpass', 420, 0.9);
       const g = gain(actx, 0);
@@ -528,10 +531,10 @@ function ambientOneShot(actx, bank, rng, kind, o = {}) {
       // to a gain param sums with the envelope instead of scaling it.
       const am = gain(actx, 0.45);
       series(src, lp, g, am).connect(out);
-      ad(g.gain, t0, 2.1 * lvl, dur * 0.4, dur * 0.6);
+      ad(g.gain, t0, (carePackage ? 1.55 : 2.1) * lvl, carePackage ? 0.045 : dur * 0.4, carePackage ? dur * 0.85 : dur * 0.6);
       src.start(t0, src._offset, dur * 1.2);
       const thump = osc(actx, 'sine', rng.range(4.6, 6.4));
-      const tg = gain(actx, 0.5);
+      const tg = gain(actx, carePackage ? 0.72 : 0.5);
       thump.connect(tg); tg.connect(am.gain);
       thump.start(t0); thump.stop(t0 + dur * 1.2);
       // Turbine whine an octave-ish above the blade rate harmonics.
@@ -539,7 +542,7 @@ function ambientOneShot(actx, bank, rng, kind, o = {}) {
       const wbp = biquad(actx, 'bandpass', 1400, 6);
       const wg = gain(actx, 0);
       series(w, wbp, wg).connect(out);
-      ad(wg.gain, t0, 0.11 * lvl, dur * 0.4, dur * 0.6);
+      ad(wg.gain, t0, (carePackage ? 0.16 : 0.11) * lvl, carePackage ? 0.08 : dur * 0.4, carePackage ? dur * 0.72 : dur * 0.6);
       w.start(t0); w.stop(t0 + dur * 1.2);
       return { node: out, end: t0 + dur * 1.3, send: 0.9 };
     }

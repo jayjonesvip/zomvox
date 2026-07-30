@@ -131,11 +131,11 @@
         // this repurposes the procedural helicopter one-shot so the drop feels
         // like a command supply run without adding another audio asset.
         mixer.duck(0.28, 0.65);
-        voice = ambientOneShot(ctx, bank, local, 'heli', { level: level * 0.55 });
-        bus = 'ambience';
+        voice = ambientOneShot(ctx, bank, local, 'heli', { level: level * 0.9, carePackage: true });
+        bus = 'sfx';
         routeOptions = {
           pan: Number.isFinite(Number(options.pan)) ? options.pan : local.range(-0.35, 0.35),
-          sendScale: 0.85
+          sendScale: 0.55
         };
         break;
       case 'zombieMoan':

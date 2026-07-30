@@ -3254,7 +3254,7 @@ function playerOnMachinePad() {
     if (killComboCount === 2) {
       player.score += 150;
       scorePop('+150 DOUBLE KILL', 'combo small');
-    } else if (killComboCount === 3) {
+    } else if (killComboCount >= 3 && killComboCount % 3 === 0) {
       player.score += 300;
       scorePop('+300 TRIPLE KILL', 'combo');
       if (spawnCarePackagePerk()) {
@@ -3447,6 +3447,7 @@ function playerOnMachinePad() {
 
   function updatePickups(dt) {
     for (const p of pickups) {
+      if (p.kind === 'perk') emitCarePackageSmoke(p, dt, !!(p.vx || p.vy || p.vz));
       if (p.vx || p.vy || p.vz) {
         p.x += (p.vx || 0) * dt;
         p.y += (p.vy || 0) * dt;
@@ -3454,10 +3455,6 @@ function playerOnMachinePad() {
         p.vy = (p.vy || 0) - 12 * dt;
         p.vx = (p.vx || 0) * Math.max(0, 1 - dt * 1.9);
         p.vz = (p.vz || 0) * Math.max(0, 1 - dt * 1.9);
-        // Perk care packages are intentionally noisy in the sky: the blue
-        // smoke trail makes the triple-kill reward readable even if the player
-        // is still tracking enemies when command calls it in.
-        if (p.kind === 'perk') emitCarePackageSmoke(p, dt);
         const floor = pickupAirY(p.x, p.z) + .35;
         if (p.y <= floor) {
           p.y = floor;
@@ -3506,19 +3503,20 @@ function playerOnMachinePad() {
     pickups = pickups.filter(p => !p.collected && Math.hypot(p.x - player.pos[0], p.z - player.pos[2]) < 120);
   }
 
-  function emitCarePackageSmoke(p, dt) {
+  function emitCarePackageSmoke(p, dt, airborne = false) {
     p.smokeTimer = (p.smokeTimer || 0) - dt;
     if (p.smokeTimer > 0) return;
-    p.smokeTimer = .045 + Math.random() * .035;
-    for (let i = 0; i < 2; i++) {
+    p.smokeTimer = airborne ? .04 + Math.random() * .025 : .10 + Math.random() * .08;
+    const count = airborne ? 3 : 1;
+    for (let i = 0; i < count; i++) {
       particles.push({
         x: p.x + (Math.random() - .5) * .32,
         y: p.y + .12 + Math.random() * .18,
         z: p.z + (Math.random() - .5) * .32,
-        vx: (Math.random() - .5) * .65,
-        vy: .35 + Math.random() * .55,
-        vz: (Math.random() - .5) * .65,
-        life: .5 + Math.random() * .35,
+        vx: (Math.random() - .5) * (airborne ? .75 : .32),
+        vy: (airborne ? .35 : .55) + Math.random() * .65,
+        vz: (Math.random() - .5) * (airborne ? .75 : .32),
+        life: (airborne ? .55 : .8) + Math.random() * .45,
         type: 42
       });
     }
