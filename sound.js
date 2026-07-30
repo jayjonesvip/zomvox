@@ -105,7 +105,7 @@
   }
 
   function busForSound(name) {
-    if (name === 'shoot' || name === 'empty' || name === 'reloadStart' || name === 'reloadDone' || name === 'explosion') return 'weapon';
+    if (name === 'shoot' || name === 'empty' || name === 'reloadStart' || name === 'reloadStep' || name === 'reloadDone' || name === 'explosion') return 'weapon';
     if (name === 'land' || name === 'footstep' || name === 'block') return 'foley';
     if (name === 'zombieMoan') return 'enemy';
     if (name && name.startsWith('ambient')) return 'ambient';
@@ -464,21 +464,46 @@
     noise(.026, .022 * level, 1500 * pitch, 'weapon', 'bandpass', .018, 1.8);
   }
 
+  function reloadMetalHit(time, level = 1, base = 1600, low = 700, pan = 0) {
+    const pitch = rand(.94, 1.08);
+    // A struck metal part reads more physical as several tiny partials plus contact noise.
+    pannedNoise(.018, .014 * level, base * 2.1 * pitch, 'weapon', 'highpass', time, 2.2, pan);
+    physicalTone(base * pitch, .034, 'triangle', .022 * level, base * .72 * pitch, 'weapon', time, base * 1.8 * pitch, 'bandpass', .008 * level, 1.9);
+    physicalTone(base * 2.2 * pitch, .02, 'square', .012 * level, base * 1.2 * pitch, 'weapon', time + .004, base * 3.1 * pitch, 'bandpass', .005 * level, 2.5);
+    physicalTone(low * pitch, .044, 'triangle', .014 * level, low * .72 * pitch, 'weapon', time + .002, low * 1.3 * pitch, 'bandpass', .006 * level, 1.2);
+  }
+
   function reloadStartSynth(level = 1) {
-    noise(.035, .04 * level, 2100, 'weapon', 'bandpass', 0, 1.5);
-    physicalTone(240, .045, 'triangle', .033 * level, 148, 'weapon', .006, 920, 'bandpass', .018 * level, 1.2);
-    physicalTone(880, .018, 'square', .02 * level, 520, 'weapon', .064, 1900, 'bandpass', .012 * level, 1.6);
-    noise(.042, .035 * level, 1250, 'weapon', 'bandpass', .072, 1.1);
-    physicalTone(168, .052, 'triangle', .024 * level, 118, 'weapon', .118, 760, 'bandpass', .016 * level, 1.0);
+    const pan = rand(-.12, .12);
+    const pitch = rand(.94, 1.06);
+    // Mag release and scrape, adapted from the other project's reloadPhase('start'/'magout').
+    pannedNoise(.17, .052 * level, 1750 * pitch, 'weapon', 'bandpass', 0, .62, pan);
+    reloadMetalHit(.034, 1.2 * level, 1780 * pitch, 820 * pitch, pan);
+    pannedNoise(.12, .055 * level, 3200 * pitch, 'weapon', 'bandpass', .074, 1.15, -pan * .8);
+    pannedNoise(.09, .035 * level, 1450 * pitch, 'weapon', 'bandpass', .145, .9, pan * .5);
+    physicalTone(156 * pitch, .052, 'sine', .026 * level, 92 * pitch, 'weapon', .16, 430 * pitch, 'lowpass', .01 * level, .7);
+  }
+
+  function reloadStepSynth(level = 1) {
+    const pan = rand(-.09, .09);
+    const pitch = rand(.96, 1.08);
+    // Per-round insert: low palm thunk plus a bright latch tick so the HUD count feels tactile.
+    pannedNoise(.075, .032 * level, 1550 * pitch, 'weapon', 'bandpass', 0, .75, pan);
+    physicalTone(205 * pitch, .05, 'sine', .043 * level, 112 * pitch, 'weapon', .018, 420 * pitch, 'lowpass', .014 * level, .65);
+    reloadMetalHit(.046, .72 * level, 1320 * pitch, 620 * pitch, -pan);
+    pannedNoise(.018, .016 * level, 6100 * pitch, 'weapon', 'highpass', .075, 2.4, pan * .8);
   }
 
   function reloadDoneSynth(level = 1) {
-    physicalTone(720, .024, 'square', .024 * level, 470, 'weapon', 0, 2600, 'highpass', .016 * level, 1.5);
-    noise(.028, .036 * level, 2600, 'weapon', 'highpass', .012, 1.2);
-    physicalTone(360, .045, 'triangle', .034 * level, 610, 'weapon', .056, 1400, 'bandpass', .017 * level, 1.1);
-    physicalTone(118, .055, 'sine', .024 * level, 82, 'weapon', .074, 520, 'lowpass', .014 * level, .7);
-    pannedNoise(.026, .018 * level, 4800, 'weapon', 'highpass', .126, 2.2, rand(-.16, .16));
-    physicalTone(1620, .018, 'triangle', .014 * level, 1080, 'weapon', .142, 3600, 'bandpass', .006 * level, 2.4);
+    const pan = rand(-.14, .14);
+    const pitch = rand(.93, 1.05);
+    // Charging handle: scrape, spring zing, then bolt into battery.
+    pannedNoise(.082, .068 * level, 2800 * pitch, 'weapon', 'bandpass', 0, 1.55, pan);
+    physicalTone(1180 * pitch, .035, 'triangle', .024 * level, 840 * pitch, 'weapon', .046, 2400 * pitch, 'bandpass', .012 * level, 1.7);
+    physicalTone(4900 * pitch, .145, 'sine', .018 * level, 7200 * pitch, 'weapon', .055, 5200 * pitch, 'bandpass', .006 * level, 3.8);
+    pannedNoise(.034, .042 * level, 4200 * pitch, 'weapon', 'highpass', .096, 1.6, -pan);
+    physicalTone(150 * pitch, .062, 'sine', .052 * level, 88 * pitch, 'weapon', .108, 360 * pitch, 'lowpass', .017 * level, .62);
+    reloadMetalHit(.112, 1.15 * level, 1750 * pitch, 760 * pitch, -pan * .7);
   }
 
   function explosionSynth(level = 1) {
@@ -1026,6 +1051,8 @@
       dryFire(gainValue);
     } else if (name === 'reloadStart') {
       reloadStartSynth(gainValue);
+    } else if (name === 'reloadStep') {
+      reloadStepSynth(gainValue);
     } else if (name === 'reloadDone') {
       reloadDoneSynth(gainValue);
     } else if (name === 'block') {
