@@ -18,7 +18,7 @@
     empty: 'empty.mp3',
     reloadStart: 'reloadStart.mp3',
     reloadStep: '',
-    reloadDone: '',
+    reloadDone: 'reloadDone.mp3',
     explosion: 'explosion.mp3',
     block: '',
     hit: 'hit.mp3',
