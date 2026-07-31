@@ -1,4 +1,4 @@
-const CACHE_NAME = 'zomvox-pwa-2026-07-31-03';
+const CACHE_NAME = 'zomvox-pwa-2026-07-31-04';
 
 const APP_SHELL = [
   './',
@@ -46,6 +46,9 @@ const APP_SHELL = [
   './assets/objectiveClear.mp3',
   './assets/pickup.mp3',
   './assets/pickupAmmo.mp3',
+  './assets/pickupC4.mp3',
+  './assets/pickupHealth.mp3',
+  './assets/perkEquip.mp3',
   './assets/reloadDone.mp3',
   './assets/reloadStart.mp3',
   './assets/shoot.mp3',
