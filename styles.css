@@ -145,6 +145,14 @@
   .commandKicker{ color:#9df57c; font-size:12px; font-weight:1000; letter-spacing:.22em; text-transform:uppercase; margin-bottom:7px; text-shadow:0 0 14px rgba(145,243,110,.42); }
   #commandBannerTitle{ color:#ffe66d; font-size:clamp(22px,2.7vw,30px); font-weight:1000; line-height:.95; text-transform:uppercase; text-shadow:0 0 22px rgba(255,219,76,.38),0 3px 0 rgba(0,0,0,.7); }
   #commandBannerBody{ color:#eef7df; font-size:clamp(10px,1.25vw,13px); font-weight:900; letter-spacing:.06em; text-transform:uppercase; margin-top:7px; text-shadow:0 2px 0 rgba(0,0,0,.62); }
+  .radioComms{ pointer-events:none; position:fixed; left:50%; top:76px; width:min(420px, 54vh, calc(100vw - 30px)); transform:translateX(-50%) translateY(-10px); z-index:23; display:flex; align-items:center; justify-content:center; gap:10px; opacity:0; visibility:hidden; transition:opacity .16s ease, visibility .16s ease, transform .16s ease; }
+  .radioComms[hidden]{ display:none; }
+  .radioComms.show{ opacity:1; visibility:visible; transform:translateX(-50%) translateY(0); }
+  .radioCommsAvatar{ width:64px; height:64px; flex:0 0 auto; image-rendering:pixelated; filter:drop-shadow(0 5px 0 rgba(0,0,0,.62)) drop-shadow(0 0 14px rgba(105,255,82,.2)); }
+  .radioCommsBubble{ position:relative; min-height:56px; flex:1 1 auto; padding:10px 13px 10px 16px; border:1px solid rgba(145,243,110,.48); border-radius:8px; background:linear-gradient(180deg, rgba(8,18,15,.94), rgba(3,8,9,.9)); box-shadow:0 16px 44px rgba(0,0,0,.46), inset 0 1px 0 rgba(255,255,255,.1), 0 0 22px rgba(105,255,82,.12); }
+  .radioCommsBubble::before{ content:""; position:absolute; left:-8px; top:23px; width:14px; height:14px; transform:rotate(45deg); border-left:1px solid rgba(145,243,110,.48); border-bottom:1px solid rgba(145,243,110,.48); background:rgba(8,18,15,.94); }
+  .radioCommsKicker{ color:#91f36e; font-size:10px; font-weight:1000; letter-spacing:.18em; line-height:1; text-transform:uppercase; margin-bottom:5px; text-shadow:0 0 12px rgba(145,243,110,.32); }
+  #radioCommsText{ color:#ecfff0; font-size:13px; line-height:1.18; font-weight:900; text-transform:uppercase; text-shadow:0 2px 0 rgba(0,0,0,.74); }
   #disableOverlay{ pointer-events:none; position:fixed; left:50%; bottom:20%; transform:translateX(-50%) translateY(8px); width:min(390px, calc(100vw - 42px)); padding:11px 12px; border-radius:8px; background:rgba(4,10,12,.84); border:1px solid rgba(145,243,110,.38); box-shadow:0 16px 48px rgba(0,0,0,.4),0 0 28px rgba(78,255,74,.12); opacity:0; visibility:hidden; transition:.14s; z-index:10; }
   #disableOverlay.show{ opacity:1; visibility:visible; transform:translateX(-50%) translateY(0); }
   .disableTitle{ color:#d7ffc7; font-size:13px; font-weight:1000; letter-spacing:.16em; text-transform:uppercase; text-align:center; margin-bottom:8px; text-shadow:0 0 18px rgba(145,243,110,.32); }
@@ -384,6 +392,11 @@
     #commandBanner{ width:min(330px, 58vh, calc(100vw - 28px)); padding:12px 14px; }
     #commandBannerTitle{ font-size:22px; }
     #commandBannerBody{ font-size:10px; line-height:1.15; }
+    .radioComms{ top:62px; width:min(330px, 62vh, calc(100vw - 24px)); gap:8px; }
+    .radioCommsAvatar{ width:50px; height:50px; }
+    .radioCommsBubble{ min-height:48px; padding:8px 10px 8px 13px; }
+    .radioCommsKicker{ font-size:8px; margin-bottom:4px; }
+    #radioCommsText{ font-size:10px; line-height:1.15; }
     #disableOverlay{ bottom:16%; width:min(330px, calc(100vw - 32px)); padding:8px 10px; }
     .disableTitle{ font-size:11px; margin-bottom:6px; }
     .disableBar{ height:10px; }

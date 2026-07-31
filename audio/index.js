@@ -124,11 +124,6 @@
         break;
       case 'zombieMoan':
         return zombieMoanVoice(level, playbackRate, options);
-      case 'voiceDrop': return radioCommand('radioDrop', level);
-      case 'voiceTriple': return radioCommand('radioTriple', level);
-      case 'voiceFewMore': return radioCommand('radioFew', level);
-      case 'voiceLowHealth': return radioCommand('radioLow', level);
-      case 'voiceLongRange': return radioCommand('radioLong', level);
       case 'birds':
         voice = ambientOneShot(ctx, bank, local, 'birds', { level }); bus = 'ambience'; break;
       case 'frogs': voice = frogVoice(level); bus = 'ambience'; break;
@@ -166,7 +161,10 @@
 
     setAmbientEnabled(value) {
       ambientEnabled = !!value;
-      if (!ambientEnabled) ambience?.stop();
+      if (!ambientEnabled) {
+        stopAmbientFile();
+        ambience?.stop();
+      }
     },
 
     setMasterVolume(value) {
@@ -182,7 +180,7 @@
 
     prime(onProgress) {
       getAudio();
-      const fileNames = Object.keys(DEFAULT_FILE_CUES).filter(name => configuredFileName(name));
+      const fileNames = configuredCueNames();
       const total = fileNames.length + 1;
       let loaded = 0;
       const report = (fileName, ok = true) => {
@@ -208,8 +206,8 @@
         lastLandAt = now;
       }
 
-      const filesFirst = options.preferFile === true || PREFER_FILES;
-      if (filesFirst && (name === 'shoot' || name === 'zombieMoan')) {
+      const filesFirst = (options.preferFile === true || PREFER_FILES) && hasConfiguredFileCue(name);
+      if (filesFirst) {
         const fileHandle = playFileCue(name, gainValue, playbackRate, options);
         if (fileHandle) return fileHandle;
       }
@@ -217,7 +215,7 @@
       const procedural = synthCue(name, gainValue, playbackRate, options);
       if (procedural) return procedural;
 
-      if (FILE_FALLBACK && (name === 'shoot' || name === 'zombieMoan')) {
+      if (FILE_FALLBACK && hasConfiguredFileCue(name)) {
         return playFileCue(name, gainValue, playbackRate, options);
       }
       return null;
@@ -226,10 +224,17 @@
     playAmbient(name) {
       if (!ambientEnabled) return;
       getAudio();
+      if (hasConfiguredFileCue(name)) {
+        if (playAmbientFileCue(name)) ambience?.stop();
+        else ambience?.play(name);
+        return;
+      }
+      stopAmbientFile();
       ambience?.play(name);
     },
 
     stopAmbient() {
+      stopAmbientFile();
       ambience?.stop();
     },
 
@@ -238,7 +243,7 @@
         running: !!audioCtx && audioCtx.state === 'running',
         contextState: audioCtx?.state || 'none',
         sampleRate: audioCtx?.sampleRate || 0,
-        ambience: ambience?.name || '',
+        ambience: activeAmbientFileName || ambience?.name || '',
         proceduralPreferred: !PREFER_FILES,
         loadedFiles: [...audioBuffers.entries()].filter(([, value]) => !!value).map(([name]) => name),
         zombieVoices: zombieMoanHandles.filter(h => h.expiresAt > performance.now()).length

@@ -17,7 +17,7 @@ window.ZOMVOX_CONFIG = {
     Bump this when you make visible changes so you can tell the browser
     loaded the newest version.
   */
-  buildVersion: '2026.07.30.12',
+  buildVersion: '2026.07.31.01',
 
   /*
     Seed used for deterministic world generation.
@@ -419,44 +419,50 @@ window.ZOMVOX_CONFIG = {
       Optional file-backed sounds.
 
       Put mp3/wav files in assets/ and set the file name here.
-      These two cues can use files while the rest of the game stays procedural.
-      Use null or '' to force the procedural fallback.
+      File-backed audio is tried first. The procedural synth stays available
+      as a fallback when a cue is blank, missing, or unavailable.
+
+      Use:
+      - 'sound-name.mp3' to use an asset file
+      - null to use the built-in procedural fallback
+      - '' to intentionally leave a slot silent/fallback-only
     */
+    preferFiles: true,
+    fileFallback: true,
     files: {
-      shoot: null,
-      zombieMoan: null
-    },
-
-    commandVoice: {
-      /*
-        Browser speech settings for radio command callouts.
-
-        Available voices depend on the device/browser. Set preferredVoice
-        to part of a voice name if you find one you like, such as 'David',
-        'Daniel', 'Google US English', etc. Leave blank for auto-pick.
-      */
-      enabled: true,
-      preferredVoice: '',
-
-      /*
-        1.00 uses the browser's natural/default speech pacing and tone.
-      */
-      pitch: 1.00,
-      rate: 1.00,
-      volume: 0.90,
-
-      /*
-        Faint radio bed that plays under command voice lines.
-
-        staticLevel:
-        - 0.00 = no under-voice static
-        - 0.03 = subtle field-radio texture
-        - 0.08+ = very noisy transmission
-
-        staticFrequency controls the bandpass center of the static.
-      */
-      staticLevel: 0.032,
-      staticFrequency: 1450
+      shoot: 'shoot.mp3',
+      empty: 'empty.mp3',
+      reloadStart: 'reloadStart.mp3',
+      reloadStep: '',
+      reloadDone: '',
+      explosion: 'explosion.mp3',
+      block: '',
+      hit: 'hit.mp3',
+      head: 'head.mp3',
+      kill: 'hit.mp3',
+      hurt: 'hurt.mp3',
+      death: '',
+      toxin: 'toxin.mp3',
+      land: 'land.mp3',
+      footstep: '',
+      heartbeat: '',
+      pickup: 'pickup.mp3',
+      pickupAmmo: 'pickupAmmo.mp3',
+      pickupHealth: 'pickup.mp3',
+      pickupC4: '',
+      perkEquip: '',
+      objectiveClear: 'objectiveClear.mp3',
+      wave: '',
+      confirm: '',
+      briefing: '',
+      zombieMoan: 'zombiemoan.wav',
+      ambientMenu: 'ambientMenu.mp3',
+      ambientForest: 'ambientForest.mp3',
+      ambientDunes: 'ambientDunes.mp3',
+      ambientRocky: 'ambientRocky.mp3',
+      ambientSwamp: 'ambientSwamp.mp3',
+      ambientAshlands: 'ambientAshlands.mp3',
+      ambientTundra: ''
     }
   }
 };

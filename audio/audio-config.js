@@ -8,30 +8,60 @@
  * so the static GitHub Pages build does not need bundling or modules.
  */
 
-  /*
-   * ZOMVOX AUDIO â€” single-file procedural sound system
-   *
-   * Built from the stronger layered synthesis approach used by the attached
-   * audio system, while keeping ZomVox's existing window.ZomVoxSound API.
-   *
-   * Kept: shared noise bank, layered weapon/foley recipes, bus compression,
-   * ducking, one generated reverb, audio-rate ambience movement, formant voice.
-   * Removed: module imports, 3D emitter pool, raycast occlusion/room probes,
-   * five-way convolution blend, offline test harness and engine event wiring.
-   */
-
   const config = window.ZOMVOX_CONFIG || {};
   const enemyConfig = config.enemies || {};
   const audioConfig = config.audio || {};
   const audioFileConfig = audioConfig.files || {};
-  const commandVoiceConfig = audioConfig.commandVoice || {};
 
   const DEFAULT_FILE_CUES = {
-    shoot: null,
-    zombieMoan: null
+    shoot: 'shoot.mp3',
+    empty: 'empty.mp3',
+    reloadStart: 'reloadStart.mp3',
+    reloadStep: '',
+    reloadDone: '',
+    explosion: 'explosion.mp3',
+    block: '',
+    hit: 'hit.mp3',
+    head: 'head.mp3',
+    kill: 'hit.mp3',
+    hurt: 'hurt.mp3',
+    death: '',
+    toxin: 'toxin.mp3',
+    land: 'land.mp3',
+    footstep: '',
+    heartbeat: '',
+    pickup: 'pickup.mp3',
+    pickupAmmo: 'pickupAmmo.mp3',
+    pickupHealth: 'pickup.mp3',
+    pickupC4: '',
+    perkEquip: '',
+    objectiveClear: 'objectiveClear.mp3',
+    wave: '',
+    confirm: '',
+    briefing: '',
+    zombieMoan: 'zombiemoan.wav',
+    ambientMenu: 'ambientMenu.mp3',
+    ambientForest: 'ambientForest.mp3',
+    ambientDunes: 'ambientDunes.mp3',
+    ambientRocky: 'ambientRocky.mp3',
+    ambientSwamp: 'ambientSwamp.mp3',
+    ambientAshlands: 'ambientAshlands.mp3',
+    ambientTundra: ''
   };
-  const FILE_CUE_VOLUME = { shoot: 1.0, zombieMoan: 0.94 };
-  const PREFER_FILES = audioConfig.preferFiles === true;
+  const FILE_CUE_VOLUME = {
+    shoot: 1.18,
+    explosion: 1.08,
+    hit: 0.92,
+    head: 1.04,
+    zombieMoan: 0.78,
+    ambientMenu: 0.72,
+    ambientForest: 0.68,
+    ambientDunes: 0.68,
+    ambientRocky: 0.68,
+    ambientSwamp: 0.68,
+    ambientAshlands: 0.68
+  };
+  const PREFER_FILES = audioConfig.preferFiles !== false;
   const FILE_FALLBACK = audioConfig.fileFallback !== false;
   const ZOMBIE_MOAN_MAX_OVERLAP = Math.max(
     1,

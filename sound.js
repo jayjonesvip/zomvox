@@ -14,8 +14,8 @@
  *   2. dsp.js              shared Web Audio building blocks
  *   3. weapons.js          gunshot and dry-fire recipes
  *   4. foley.js            impacts, footsteps, reloads, explosions, UI pings
- *   5. voice.js            formant barks, command voice material, one-shots
- *   6. mixer-runtime.js    buses, limiter, file fallbacks, routing helpers
+ *   5. voice.js            formant fallback voices, zombie throats, one-shots
+ *   6. mixer-runtime.js    buses, limiter, file playback, routing helpers
  *   7. ambience.js         looping biome beds and scheduled sweeteners
  *   8. index.js            cue dispatcher and window.ZomVoxSound public API
  *

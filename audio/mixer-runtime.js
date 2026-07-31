@@ -3,7 +3,7 @@
 /*
  * ZomVox audio: mixer and runtime bridge
  *
- * Master limiter, bus compressor/ducking, file-cue fallback, routing, radio command wrappers, and lightweight procedural ambience helpers.
+ * Master limiter, bus compressor/ducking, file-cue playback, routing, and lightweight procedural ambience helpers.
  * Loaded by ../sound.js before script.js; keep this as a classic script
  * so the static GitHub Pages build does not need bundling or modules.
  */
@@ -137,6 +137,8 @@
   let ambience = null;
   let audioBuffers = new Map();
   let audioLoadPromises = new Map();
+  let activeAmbientFile = null;
+  let activeAmbientFileName = '';
   let lastLandAt = -Infinity;
   let zombieMoanHandles = [];
 
@@ -172,7 +174,7 @@
     if (['shoot', 'empty', 'reloadStart', 'reloadStep', 'reloadDone', 'explosion'].includes(name)) return 'weapons';
     if (['footstep', 'land', 'block'].includes(name)) return 'foley';
     if (name === 'zombieMoan') return 'enemy';
-    if (name.startsWith('voice')) return 'voice';
+    if (name.startsWith('ambient')) return 'ambience';
     if (['confirm', 'briefing', 'objectiveClear', 'wave', 'perkEquip', 'heartbeat'].includes(name)) return 'ui';
     return 'sfx';
   }
@@ -236,6 +238,17 @@
     return DEFAULT_FILE_CUES[name] || '';
   }
 
+  function hasConfiguredFileCue(name) {
+    return !!configuredFileName(name);
+  }
+
+  function configuredCueNames() {
+    return Array.from(new Set([
+      ...Object.keys(DEFAULT_FILE_CUES),
+      ...Object.keys(audioFileConfig)
+    ])).filter(hasConfiguredFileCue);
+  }
+
   function fileCueUrl(fileName) {
     if (!fileName || typeof fileName !== 'string') return '';
     if (/^(https?:|data:|blob:)/i.test(fileName)) return fileName;
@@ -283,12 +296,15 @@
     const source = ctx.createBufferSource();
     const root = gain(ctx, Math.max(0, gainValue * (FILE_CUE_VOLUME[name] || 1)));
     const rate = clamp(Math.abs(Number(playbackRate) || 1), 0.25, 2);
+    const loop = options.loop === true;
     source.buffer = buffer;
+    source.loop = loop;
     source.playbackRate.value = rate;
     source.connect(root);
     source.start();
+    const duration = loop ? 86400 : buffer.duration / rate;
     const routed = routeVoice(
-      { node: root, end: ctx.currentTime + buffer.duration / rate, send: name === 'shoot' ? 0.35 : 0.22 },
+      { node: root, end: ctx.currentTime + duration, send: name === 'shoot' ? 0.35 : 0.22 },
       busForCue(name),
       options
     );
@@ -301,138 +317,41 @@
     return routed;
   }
 
+  function stopAmbientFile() {
+    if (activeAmbientFile) activeAmbientFile.stop?.();
+    activeAmbientFile = null;
+    activeAmbientFileName = '';
+  }
+
+  function playAmbientFileCue(name) {
+    if (!hasConfiguredFileCue(name)) return null;
+    if (activeAmbientFileName === name && activeAmbientFile) return activeAmbientFile;
+    stopAmbientFile();
+    activeAmbientFileName = name;
+    const handle = playFileCue(name, 1, 1, { loop: true, routeGain: 0.92, sendScale: 0.18 });
+    if (!handle) {
+      loadFileCue(name).then(result => {
+        if (ambientEnabled && activeAmbientFileName === name && result.ok && !activeAmbientFile) {
+          const loadedHandle = playFileCue(name, 1, 1, { loop: true, routeGain: 0.92, sendScale: 0.18 });
+          if (loadedHandle) {
+            activeAmbientFile = loadedHandle;
+            ambience?.stop();
+          }
+        }
+      });
+      return null;
+    }
+    activeAmbientFile = handle;
+    activeAmbientFileName = name;
+    return handle;
+  }
+
   const SURFACE_MAP = {
     grass: 'foliage', dirt: 'dirt', sand: 'sand', mud: 'dirt', stone: 'concrete',
     rock: 'concrete', ice: 'glass', water: 'water', ash: 'dirt', wood: 'wood',
     snow: 'sand', concrete: 'concrete', metal: 'metal', foliage: 'foliage', flesh: 'flesh'
   };
   function surfaceName(name) { return SURFACE_MAP[String(name || '').toLowerCase()] || 'concrete'; }
-
-  Object.assign(BARKS, {
-    // Short command-radio phrases. These intentionally favour cadence and grit
-    // over perfect intelligibility, matching the attached voice engine.
-    radioDrop: {
-      f0: 0.96, drive: 1.15, breath: 0.2, syl: [
-        { v: 'u', d: 0.15, a: 1, p: 1.02, on: 'n', g: 0.025 },
-        { v: 'a', d: 0.18, a: 0.9, p: 0.86, on: 'p', g: 0 }
-      ]
-    },
-    radioTriple: {
-      f0: 1.06, drive: 1.08, syl: [
-        { v: 'ah', d: 0.12, a: 0.85, p: 1.04, on: 'f', g: 0.012 },
-        { v: 'i', d: 0.11, a: 0.8, p: 1.12, on: 'p', g: 0.016 },
-        { v: 'a', d: 0.14, a: 1, p: 1.18, on: 'n', g: 0 }
-      ]
-    },
-    radioFew: {
-      f0: 1.0, drive: 1.0, syl: [
-        { v: 'u', d: 0.13, a: 0.9, p: 1.04, on: 'f', g: 0.025 },
-        { v: 'ohh', d: 0.18, a: 1, p: 0.92, on: 'n', g: 0 }
-      ]
-    },
-    radioLow: {
-      f0: 1.15, drive: 1.25, breath: 0.3, syl: [
-        { v: 'a', d: 0.15, a: 1, p: 1.12, on: 'f', g: 0.018 },
-        { v: 'a', d: 0.18, a: 1.05, p: 0.98, on: 'p', g: 0 }
-      ]
-    },
-    radioLong: {
-      f0: 1.03, drive: 0.95, syl: [
-        { v: 'i', d: 0.13, a: 0.9, p: 1.08, on: 'n', g: 0.02 },
-        { v: 'o', d: 0.16, a: 1, p: 0.93, on: 'f', g: 0 }
-      ]
-    }
-  });
-
-  const RADIO_COMMAND_TEXT = {
-    radioDrop: 'Follow your objective. Over.',
-    radioTriple: 'Impressive.',
-    radioFew: 'Just a few more.',
-    radioLow: 'Retreat and treat your wounds.',
-    radioLong: 'Nice shot.'
-  };
-
-  function commandVoiceSetting(name, fallback) {
-    return Object.prototype.hasOwnProperty.call(commandVoiceConfig, name) ? commandVoiceConfig[name] : fallback;
-  }
-
-  function commandVoiceNumber(name, fallback) {
-    const value = Number(commandVoiceSetting(name, fallback));
-    return Number.isFinite(value) ? value : fallback;
-  }
-
-  function selectCommandVoice(voices) {
-    const english = voices.filter(voice => /^en[-_]/i.test(voice.lang || ''));
-    const candidates = english.length ? english : voices;
-    const preferred = String(commandVoiceSetting('preferredVoice', '') || '').trim().toLowerCase();
-    if (preferred) {
-      const match = candidates.find(voice => String(voice.name || '').toLowerCase().includes(preferred));
-      if (match) return match;
-    }
-    return candidates
-      .map(voice => {
-        const name = String(voice.name || '').toLowerCase();
-        let score = 0;
-        if (/male|david|mark|george|daniel|alex|guy|fred|bruce|ralph/.test(name)) score += 8;
-        if (/female|zira|susan|samantha|victoria|karen|moira|tessa/.test(name)) score -= 8;
-        if (/google|microsoft|enhanced|premium|natural/.test(name)) score += 2;
-        return { voice, score };
-      })
-      .sort((a, b) => b.score - a.score)[0]?.voice || candidates[0];
-  }
-
-  function radioClick(level = 1, delay = 0) {
-    const ctx = getAudio();
-    if (!ctx) return null;
-    const t0 = ctx.currentTime + Math.max(0, delay);
-    const src = bank.source('white', rng.fork(), 1.08);
-    const bp = biquad(ctx, 'bandpass', Number(commandVoiceSetting('staticFrequency', 1450)) || 1450, 1.75);
-    const g = gain(ctx, 0);
-    series(src, bp, g);
-    ad(g.gain, t0, 0.18 * level, 0.004, 0.07);
-    src.start(t0, src._offset, 0.18);
-    return routeVoice({ node: g, end: t0 + 0.2, send: 0.04 }, 'voice', { sendScale: 0.35 });
-  }
-
-  function radioCommand(key, level = 1) {
-    const ctx = getAudio();
-    if (!ctx || commandVoiceSetting('enabled', true) === false) return null;
-    const text = RADIO_COMMAND_TEXT[key] || 'Command received.';
-    const handles = [radioClick(level, 0)];
-    const synth = window.speechSynthesis;
-    const canSpeak = !!(synth && typeof window.SpeechSynthesisUtterance === 'function');
-    const estimated = Math.max(0.75, text.length * 0.052);
-
-    if (canSpeak) {
-      try {
-        const utterance = new SpeechSynthesisUtterance(text);
-        const voices = typeof synth.getVoices === 'function' ? synth.getVoices() : [];
-        const preferred = selectCommandVoice(voices);
-        if (preferred) utterance.voice = preferred;
-        utterance.lang = preferred?.lang || 'en-US';
-        utterance.rate = clamp(commandVoiceNumber('rate', 1), 0.65, 1.35);
-        utterance.pitch = clamp(commandVoiceNumber('pitch', 1), 0.6, 1.4);
-        utterance.volume = clamp(commandVoiceNumber('volume', 0.9), 0, 1) * clamp(level, 0, 1.2);
-        setTimeout(() => {
-          try {
-            synth.cancel();
-            synth.speak(utterance);
-          } catch (_) {}
-        }, 85);
-        setTimeout(() => radioClick(level * 0.72, 0), (estimated + 0.18) * 1000);
-        return {
-          duration: estimated + 0.32,
-          stop() {
-            try { synth.cancel(); } catch (_) {}
-            for (const handle of handles) handle?.stop?.();
-          }
-        };
-      } catch (_) {}
-    }
-
-    handles.push(radioClick(level * 0.72, 0.22));
-    return combineHandles(handles);
-  }
 
   function zombieMoanVoice(level = 1, playbackRate = 1, options = {}) {
     const ctx = getAudio();
