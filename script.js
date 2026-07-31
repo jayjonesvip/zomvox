@@ -297,7 +297,7 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.30.10');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.30.11');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -2801,6 +2801,8 @@ function playerOnMachinePad() {
           const handle = sound('zombieMoan', volume, rate, { variant: stats.kind });
           enemy.moanHandle = handle && typeof handle.stop === 'function' ? handle : null;
           if (enemy.moanHandle) {
+            // Keep the mouth open for the actual sound handle duration, so
+            // longer procedural moans automatically get longer mouth movement.
             enemy.mouthOpenTimer = Math.max(enemy.mouthOpenTimer || 0, enemy.moanHandle.duration || 1.05);
           }
         }

@@ -28,7 +28,7 @@
 
   const DEFAULT_FILE_CUES = {
     shoot: null,
-    zombieMoan: 'zombiemoan.wav'
+    zombieMoan: null
   };
   const FILE_CUE_VOLUME = { shoot: 1.0, zombieMoan: 0.94 };
   const PREFER_FILES = audioConfig.preferFiles === true;
