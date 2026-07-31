@@ -167,7 +167,7 @@ function weaponShot(actx, bank, rng, profile, o = {}) {
 
   // VOICE TRIM â€” the gunshot is the loudest thing in the game and defines the
   // reference the rest of the mix is staged against.
-  const out = gain(actx, 0.46);
+  const out = gain(actx, 0.62);
   let end = t0 + 0.2;
 
   /* ---- 1. transient --------------------------------------------- */

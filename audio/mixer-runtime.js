@@ -384,7 +384,7 @@
       tract: rng.range(0.88, 1.08),
       level: level * voiceLevel
     });
-    const handle = routeVoice(voice, 'enemy', { pan: options.pan, sendScale: 1.15 });
+    const handle = routeVoice(voice, 'enemy', { pan: options.pan, routeGain: 1.18, sendScale: 1.15 });
     if (handle) zombieMoanHandles.push(handle);
     return handle;
   }
