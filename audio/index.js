@@ -20,7 +20,7 @@
     switch (name) {
       case 'shoot':
         mixer.duck(0.74, 0.11);
-        voice = weaponShot(ctx, bank, local, WEAPON_PROFILES.shotgun, {
+        voice = weaponShot(ctx, bank, local, WEAPON_PROFILES.rifle, {
           distance: 0, firstPerson: true, echoBoost: 1.05
         });
         routeOptions.routeGain = level;
