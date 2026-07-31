@@ -299,7 +299,7 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.30.12');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.31.02');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -976,7 +976,7 @@
 
   function beginWorldRebuild(seed) {
     if (worldRebuildState.active) return;
-    const nextSeed = Number.isFinite(seed) ? seed : Math.floor(Math.random() * 999999);
+    const nextSeed = Number.isFinite(seed) ? seed : monthlyRandomSeed();
     clearMovementInput();
     document.body.classList.add('stage-transition');
     worldRebuildState.active = true;
@@ -1000,9 +1000,22 @@
     return ['forest', 'dunes', 'rocky', 'swamp', 'ashlands', 'tundra'].includes(biome) ? biome : 'forest';
   }
 
+  function monthlySeedPrefix(date = new Date()) {
+    // Runtime month/year prefix keeps Quick Hunt islands fresh each month
+    // without requiring a config edit or new deployment.
+    return String(date.getMonth() + 1).padStart(2, '0') + String(date.getFullYear());
+  }
+
+  function monthlyRandomSeed(prefixBucket = 0) {
+    const bucket = Math.max(0, Math.min(8, Math.floor(prefixBucket)));
+    const suffixBase = bucket * 10000;
+    const suffix = String(suffixBase + Math.floor(Math.random() * 10000)).padStart(5, '0');
+    return Number(monthlySeedPrefix() + suffix);
+  }
+
   function quickSeedForBiome(biome) {
     const idx = QUICK_BIOMES.indexOf(normalizeBiome(biome));
-    return INITIAL_SEED + 100003 * (idx + 1);
+    return monthlyRandomSeed(Math.max(0, idx) + 1);
   }
 
   function currentBiome() {
@@ -4643,7 +4656,7 @@ function currentWaterIsDangerous() {
     mission.quickGoal = 20 + Math.floor(Math.random() * 21);
     resetActivePerks();
     document.body.classList.add('quick-mode');
-    generateWorld(Math.floor(100000 + Math.random() * 900000));
+    generateWorld(quickSeedForBiome(mission.quickBiome));
     enterGameFromMenu();
   }
 

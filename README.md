@@ -106,7 +106,7 @@ The pre-game settings panel allows quick tuning before entering the world:
 - Sound: turn game sounds on or off.
 - Fullscreen: request fullscreen on mobile when play starts.
 
-Seed controls were removed from the visible menu. Frontier Hunt rolls a fresh island seed and avoids repeating the previous biome when possible.
+Seed controls were removed from the visible menu. Frontier Hunt rolls a fresh island seed with a runtime month/year prefix, so random islands naturally rotate each month without a new build.
 
 ## Code Options
 
@@ -114,7 +114,7 @@ Common tuning options live in `config.js` under `window.ZOMVOX_CONFIG`. Edit tha
 
 ```js
 window.ZOMVOX_CONFIG = {
-  buildVersion: '2026.07.30.12',
+  buildVersion: '2026.07.31.02',
   initialSeed: 729641,
 
   environment: {
