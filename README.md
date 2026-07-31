@@ -114,7 +114,7 @@ Common tuning options live in `config.js` under `window.ZOMVOX_CONFIG`. Edit tha
 
 ```js
 window.ZOMVOX_CONFIG = {
-  buildVersion: '2026.07.30.08',
+  buildVersion: '2026.07.30.09',
   initialSeed: 729641,
 
   environment: {
@@ -219,7 +219,7 @@ Other sections in `config.js` expose safe defaults for:
 - `audio.files`: optional file-backed overrides for `shoot` and `zombieMoan`; both fall back to procedural audio if the files are missing or disabled.
 - `audio.commandVoice`: browser speech tuning for command callouts, including preferred voice name, pitch, rate, volume, and under-voice radio static.
 
-Audio is handled through `sound.js`, which loads the no-build classic scripts in `audio/`. The engine uses procedural Web Audio synthesis plus optional file-backed playback for the gunshot and zombie moan cues. The procedural cues use short ADSR-style envelopes, layered filtered noise, detuned shimmer tones for pickups, oscillators, soft-limited buses, and crossfaded ambience beds. If `assets/shoot.mp3` or `assets/zombiemoan.wav` are present, those cues use the files; otherwise they fall back to procedural audio.
+Audio is handled through `sound.js`, which loads the no-build classic scripts in `audio/`. The engine uses procedural Web Audio synthesis plus optional file-backed playback for specific cues. The procedural cues use short ADSR-style envelopes, layered filtered noise, detuned shimmer tones for pickups, oscillators, soft-limited buses, and crossfaded ambience beds. The gunshot currently uses the procedural rifle profile by default; file-backed playback can still be enabled by setting a cue file in `config.js`.
 
 Procedural cue references:
 
@@ -269,7 +269,7 @@ Procedural cue references:
 - `audio/`: pure procedural Web Audio effects split by responsibility: config/RNG, DSP helpers, weapons, foley/UI, formant voices, mixer/runtime routing, ambience, and cue dispatch.
 - `styles.css`: visual styling, responsive mobile layout, splash screen, health/ammo HUD, death overlay, world rebuild overlay, and touch controls.
 - `script.js`: WebGL setup, procedural terrain, fixed world chunks, movement, combat, enemy behavior, pickups, world rebuilding, HUD updates, and game loop.
-- `assets/`: splash screen, favicon files, title/social images, weapon sprite sheet, and optional `shoot.mp3` / `zombiemoan.wav` audio files.
+- `assets/`: splash screen, favicon files, title/social images, weapon sprite sheet, and optional cue audio files such as `zombiemoan.wav`.
 
 ## Hosting
 

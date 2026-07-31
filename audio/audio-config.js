@@ -27,7 +27,7 @@
   const commandVoiceConfig = audioConfig.commandVoice || {};
 
   const DEFAULT_FILE_CUES = {
-    shoot: 'shoot.mp3',
+    shoot: null,
     zombieMoan: 'zombiemoan.wav'
   };
   const FILE_CUE_VOLUME = { shoot: 0.72, zombieMoan: 0.74 };
