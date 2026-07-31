@@ -114,7 +114,7 @@ Common tuning options live in `config.js` under `window.ZOMVOX_CONFIG`. Edit tha
 
 ```js
 window.ZOMVOX_CONFIG = {
-  buildVersion: '2026.07.30.09',
+  buildVersion: '2026.07.30.11',
   initialSeed: 729641,
 
   environment: {
@@ -228,7 +228,7 @@ Procedural cue references:
 - Pickups and UI: `pickupAmmo`, `pickupHealth`, `pickupC4`, `pickup`, `perkEquip`, `confirm`, `briefing`, `objectiveClear`, `wave`.
 - Command voice: `voiceDrop` for drop-in orders, `voiceFewMore` for late-objective pressure, `voiceLowHealth` for wound warnings, and `voiceLongRange` for the first long-range kill. These use browser speech when available with procedural radio clicks, squelch, and a faint live static bed under the spoken line. The actual voice depends on the device/browser, but `config.js` can prefer a named voice and tune pitch/rate/static.
 - Foley and ambience: `footstep`, `land`, `ambientMenu`, `ambientForest`, `ambientDunes`, `ambientRocky`, `ambientSwamp`, `ambientAshlands`, `ambientTundra`. Footsteps use lightweight heel/toe contacts, surface scuff, grit, splash, and ice/wood accents. Ambience includes procedural beds plus occasional biome/menu sweeteners, mixed below zombie voices so nearby threats stay readable.
-- Zombie voices: `zombieMoan` can use `assets/zombiemoan.wav` with per-type playback speed/reverse behavior, or fall back to procedural per-type moans if the file is unavailable.
+- Zombie voices: `zombieMoan` defaults to procedural per-type moans. It can still use `assets/zombiemoan.wav` with per-type playback speed/reverse behavior if that file is explicitly configured in `config.js`.
 
 ## Repository Layout
 

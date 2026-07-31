@@ -124,8 +124,8 @@ const BARKS = {
     voiced: 0.62, tremolo: 5.2, tremoloDepth: 0.16, wanderCents: 42,
     growl: 0.58, formantJitter: 0.045, presenceDb: 1.5, throatDb: 6,
     lowpass: 3600, release: 0.18, innerRelease: 0.08, loopNoise: true, syl: [
-      { v: 'ohh', d: 0.62, a: 1.0, p: 1.03, g: 0.035 },
-      { v: 'ehr', d: 0.72, a: 0.72, p: 0.72, g: 0 },
+      { v: 'ohh', d: 1.24, a: 1.0, p: 1.03, g: 0.07 },
+      { v: 'ehr', d: 1.44, a: 0.72, p: 0.72, g: 0 },
     ],
   },
   zombieWail: {
@@ -133,8 +133,8 @@ const BARKS = {
     voiced: 0.52, tremolo: 6.4, tremoloDepth: 0.13, wanderCents: 58,
     growl: 0.34, formantJitter: 0.055, presenceDb: 1, throatDb: 5,
     lowpass: 3900, release: 0.24, innerRelease: 0.1, loopNoise: true, dying: true, syl: [
-      { v: 'ah', d: 0.55, a: 0.9, p: 1.08, g: 0.04 },
-      { v: 'ohh', d: 0.68, a: 0.72, p: 0.66, g: 0 },
+      { v: 'ah', d: 1.1, a: 0.9, p: 1.08, g: 0.08 },
+      { v: 'ohh', d: 1.36, a: 0.72, p: 0.66, g: 0 },
     ],
   },
   zombieBrute: {
@@ -142,8 +142,8 @@ const BARKS = {
     voiced: 0.7, tremolo: 4.3, tremoloDepth: 0.15, wanderCents: 30,
     growl: 0.95, formantJitter: 0.04, presenceDb: 0.5, throatDb: 8,
     lowpass: 3100, release: 0.22, innerRelease: 0.1, loopNoise: true, syl: [
-      { v: 'u', d: 0.72, a: 1.05, p: 0.98, g: 0.05 },
-      { v: 'ehr', d: 0.66, a: 0.8, p: 0.7, g: 0 },
+      { v: 'u', d: 1.44, a: 1.05, p: 0.98, g: 0.1 },
+      { v: 'ehr', d: 1.32, a: 0.8, p: 0.7, g: 0 },
     ],
   },
   zombieRunner: {
@@ -151,8 +151,8 @@ const BARKS = {
     voiced: 0.48, tremolo: 7.2, tremoloDepth: 0.12, wanderCents: 66,
     growl: 0.28, formantJitter: 0.06, presenceDb: 1.5, throatDb: 4,
     lowpass: 4100, release: 0.14, innerRelease: 0.07, loopNoise: true, syl: [
-      { v: 'ah', d: 0.42, a: 0.92, p: 1.12, g: 0.025 },
-      { v: 'ehr', d: 0.5, a: 0.66, p: 0.76, g: 0 },
+      { v: 'ah', d: 0.84, a: 0.92, p: 1.12, g: 0.05 },
+      { v: 'ehr', d: 1.0, a: 0.66, p: 0.76, g: 0 },
     ],
   },
   /* short affirmative, for squad chatter */
