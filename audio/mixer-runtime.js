@@ -238,6 +238,14 @@
     return DEFAULT_FILE_CUES[name] || '';
   }
 
+  function configuredFilePlaybackRate(name) {
+    const rates = audioConfig.playbackRates || {};
+    const value = Object.prototype.hasOwnProperty.call(rates, name)
+      ? Number(rates[name])
+      : Number(DEFAULT_FILE_PLAYBACK_RATES[name]);
+    return Number.isFinite(value) && value > 0 ? value : 1;
+  }
+
   function hasConfiguredFileCue(name) {
     return !!configuredFileName(name);
   }
@@ -295,7 +303,7 @@
     const buffer = reverse ? audioBuffers.get(key) : original;
     const source = ctx.createBufferSource();
     const root = gain(ctx, Math.max(0, gainValue * (FILE_CUE_VOLUME[name] || 1)));
-    const rate = clamp(Math.abs(Number(playbackRate) || 1), 0.25, 2);
+    const rate = clamp(Math.abs(Number(playbackRate) || 1) * configuredFilePlaybackRate(name), 0.25, 2);
     const loop = options.loop === true;
     source.buffer = buffer;
     source.loop = loop;

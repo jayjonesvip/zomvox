@@ -48,6 +48,9 @@
     ambientAshlands: 'ambientAshlands.mp3',
     ambientTundra: ''
   };
+  const DEFAULT_FILE_PLAYBACK_RATES = {
+    shoot: 1.15
+  };
   const FILE_CUE_VOLUME = {
     shoot: 1.18,
     explosion: 1.08,
