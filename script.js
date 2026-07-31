@@ -266,8 +266,6 @@
     reloading: false,
     reloadTimer: 0,
     reloadDuration: 0,
-    reloadSteps: 0,
-    reloadStep: 0,
     reloadTotal: 0,
     reloadInitialMag: 0,
     shotCooldown: 0,
@@ -299,7 +297,7 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.31.02');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.31.04');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -3093,10 +3091,8 @@ function playerOnMachinePad() {
     if (total <= 0) return;
     player.reloading = true;
     player.reloadTimer = 0;
-    player.reloadDuration = Math.max(0.08, currentReloadTime() * (total / MAG_SIZE));
+    player.reloadDuration = Math.max(0.08, currentReloadTime());
     player.reloadTotal = total;
-    player.reloadSteps = Math.min(6, total);
-    player.reloadStep = 0;
     player.reloadInitialMag = player.mag;
     reloadOverlay.classList.add('show');
     reloadOverlayFill.style.width = '0%';
@@ -3104,33 +3100,16 @@ function playerOnMachinePad() {
     sound('reloadStart');
   }
 
-  function applyReloadStep(targetStep) {
-    const clamped = Math.max(0, Math.min(player.reloadSteps, targetStep));
-    while (player.reloadStep < clamped) {
-      player.reloadStep++;
-      const loaded = Math.ceil(player.reloadTotal * player.reloadStep / player.reloadSteps);
-      const currentLoaded = player.mag - player.reloadInitialMag;
-      const add = Math.max(0, Math.min(player.reserve, loaded - currentLoaded));
-      if (add > 0) {
-        player.mag += add;
-        player.reserve -= add;
-        sound('reloadStep');
-        updateAmmoDisplay();
-      }
-    }
-    reloadOverlayFill.style.width = player.reloadSteps
-      ? Math.max(0, Math.min(100, (player.reloadStep / player.reloadSteps) * 100)) + '%'
-      : '0%';
-  }
-
   function finishReload() {
-    applyReloadStep(player.reloadSteps);
+    const add = Math.max(0, Math.min(player.reserve, player.reloadTotal, player.magSize - player.mag));
+    if (add > 0) {
+      player.mag += add;
+      player.reserve -= add;
+    }
     player.reloading = false;
     player.reloadTimer = 0;
     player.reloadDuration = 0;
     player.reloadTotal = 0;
-    player.reloadSteps = 0;
-    player.reloadStep = 0;
     player.reloadInitialMag = player.mag;
     reloadOverlay.classList.remove('show');
     reloadOverlayFill.style.width = '0%';
@@ -3144,8 +3123,6 @@ function playerOnMachinePad() {
     player.reloadTimer = 0;
     player.reloadDuration = 0;
     player.reloadTotal = 0;
-    player.reloadSteps = 0;
-    player.reloadStep = 0;
     player.reloadInitialMag = player.mag;
     reloadOverlay.classList.remove('show');
     reloadOverlayFill.style.width = '0%';
@@ -3157,8 +3134,8 @@ function playerOnMachinePad() {
     if (!player.reloading) return;
     player.reloadTimer += dt;
     const duration = Math.max(0.01, player.reloadDuration || currentReloadTime());
-    const targetStep = Math.floor((player.reloadTimer / duration) * player.reloadSteps);
-    applyReloadStep(targetStep);
+    const progress = Math.max(0, Math.min(1, player.reloadTimer / duration));
+    reloadOverlayFill.style.width = (progress * 100).toFixed(1) + '%';
     if (player.reloadTimer >= duration) finishReload();
   }
 
