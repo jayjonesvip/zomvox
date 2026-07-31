@@ -126,18 +126,6 @@
         voice = arpVoice([180, 330, 480], level, { spacing: 0.085, peak: 0.25, decay: 0.11, endScale: 0.88, type: 'sawtooth' });
         bus = 'ui'; routeOptions = {};
         break;
-      case 'carePackage':
-        // Triple-kill reward stinger. The perk crate already falls from above;
-        // this repurposes the procedural helicopter one-shot so the drop feels
-        // like a command supply run without adding another audio asset.
-        mixer.duck(0.28, 0.65);
-        voice = ambientOneShot(ctx, bank, local, 'heli', { level: level * 0.9, carePackage: true });
-        bus = 'sfx';
-        routeOptions = {
-          pan: Number.isFinite(Number(options.pan)) ? options.pan : local.range(-0.35, 0.35),
-          sendScale: 0.55
-        };
-        break;
       case 'zombieMoan':
         return zombieMoanVoice(level, playbackRate, options);
       case 'voiceDrop': return radioCommand('radioDrop', level);
