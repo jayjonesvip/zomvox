@@ -114,7 +114,7 @@ Common tuning options live in `config.js` under `window.ZOMVOX_CONFIG`. Edit tha
 
 ```js
 window.ZOMVOX_CONFIG = {
-  buildVersion: '2026.07.31.04',
+  buildVersion: '2026.07.31.06',
   initialSeed: 729641,
 
   environment: {
@@ -217,12 +217,13 @@ Other sections in `config.js` expose safe defaults for:
 - `pickups`: ammo, health, and C4 pickup amounts/drop chances.
 - `timers`: death overlay delay, world rebuild meter duration, heartbeat interval, and day/night cycle length.
 - `audio.files`: optional file-backed sounds for weapon, impact, pickup, UI, zombie, and ambient cues. File cues are tried first when configured; blank cues fall back to procedural audio.
+- `audio.playbackRates`: optional per-cue file playback speed multipliers, such as `shoot: 1.15` to make a stock asset feel snappier.
 
 Audio is handled through `sound.js`, which loads the no-build classic scripts in `audio/`. The engine uses file-backed playback first for configured cue files in `assets/`, with procedural Web Audio synthesis kept as the fallback when a slot is blank or a file is unavailable. Procedural fallback cues use short ADSR-style envelopes, layered filtered noise, detuned shimmer tones for pickups, oscillators, soft-limited buses, and biome ambience beds.
 
 Procedural cue references:
 
-- Weapon: `shoot`, `empty`, `reloadStart`, `reloadStep`, `reloadDone`, `explosion`.
+- Weapon: `shoot`, `empty`, `reloadStart`, `reloadDone`, `explosion`.
 - Impact and feedback: `hit`, `head`, `kill`, `block`, `hurt`, `death`, `toxin`, `heartbeat`.
 - Pickups and UI: `pickupAmmo`, `pickupHealth`, `pickupC4`, `pickup`, `perkEquip`, `confirm`, `briefing`, `objectiveClear`, `wave`.
 - Foley and ambience: `footstep`, `land`, `ambientMenu`, `ambientForest`, `ambientDunes`, `ambientRocky`, `ambientSwamp`, `ambientAshlands`, `ambientTundra`. Footsteps use lightweight heel/toe contacts, surface scuff, grit, splash, and ice/wood accents. Ambience includes procedural beds plus occasional biome/menu sweeteners, mixed below zombie voices so nearby threats stay readable.

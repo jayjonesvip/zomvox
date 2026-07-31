@@ -17,7 +17,6 @@
     shoot: 'shoot.mp3',
     empty: 'empty.mp3',
     reloadStart: 'reloadStart.mp3',
-    reloadStep: '',
     reloadDone: 'reloadDone.mp3',
     explosion: 'explosion.mp3',
     block: '',
@@ -47,6 +46,9 @@
     ambientSwamp: 'ambientSwamp.mp3',
     ambientAshlands: 'ambientAshlands.mp3',
     ambientTundra: ''
+  };
+  const DEFAULT_FILE_PLAYBACK_RATES = {
+    shoot: 1.15
   };
   const FILE_CUE_VOLUME = {
     shoot: 1.18,
