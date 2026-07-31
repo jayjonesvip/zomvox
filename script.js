@@ -297,7 +297,7 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.30.11');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.07.30.12');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -3254,19 +3254,21 @@ function playerOnMachinePad() {
     const now = performance.now() / 1000;
     killComboCount = now - lastKillTime < 2.0 ? killComboCount + 1 : 1;
     player.lifeBestCombo = Math.max(player.lifeBestCombo, killComboCount);
+    let perkRewardKill = false;
     if (killComboCount === 2) {
       player.score += 150;
       scorePop('+150 DOUBLE KILL', 'combo small');
     } else if (killComboCount >= 3 && killComboCount % 3 === 0) {
       player.score += 300;
       scorePop('+300 TRIPLE KILL', 'combo');
+      perkRewardKill = true;
       spawnTripleKillPerk(enemy);
     }
     lastKillTime = now;
     sound('kill');
     maybeVoiceFewMore();
     checkHordeLevel();
-    spawnEnemyDrop(enemy);
+    if (!perkRewardKill) spawnEnemyDrop(enemy);
     return true;
   }
 
