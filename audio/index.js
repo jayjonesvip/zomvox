@@ -23,7 +23,7 @@
         voice = weaponShot(ctx, bank, local, WEAPON_PROFILES.rifle, {
           distance: 0, firstPerson: true, echoBoost: 1.05
         });
-        routeOptions.routeGain = level;
+        routeOptions.routeGain = level * 1.35;
         break;
       case 'empty':
         voice = dryFire(ctx, bank, local, { level });
@@ -65,18 +65,14 @@
         });
         break;
       case 'hit': {
-        const a = routeVoice(surfaceImpact(ctx, bank, local, { surface: 'flesh', energy: level }), 'sfx', routeOptions);
-        const b = routeVoice(uiSound(ctx, bank, local.fork(), 'hitmarker', { level: level * 0.7 }), 'ui', {});
-        return combineHandles([a, b]);
+        return routeVoice(surfaceImpact(ctx, bank, local, { surface: 'flesh', energy: level * 1.25 }), 'sfx', routeOptions);
       }
       case 'head': {
-        const a = routeVoice(surfaceImpact(ctx, bank, local, { surface: 'flesh', energy: level * 1.25 }), 'sfx', routeOptions);
-        const b = routeVoice(uiSound(ctx, bank, local.fork(), 'headshot', { level }), 'ui', {});
-        return combineHandles([a, b]);
+        return routeVoice(surfaceImpact(ctx, bank, local, { surface: 'flesh', energy: level * 1.65 }), 'sfx', routeOptions);
       }
       case 'kill':
-        voice = uiSound(ctx, bank, local, 'kill', { level });
-        bus = 'ui'; routeOptions = {};
+        voice = surfaceImpact(ctx, bank, local, { surface: 'flesh', energy: level * 1.1 });
+        bus = 'sfx';
         break;
       case 'hurt': {
         const a = routeVoice(bark(ctx, bank, local, { bark: local.float() < 0.55 ? 'hit' : 'pain', f0: local.range(88, 120), level }), 'voice', {});
