@@ -17,7 +17,6 @@
     shoot: 'shoot.mp3',
     empty: 'empty.mp3',
     reloadStart: 'reloadStart.mp3',
-    reloadStep: '',
     reloadDone: 'reloadDone.mp3',
     explosion: 'explosion.mp3',
     block: '',

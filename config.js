@@ -17,7 +17,7 @@ window.ZOMVOX_CONFIG = {
     Bump this when you make visible changes so you can tell the browser
     loaded the newest version.
   */
-  buildVersion: '2026.07.31.05',
+  buildVersion: '2026.07.31.06',
 
   /*
     Seed used for deterministic world generation.
@@ -436,7 +436,6 @@ window.ZOMVOX_CONFIG = {
       shoot: 'shoot.mp3',
       empty: 'empty.mp3',
       reloadStart: 'reloadStart.mp3',
-      reloadStep: '',
       reloadDone: 'reloadDone.mp3',
       explosion: 'explosion.mp3',
       block: '',

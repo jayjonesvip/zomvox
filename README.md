@@ -114,7 +114,7 @@ Common tuning options live in `config.js` under `window.ZOMVOX_CONFIG`. Edit tha
 
 ```js
 window.ZOMVOX_CONFIG = {
-  buildVersion: '2026.07.31.05',
+  buildVersion: '2026.07.31.06',
   initialSeed: 729641,
 
   environment: {
@@ -223,7 +223,7 @@ Audio is handled through `sound.js`, which loads the no-build classic scripts in
 
 Procedural cue references:
 
-- Weapon: `shoot`, `empty`, `reloadStart`, `reloadStep`, `reloadDone`, `explosion`.
+- Weapon: `shoot`, `empty`, `reloadStart`, `reloadDone`, `explosion`.
 - Impact and feedback: `hit`, `head`, `kill`, `block`, `hurt`, `death`, `toxin`, `heartbeat`.
 - Pickups and UI: `pickupAmmo`, `pickupHealth`, `pickupC4`, `pickup`, `perkEquip`, `confirm`, `briefing`, `objectiveClear`, `wave`.
 - Foley and ambience: `footstep`, `land`, `ambientMenu`, `ambientForest`, `ambientDunes`, `ambientRocky`, `ambientSwamp`, `ambientAshlands`, `ambientTundra`. Footsteps use lightweight heel/toe contacts, surface scuff, grit, splash, and ice/wood accents. Ambience includes procedural beds plus occasional biome/menu sweeteners, mixed below zombie voices so nearby threats stay readable.
