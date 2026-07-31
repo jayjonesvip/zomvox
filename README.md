@@ -216,19 +216,19 @@ Other sections in `config.js` expose safe defaults for:
 - `mission`: legacy/story mission tuning plus insertion drop timing and first wave size. Frontier Hunt currently rolls random hunt seeds and targets at runtime.
 - `pickups`: ammo, health, and C4 pickup amounts/drop chances.
 - `timers`: death overlay delay, world rebuild meter duration, heartbeat interval, and day/night cycle length.
-- `audio.files`: optional file-backed overrides for `shoot` and `zombieMoan`; both fall back to procedural audio if the files are missing or disabled.
-- `audio.commandVoice`: browser speech tuning for command callouts, including preferred voice name, pitch, rate, volume, and under-voice radio static.
+- `audio.files`: optional file-backed sounds for weapon, impact, pickup, UI, zombie, and ambient cues. File cues are tried first when configured; blank cues fall back to procedural audio.
 
-Audio is handled through `sound.js`, which loads the no-build classic scripts in `audio/`. The engine uses procedural Web Audio synthesis plus optional file-backed playback for specific cues. The procedural cues use short ADSR-style envelopes, layered filtered noise, detuned shimmer tones for pickups, oscillators, soft-limited buses, and crossfaded ambience beds. The gunshot currently uses the procedural rifle profile by default; file-backed playback can still be enabled by setting a cue file in `config.js`.
+Audio is handled through `sound.js`, which loads the no-build classic scripts in `audio/`. The engine uses file-backed playback first for configured cue files in `assets/`, with procedural Web Audio synthesis kept as the fallback when a slot is blank or a file is unavailable. Procedural fallback cues use short ADSR-style envelopes, layered filtered noise, detuned shimmer tones for pickups, oscillators, soft-limited buses, and biome ambience beds.
 
 Procedural cue references:
 
 - Weapon: `shoot`, `empty`, `reloadStart`, `reloadStep`, `reloadDone`, `explosion`.
 - Impact and feedback: `hit`, `head`, `kill`, `block`, `hurt`, `death`, `toxin`, `heartbeat`.
 - Pickups and UI: `pickupAmmo`, `pickupHealth`, `pickupC4`, `pickup`, `perkEquip`, `confirm`, `briefing`, `objectiveClear`, `wave`.
-- Command voice: `voiceDrop` for drop-in orders, `voiceFewMore` for late-objective pressure, `voiceLowHealth` for wound warnings, and `voiceLongRange` for the first long-range kill. These use browser speech when available with procedural radio clicks, squelch, and a faint live static bed under the spoken line. The actual voice depends on the device/browser, but `config.js` can prefer a named voice and tune pitch/rate/static.
 - Foley and ambience: `footstep`, `land`, `ambientMenu`, `ambientForest`, `ambientDunes`, `ambientRocky`, `ambientSwamp`, `ambientAshlands`, `ambientTundra`. Footsteps use lightweight heel/toe contacts, surface scuff, grit, splash, and ice/wood accents. Ambience includes procedural beds plus occasional biome/menu sweeteners, mixed below zombie voices so nearby threats stay readable.
 - Zombie voices: `zombieMoan` defaults to procedural per-type moans. It can still use `assets/zombiemoan.wav` with per-type playback speed/reverse behavior if that file is explicitly configured in `config.js`.
+
+Mission command lines are visual radio comms toasts in the HUD instead of browser text-to-speech, so they stay readable and consistent across devices.
 
 ## Repository Layout
 

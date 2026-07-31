@@ -46,6 +46,8 @@
   const commandBanner = $('commandBanner');
   const commandBannerTitle = $('commandBannerTitle');
   const commandBannerBody = $('commandBannerBody');
+  const radioComms = $('radioComms');
+  const radioCommsText = $('radioCommsText');
   const disableOverlay = $('disableOverlay');
   const disableTitle = disableOverlay ? disableOverlay.querySelector('.disableTitle') : null;
   const disableFill = $('disableFill');
@@ -429,6 +431,7 @@
   setPlayerMagSize(MAG_SIZE, true);
 
   let toastTimer = null;
+  let radioCommsTimer = null;
 
   function showToast(message, priority = false, tone = '') {
     if (!priority && mission.toastLockTimer > 0) return;
@@ -446,6 +449,20 @@
     commandBannerBody.textContent = body;
     commandBanner.classList.add('show');
     mission.commandBannerTimer = duration;
+  }
+
+  function showRadioComms(message, duration = 3.4) {
+    if (!radioComms || !radioCommsText) return;
+    radioCommsText.textContent = message;
+    radioComms.hidden = false;
+    radioComms.classList.add('show');
+    clearTimeout(radioCommsTimer);
+    radioCommsTimer = setTimeout(() => {
+      radioComms.classList.remove('show');
+      setTimeout(() => {
+        if (!radioComms.classList.contains('show')) radioComms.hidden = true;
+      }, 180);
+    }, duration * 1000);
   }
 
   function updateCommandBanner(dt) {
@@ -914,7 +931,7 @@
     }
     const messages = [
       'Getting latest version...',
-      'Warming audio synth...',
+      'Preloading field audio...',
       'Generating world...',
       'Calibrating display...'
     ];
@@ -1162,7 +1179,7 @@
     const remaining = currentInfectedGoal() - player.kills;
     if (remaining > 0 && remaining <= 3) {
       mission.fewMoreVoicePlayed = true;
-      sound('voiceFewMore', .78);
+      showRadioComms('Just a few more.');
     }
   }
 
@@ -1170,14 +1187,14 @@
     if (mission.lowHealthVoicePlayed || deathState.active || player.health <= 0) return;
     if (player.health <= STARTING_HEALTH * .33) {
       mission.lowHealthVoicePlayed = true;
-      sound('voiceLowHealth', .82);
+      showRadioComms('Retreat and treat your wounds.', 4.2);
     }
   }
 
   function maybeVoiceLongRangeKill(dist) {
     if (mission.longRangeVoicePlayed || dist < LONG_RANGE_KILL_DIST) return;
     mission.longRangeVoicePlayed = true;
-    sound('voiceLongRange', .78);
+    showRadioComms('Nice shot.');
   }
 
   function missionSeedIndex(seed) {
@@ -2560,7 +2577,7 @@ function playerOnMachinePad() {
     showToast(mission.mode === MODE_QUICK
       ? 'Frontier Hunt: drop started. Look around. Movement unlocks on touchdown.'
       : 'Mission Command: insertion started. Look around. Movement unlocks on touchdown.');
-    if (mission.mode === MODE_QUICK) sound('voiceDrop', .82);
+    if (mission.mode === MODE_QUICK) showRadioComms('Follow your objective. Over.', 4.2);
   }
 
   function finishInsertionDrop() {

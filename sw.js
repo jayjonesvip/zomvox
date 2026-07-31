@@ -1,4 +1,4 @@
-const CACHE_NAME = 'zomvox-pwa-2026-07-30-12';
+const CACHE_NAME = 'zomvox-pwa-2026-07-31-01';
 
 const APP_SHELL = [
   './',
@@ -27,8 +27,29 @@ const APP_SHELL = [
   './assets/apple-touch-icon.png',
   './assets/favicon.png',
   './assets/bullet-icon.svg',
+  './assets/radio-operator.svg',
   './assets/zomvox-splash.png',
-  './assets/zomvox-gun-spritesheet.png'
+  './assets/zomvox-gun-spritesheet.png',
+  './assets/ambientAshlands.mp3',
+  './assets/ambientDunes.mp3',
+  './assets/ambientForest.mp3',
+  './assets/ambientMenu.mp3',
+  './assets/ambientRocky.mp3',
+  './assets/ambientSwamp.mp3',
+  './assets/empty.mp3',
+  './assets/explosion.mp3',
+  './assets/head.mp3',
+  './assets/hit.mp3',
+  './assets/hurt.mp3',
+  './assets/land.mp3',
+  './assets/moan.mp3',
+  './assets/objectiveClear.mp3',
+  './assets/pickup.mp3',
+  './assets/pickupAmmo.mp3',
+  './assets/reloadStart.mp3',
+  './assets/shoot.mp3',
+  './assets/toxin.mp3',
+  './assets/zombiemoan.wav'
 ];
 
 self.addEventListener('install', event => {
