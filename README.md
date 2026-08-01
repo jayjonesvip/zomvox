@@ -114,7 +114,7 @@ Common tuning options live in `config.js` under `window.ZOMVOX_CONFIG`. Edit tha
 
 ```js
 window.ZOMVOX_CONFIG = {
-  buildVersion: '2026.08.01.02',
+  buildVersion: '2026.08.01.03',
   initialSeed: 729641,
 
   environment: {
@@ -227,7 +227,7 @@ Procedural cue references:
 - Impact and feedback: `hit`, `head`, `kill`, `block`, `hurt`, `death`, `toxin`, `heartbeat`.
 - Pickups and UI: `pickupAmmo`, `pickupHealth`, `pickupC4`, `pickup`, `perkEquip`, `confirm`, `briefing`, `objectiveClear`, `wave`.
 - Foley and ambience: `footstep`, `land`, `ambientMenu`, `ambientForest`, `ambientDunes`, `ambientRocky`, `ambientSwamp`, `ambientAshlands`, `ambientTundra`. Footsteps use lightweight heel/toe contacts, surface scuff, grit, splash, and ice/wood accents. Ambience includes procedural beds plus occasional biome/menu sweeteners, mixed below zombie voices so nearby threats stay readable.
-- Zombie voices: `zombieMoan` defaults to procedural per-type moans. It can still use `assets/zombiemoan.wav` with per-type playback speed/reverse behavior if that file is explicitly configured in `config.js`.
+- Zombie voices: `zombieMoan` can use `assets/zombieMoan.mp3` with per-type playback speed/reverse behavior when configured in `config.js`; otherwise the procedural fallback is used.
 
 Mission command lines are visual radio comms toasts in the HUD instead of browser text-to-speech, so they stay readable and consistent across devices.
 
@@ -270,7 +270,7 @@ Mission command lines are visual radio comms toasts in the HUD instead of browse
 - `audio/`: pure procedural Web Audio effects split by responsibility: config/RNG, DSP helpers, weapons, foley/UI, formant voices, mixer/runtime routing, ambience, and cue dispatch.
 - `styles.css`: visual styling, responsive mobile layout, splash screen, health/ammo HUD, death overlay, world rebuild overlay, and touch controls.
 - `script.js`: WebGL setup, procedural terrain, fixed world chunks, movement, combat, enemy behavior, pickups, world rebuilding, HUD updates, and game loop.
-- `assets/`: splash screen, favicon files, title/social images, weapon sprite sheet, and optional cue audio files such as `zombiemoan.wav`.
+- `assets/`: splash screen, favicon files, title/social images, weapon sprite sheet, and optional cue audio files such as `zombieMoan.mp3`.
 
 ## Hosting
 
