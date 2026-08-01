@@ -38,7 +38,7 @@
     wave: '',
     confirm: '',
     briefing: '',
-    zombieMoan: 'zombiemoan.wav',
+    zombieMoan: 'zombieMoan.mp3',
     ambientMenu: 'ambientMenu.mp3',
     ambientForest: 'ambientForest.mp3',
     ambientDunes: 'ambientDunes.mp3',
