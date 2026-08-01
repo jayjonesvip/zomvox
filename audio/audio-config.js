@@ -31,7 +31,6 @@
     heartbeat: '',
     pickup: 'pickup.mp3',
     pickupAmmo: 'pickupAmmo.mp3',
-    pickupHealth: 'pickupHealth.mp3',
     pickupC4: 'pickupC4.mp3',
     perkEquip: 'perkEquip.mp3',
     objectiveClear: 'objectiveClear.mp3',

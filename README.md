@@ -6,7 +6,7 @@
 ![WebGL](https://img.shields.io/badge/WebGL-voxel_engine-990000?style=for-the-badge&logo=webgl&logoColor=white)
 ![100% Vibe Coded](https://img.shields.io/badge/100%25-vibe_coded-ff3f7f?style=for-the-badge)
 
-**ZomVox: Zombies and Voxels** is a browser-based voxel zombie survival shooter built for quick static hosting. The player drops onto a randomized fixed-size voxel island, grabs ammo and C4, earns perks from triple kills, and clears a short infected target before the island overwhelms them.
+**ZomVox: Zombies and Voxels** is a browser-based voxel zombie survival shooter built for quick static hosting. The player drops onto a randomized fixed-size voxel island, grabs ammo and C4, earns persistent session perks from kill streaks, and clears a short infected target before the island overwhelms them.
 
 The game runs directly in the browser with WebGL. There is no build step, package install, bundler, backend, or asset pipeline required.
 
@@ -39,7 +39,7 @@ ZomVox is listed on [IGDB](https://www.igdb.com/) and [DEAD.ARMY](https://dead.a
 - Compact ammo HUD on desktop and mobile, plus a six-round blaster magazine with magazine-swap reloads, reserve ammo, recoil, and fire-rate cooldown.
 - Camo ammo pickups that add six rounds at a time, plus low-ammo mercy caches when reserve ammo hits zero.
 - Flat silver C4 proximity charges with blinking red dots, yellow hazard strips, one starting charge, and rare zombie drops.
-- Blue-accent perk crates awarded by triple kills; each run starts clean and never repeats an equipped perk.
+- Blue-accent perk crates awarded every five kills in one spawn; equipped perks persist for the current browser session and never repeat.
 - Zombie spawning, ground-emerge entrances, pursuit steering around water/trees, attack cooldowns, retreat steps after attacks, deaths, score popups, and pickup drops.
 - Weighted zombie variants: normal, speedy one-shot runners, slower brute attackers, and rare grey stalkers.
 - Mobile-only landscape gate.
@@ -114,7 +114,7 @@ Common tuning options live in `config.js` under `window.ZOMVOX_CONFIG`. Edit tha
 
 ```js
 window.ZOMVOX_CONFIG = {
-  buildVersion: '2026.08.01.05',
+  buildVersion: '2026.08.01.06',
   initialSeed: 729641,
 
   environment: {
@@ -214,7 +214,7 @@ Other sections in `config.js` expose safe defaults for:
 - `weapon`: magazine size, magazine-swap reload time, fire cooldown, recoil, perk multipliers, and long-range kill distance.
 - `enemies`: base enemy cap, horde escalation values, and close-range zombie moan radius/voice/timing controls.
 - `mission`: legacy/story mission tuning plus insertion drop timing and first wave size. Frontier Hunt currently rolls random hunt seeds and targets at runtime.
-- `pickups`: ammo, health, and C4 pickup amounts/drop chances.
+- `pickups`: ammo and C4 pickup amounts/drop chances. Health pickups are intentionally disabled.
 - `timers`: death overlay delay, world rebuild meter duration, heartbeat interval, and day/night cycle length.
 - `audio.files`: optional file-backed sounds for weapon, impact, pickup, UI, zombie, and ambient cues. File cues are tried first when configured; blank cues fall back to procedural audio.
 - `audio.playbackRates`: optional per-cue file playback speed multipliers, such as `shoot: 1.15` to make a stock asset feel snappier.
@@ -225,7 +225,7 @@ Procedural cue references:
 
 - Weapon: `shoot`, `empty`, `reloadStart`, `reloadDone`, `explosion`.
 - Impact and feedback: `hit`, `head`, `kill`, `block`, `hurt`, `death`, `toxin`, `heartbeat`.
-- Pickups and UI: `pickupAmmo`, `pickupHealth`, `pickupC4`, `pickup`, `perkEquip`, `confirm`, `briefing`, `objectiveClear`, `wave`.
+- Pickups and UI: `pickupAmmo`, `pickupC4`, `pickup`, `perkEquip`, `confirm`, `briefing`, `objectiveClear`, `wave`.
 - Foley and ambience: `footstep`, `land`, `ambientMenu`, `ambientForest`, `ambientDunes`, `ambientRocky`, `ambientSwamp`, `ambientAshlands`, `ambientTundra`. Footsteps use lightweight heel/toe contacts, surface scuff, grit, splash, and ice/wood accents. Ambience includes procedural beds plus occasional biome/menu sweeteners, mixed below zombie voices so nearby threats stay readable.
 - Zombie voices: `zombieMoan` can use `assets/zombieMoan.mp3` with per-type playback speed/reverse behavior when configured in `config.js`; otherwise the procedural fallback is used.
 

@@ -17,7 +17,7 @@ window.ZOMVOX_CONFIG = {
     Bump this when you make visible changes so you can tell the browser
     loaded the newest version.
   */
-  buildVersion: '2026.08.01.05',
+  buildVersion: '2026.08.01.06',
 
   /*
     Seed used for deterministic world generation.
@@ -336,11 +336,6 @@ window.ZOMVOX_CONFIG = {
     ammoRounds: 6,
 
     /*
-      Health restored from one health pickup.
-    */
-    healthAmount: 25,
-
-    /*
       Chance for an ammo pickup to spawn in a generated chunk.
 
       Range:
@@ -350,15 +345,6 @@ window.ZOMVOX_CONFIG = {
     mapAmmoChance: 0.28,
 
     /*
-      Chance for a health pickup to spawn in a generated chunk.
-
-      Range:
-      0.00 = never
-      1.00 = always
-    */
-    mapHealthChance: 0.10,
-
-    /*
       Chance that a killed enemy drops C4.
 
       C4 is a flat proximity charge that detonates when infected touch it.
@@ -366,15 +352,10 @@ window.ZOMVOX_CONFIG = {
     enemyC4DropChance: 0.06,
 
     /*
-      Chance that a killed enemy drops health.
-    */
-    enemyHealthDropChance: 0.04,
-
-    /*
       Overall chance that a killed enemy drops something.
 
-      C4 and health are checked first. If the roll is still below this value,
-      the enemy drops ammo.
+      C4 is checked first. If the roll is still below this value, the enemy
+      drops ammo. Health pickups are intentionally disabled.
     */
     enemyAnyDropChance: 0.55
   },
@@ -450,7 +431,6 @@ window.ZOMVOX_CONFIG = {
       heartbeat: '',
       pickup: 'pickup.mp3',
       pickupAmmo: 'pickupAmmo.mp3',
-      pickupHealth: 'pickupHealth.mp3',
       pickupC4: 'pickupC4.mp3',
       perkEquip: 'perkEquip.mp3',
       objectiveClear: 'objectiveClear.mp3',

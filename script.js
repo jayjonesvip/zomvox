@@ -222,12 +222,9 @@
   const CONFIGURED_INFECTED_GOALS = configNumberArray(MISSION_CONFIG, 'infectedGoals', DEFAULT_INFECTED_GOALS).slice(0, MISSION_SEEDS.length);
   const MISSION_INFECTED_GOALS = MISSION_SEEDS.map((_, i) => Math.max(1, CONFIGURED_INFECTED_GOALS[i] || DEFAULT_INFECTED_GOALS[i] || FALLBACK_INFECTED_GOAL));
   const AMMO_PICKUP_ROUNDS = Math.max(1, Math.floor(configNumber(PICKUP_CONFIG, 'ammoRounds', 6)));
-  const HEALTH_PICKUP_AMOUNT = Math.max(1, configNumber(PICKUP_CONFIG, 'healthAmount', 25));
   const MAP_AMMO_PICKUP_CHANCE = Math.max(0, Math.min(1, configNumber(PICKUP_CONFIG, 'mapAmmoChance', 0.28)));
-  const MAP_HEALTH_PICKUP_CHANCE = Math.max(0, Math.min(1, configNumber(PICKUP_CONFIG, 'mapHealthChance', 0.10)));
   const ENEMY_C4_DROP_CHANCE = Math.max(0, Math.min(1, configNumber(PICKUP_CONFIG, 'enemyC4DropChance', 0.06)));
-  const ENEMY_HEALTH_DROP_CHANCE = Math.max(0, Math.min(1, configNumber(PICKUP_CONFIG, 'enemyHealthDropChance', 0.07)));
-  const ENEMY_ANY_DROP_CHANCE = Math.max(ENEMY_C4_DROP_CHANCE + ENEMY_HEALTH_DROP_CHANCE, Math.min(1, configNumber(PICKUP_CONFIG, 'enemyAnyDropChance', 0.55)));
+  const ENEMY_ANY_DROP_CHANCE = Math.max(ENEMY_C4_DROP_CHANCE, Math.min(1, configNumber(PICKUP_CONFIG, 'enemyAnyDropChance', 0.55)));
   const LONG_RANGE_KILL_DIST = configNumber(WEAPON_CONFIG, 'longRangeKillDistance', 34);
   const DEATH_READY_DELAY = Math.max(0.1, configNumber(TIMER_CONFIG, 'deathReadyDelay', 1.85));
   const WORLD_REBUILD_DURATION = Math.max(0.25, configNumber(TIMER_CONFIG, 'worldRebuildDuration', 2.35));
@@ -297,7 +294,7 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.05');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.06');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -1033,7 +1030,7 @@
     dunes: { label: 'Dunes', requirement: 'Unlocked' },
     rocky: { label: 'Rocky', requirement: 'Survive 5:00', test: progress => progress.stats.bestSurvivalSeconds >= 300 },
     swamp: { label: 'Swamp', requirement: 'Kill 50 in one hunt', test: progress => progress.stats.bestKills >= 50 },
-    ashlands: { label: 'Ashlands', requirement: 'Get a triple kill', test: progress => progress.stats.bestCombo >= 3 },
+    ashlands: { label: 'Ashlands', requirement: 'Earn a 5-kill streak', test: progress => progress.stats.bestCombo >= 5 },
     tundra: { label: 'Tundra', requirement: '100 total kills', test: progress => progress.stats.totalKills >= 100 }
   };
 
@@ -1046,7 +1043,7 @@
         bestKills: 0,
         bestSurvivalSeconds: 0,
         bestCombo: 0,
-        tripleKills: 0
+        streakPerks: 0
       }
     };
   }
@@ -1064,7 +1061,7 @@
     base.stats.bestKills = Math.max(0, Math.floor(Number(stats.bestKills) || 0));
     base.stats.bestSurvivalSeconds = Math.max(0, Math.floor(Number(stats.bestSurvivalSeconds) || 0));
     base.stats.bestCombo = Math.max(0, Math.floor(Number(stats.bestCombo) || 0));
-    base.stats.tripleKills = Math.max(0, Math.floor(Number(stats.tripleKills) || 0));
+    base.stats.streakPerks = Math.max(0, Math.floor(Number(stats.streakPerks ?? stats.tripleKills) || 0));
     return base;
   }
 
@@ -1138,7 +1135,7 @@
     quickProgress.stats.bestKills = Math.max(quickProgress.stats.bestKills, run.kills);
     quickProgress.stats.bestSurvivalSeconds = Math.max(quickProgress.stats.bestSurvivalSeconds, run.seconds);
     quickProgress.stats.bestCombo = Math.max(quickProgress.stats.bestCombo, run.bestCombo);
-    if (run.bestCombo >= 3) quickProgress.stats.tripleKills++;
+    if (run.bestCombo >= 5) quickProgress.stats.streakPerks++;
     saveQuickProgress();
     const newlyUnlocked = applyQuickUnlockRules();
     renderQuickBiomeLocks();
@@ -1793,6 +1790,7 @@
   }
 
   function spawnPickupAt(x, _y, z, kind = 'ammo') {
+    if (kind === 'health') return false;
     const px = Math.max(WORLD_MIN, Math.min(WORLD_MAX, Math.floor(x)));
     const pz = Math.max(WORLD_MIN, Math.min(WORLD_MAX, Math.floor(z)));
     const py = pickupAirY(px, pz);
@@ -1804,7 +1802,7 @@
       y: py + .35,
       z: pz + .5,
       kind,
-      amount: kind === 'health' ? HEALTH_PICKUP_AMOUNT : (kind === 'c4' || kind === 'perk' ? 1 : AMMO_PICKUP_ROUNDS),
+      amount: kind === 'c4' || kind === 'perk' ? 1 : AMMO_PICKUP_ROUNDS,
       perkId,
       bob: seededHash(px * 5.1, pz * 9.3) * 10
     });
@@ -1840,7 +1838,7 @@
     return null;
   }
 
-  function spawnTripleKillPerk(enemy) {
+  function spawnKillStreakPerk(enemy, streak = 5) {
     const x = enemy ? enemy.x : player.pos[0];
     const z = enemy ? enemy.z : player.pos[2];
     const perkId = nextPerkId(x, z);
@@ -1850,7 +1848,7 @@
       return false;
     }
 
-    // The reward should be where the triple kill happened. If that exact block
+    // Streak rewards should feel earned at the latest corpse. If that block
     // is water, a steep edge, or otherwise blocked, walk outward around the
     // corpse until a nearby visible ground tile is found.
     const spot = findPickupSpotNear(x, z, 5) || findPickupSpotNear(player.pos[0], player.pos[2], 6);
@@ -1867,8 +1865,8 @@
       bob: seededHash(spot.px * 5.1, spot.pz * 9.3) * 10
     });
     spawnParticles(spot.px + .5, spot.py + .7, spot.pz + .5, 18, 42);
-    scorePop('PERK DROPPED', 'pickup perk small');
-    showToast('Triple kill perk dropped.', false, 'perk');
+    scorePop(streak + ' KILL STREAK', 'pickup perk small');
+    showToast('Kill streak perk dropped.', false, 'perk');
     return true;
   }
 
@@ -2078,12 +2076,6 @@
       const lz = 3 + Math.floor(seededHash(cx - 14, cz + 91) * 10);
       const x = x0 + lx, z = z0 + lz, y = terrainHeight(x, z) + 1;
       if (y > WATER_LEVEL + 1) spawnPickupAt(x, y, z);
-    }
-    if (seededHash(cx * 31.4 - 11, cz * 13.9 + 25) > 1 - MAP_HEALTH_PICKUP_CHANCE) {
-      const lx = 3 + Math.floor(seededHash(cx - 121, cz + 38) * 10);
-      const lz = 3 + Math.floor(seededHash(cx + 49, cz - 83) * 10);
-      const x = x0 + lx, z = z0 + lz, y = terrainHeight(x, z) + 1;
-      if (y > WATER_LEVEL + 1) spawnPickupAt(x, y, z, 'health');
     }
     applyEditsForChunk(cx, cz);
   }
@@ -2679,15 +2671,15 @@ function playerOnMachinePad() {
   function enemyVariantStats(x, z) {
     const roll = seededHash(x * 12.7 - 4, z * 8.4 + 6);
     if (roll < 0.66) {
-      return { kind: 'normal', hp: 48, speed: 2.55, scale: 1, damage: 14, attackCooldown: .9, retreat: .34, bodyType: 10, limbType: 11, eyeType: 12 };
+      return { kind: 'normal', hp: 48, speed: 2.55, scale: 1, damage: 50, attackCooldown: .9, retreat: .34, bodyType: 10, limbType: 11, eyeType: 12 };
     }
     if (roll < 0.84) {
-      return { kind: 'speedy', hp: 28, speed: 3.35, scale: .78, damage: 8, attackCooldown: .68, retreat: .28, bodyType: 18, limbType: 10, eyeType: 12 };
+      return { kind: 'speedy', hp: 28, speed: 3.35, scale: .78, damage: 50, attackCooldown: .68, retreat: .28, bodyType: 18, limbType: 10, eyeType: 12 };
     }
     if (roll < 0.94) {
-      return { kind: 'brute', hp: 96, speed: 1.72, scale: 1.24, damage: 24, attackCooldown: 1.25, retreat: .46, bodyType: 19, limbType: 11, eyeType: 20 };
+      return { kind: 'brute', hp: 96, speed: 1.72, scale: 1.24, damage: 100, attackCooldown: 1.25, retreat: .46, bodyType: 19, limbType: 11, eyeType: 20 };
     }
-    return { kind: 'grey', hp: 118, speed: 1.18, scale: 1, damage: 18, attackCooldown: 1.15, retreat: .38, bodyType: 35, limbType: 36, eyeType: 12 };
+    return { kind: 'grey', hp: 118, speed: 1.18, scale: 1, damage: 100, attackCooldown: 1.15, retreat: .38, bodyType: 35, limbType: 36, eyeType: 12 };
   }
 
   function spawnEnemy() {
@@ -2926,8 +2918,8 @@ function playerOnMachinePad() {
       deathStats.textContent = '';
       renderDeathUnlocks(null);
       hideDeathShare();
-      deathContinue.textContent = 'Continue';
-      deathGiveUp.textContent = 'Give Up';
+      deathContinue.textContent = 'Respawn';
+      deathGiveUp.textContent = 'Quit';
     } else {
       const run = {
         kills: player.lifeKills,
@@ -2943,8 +2935,8 @@ function playerOnMachinePad() {
         sound('objectiveClear');
         showToast('Island unlocked: ' + unlockedBiomes.map(quickBiomeLabel).join(' + '), true);
       }
-      deathContinue.textContent = 'Retry Hunt';
-      deathGiveUp.textContent = 'Main Menu';
+      deathContinue.textContent = 'Respawn';
+      deathGiveUp.textContent = 'Quit';
     }
     deathFill.style.width = '0%';
     deathOverlay.classList.remove('ready');
@@ -2958,7 +2950,7 @@ function playerOnMachinePad() {
       deathState.ready = true;
       deathText.textContent = mission.mode === MODE_STORY
         ? 'Mission Command can remotely revive you'
-        : 'Continue hunt or return to main menu';
+        : 'Respawn or quit to main menu';
       deathOverlay.classList.add('ready');
     }
   }
@@ -3224,7 +3216,6 @@ function playerOnMachinePad() {
     const y = Math.floor(enemy.y);
     const z = Math.floor(enemy.z);
     if (dropRoll < ENEMY_C4_DROP_CHANCE) spawnPickupAt(x, y, z, 'c4');
-    else if (dropRoll < ENEMY_C4_DROP_CHANCE + ENEMY_HEALTH_DROP_CHANCE) spawnPickupAt(x, y, z, 'health');
     else if (dropRoll < ENEMY_ANY_DROP_CHANCE) spawnPickupAt(x, y, z, 'ammo');
   }
 
@@ -3258,20 +3249,15 @@ function playerOnMachinePad() {
       scorePop('+200 LONG RANGE', 'range small');
       maybeVoiceLongRangeKill(dist);
     }
-    const now = performance.now() / 1000;
-    killComboCount = now - lastKillTime < 2.0 ? killComboCount + 1 : 1;
-    player.lifeBestCombo = Math.max(player.lifeBestCombo, killComboCount);
+    const streak = player.lifeKills;
+    player.lifeBestCombo = Math.max(player.lifeBestCombo, streak);
     let perkRewardKill = false;
-    if (killComboCount === 2) {
-      player.score += 150;
-      scorePop('+150 DOUBLE KILL', 'combo small');
-    } else if (killComboCount >= 3 && killComboCount % 3 === 0) {
-      player.score += 300;
-      scorePop('+300 TRIPLE KILL', 'combo');
-      perkRewardKill = true;
-      spawnTripleKillPerk(enemy);
+    if (streak > 0 && streak % 5 === 0) {
+      player.score += 250;
+      perkRewardKill = spawnKillStreakPerk(enemy, streak);
     }
-    lastKillTime = now;
+    lastKillTime = performance.now() / 1000;
+    killComboCount = streak;
     sound('kill');
     maybeVoiceFewMore();
     checkHordeLevel();
@@ -3757,10 +3743,10 @@ function playerOnMachinePad() {
     }
     for (let i = 0; i < 4; i++) {
       const angle = -Math.PI * .75 + i * (Math.PI * .5);
-      spawnThrownPickup(c.x, c.y + .75, c.z, i < 2 ? 'health' : 'ammo', angle, 3.7 + i * .35);
+      spawnThrownPickup(c.x, c.y + .75, c.z, 'ammo', angle, 3.7 + i * .35);
     }
     scorePop('SUPPLY CRATE OPENED', 'pickup small');
-    showToast('Crate popped: 2 health, 2 ammo.');
+    showToast('Crate popped: ammo cache deployed.');
     sound('pickup');
   }
 
@@ -3880,6 +3866,7 @@ function playerOnMachinePad() {
   }
 
   function spawnThrownPickup(x, y, z, kind, angle, force = 4.2) {
+    if (kind === 'health') return false;
     pickups.push({
       x,
       y,
@@ -3888,9 +3875,10 @@ function playerOnMachinePad() {
       vy: 4.2 + seededHash(x * 4.2, z * 7.1) * 1.8,
       vz: Math.sin(angle) * force,
       kind,
-      amount: kind === 'health' ? HEALTH_PICKUP_AMOUNT : AMMO_PICKUP_ROUNDS,
+      amount: AMMO_PICKUP_ROUNDS,
       bob: seededHash(x * 5.1, z * 9.3) * 10
     });
+    return true;
   }
 
   function updateDisableInteraction(dt) {
@@ -4424,7 +4412,6 @@ function currentWaterIsDangerous() {
     player.health = STARTING_HEALTH;
     player.reserve = STARTING_RESERVE;
     player.c4 = STARTING_C4;
-    resetActivePerks();
     setPlayerMagSize(effectiveMagSize(), true);
     player.kills = 0;
     player.headshots = 0;
@@ -4615,7 +4602,6 @@ function currentWaterIsDangerous() {
     mission.quickBiome = selectedBiome;
     mission.quickVariant = 'survival';
     mission.quickGoal = 0;
-    resetActivePerks();
     document.body.classList.add('quick-mode');
     generateWorld(quickSeedForBiome(mission.quickBiome));
     enterGameFromMenu();
@@ -4631,7 +4617,6 @@ function currentWaterIsDangerous() {
     mission.quickBiome = biome;
     mission.quickVariant = 'hunt';
     mission.quickGoal = 20 + Math.floor(Math.random() * 21);
-    resetActivePerks();
     document.body.classList.add('quick-mode');
     generateWorld(quickSeedForBiome(mission.quickBiome));
     enterGameFromMenu();
