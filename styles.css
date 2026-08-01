@@ -78,23 +78,23 @@
   #c4HudCount{ min-width:22px; height:22px; display:grid; place-items:center; border-radius:999px; color:#161006; background:#ffe066; font-size:14px; box-shadow:0 0 12px rgba(255,214,78,.2); }
   #c4Hud.empty{ color:#81908b; }
   #c4Hud.empty #c4HudCount{ background:#8b958f; color:#101715; box-shadow:none; }
-  #gunSprite{ pointer-events:none; position:fixed; right:clamp(22px,4vw,78px); bottom:-16px; width:min(39vw, 400px); aspect-ratio:1/1; z-index:5; background:url("assets/zomvox-gun-spritesheet.png") 0 0 / 300% 100% no-repeat; image-rendering:auto; filter:drop-shadow(0 18px 22px rgba(0,0,0,.55)); transform-origin:72% 78%; animation:gunIdleBreath 2.85s ease-in-out infinite; transition:transform .08s ease-out, opacity .12s ease-out; }
+  #gunSprite{ --gunAimAngle:7deg; pointer-events:none; position:fixed; right:clamp(22px,4vw,78px); bottom:-16px; width:min(39vw, 400px); aspect-ratio:1/1; z-index:5; background:url("assets/zomvox-gun-spritesheet.png") 0 0 / 300% 100% no-repeat; image-rendering:auto; filter:drop-shadow(0 18px 22px rgba(0,0,0,.55)); transform-origin:72% 78%; animation:gunIdleBreath 2.85s ease-in-out infinite; transition:transform .08s ease-out, opacity .12s ease-out; }
   #gunSprite.moving{ background-position:50% 0; animation:gunWalkSway .56s cubic-bezier(.45,0,.55,1) infinite; }
-  #gunSprite.shooting{ background-position:100% 0; animation:none; transform:translate(8px,-4px) rotate(1deg); }
+  #gunSprite.shooting{ background-position:100% 0; animation:none; transform:translate(8px,-4px) rotate(calc(var(--gunAimAngle) + 1deg)); }
   #gunSprite.reloading,
   #gunSprite.moving.reloading,
   #gunSprite.shooting.reloading{ animation:none; transform:translate(18vw, 24vh) rotate(18deg); opacity:0; transition:transform .22s ease-in, opacity .16s ease-in; }
   @keyframes gunIdleBreath{
-    0%,100%{ transform:translate3d(0,0,0) rotate(0deg); }
-    38%{ transform:translate3d(-1px,-3px,0) rotate(-.35deg); }
-    72%{ transform:translate3d(1px,-1px,0) rotate(.18deg); }
+    0%,100%{ transform:translate3d(0,0,0) rotate(var(--gunAimAngle)); }
+    38%{ transform:translate3d(-1px,-3px,0) rotate(calc(var(--gunAimAngle) - .35deg)); }
+    72%{ transform:translate3d(1px,-1px,0) rotate(calc(var(--gunAimAngle) + .18deg)); }
   }
   @keyframes gunWalkSway{
-    0%,100%{ transform:translate3d(-2px,7px,0) rotate(-1.8deg); }
-    20%{ transform:translate3d(1px,3px,0) rotate(-.6deg); }
-    42%{ transform:translate3d(4px,8px,0) rotate(.8deg); }
-    62%{ transform:translate3d(1px,11px,0) rotate(1.35deg); }
-    82%{ transform:translate3d(-3px,6px,0) rotate(-.8deg); }
+    0%,100%{ transform:translate3d(-2px,7px,0) rotate(calc(var(--gunAimAngle) - 1.8deg)); }
+    20%{ transform:translate3d(1px,3px,0) rotate(calc(var(--gunAimAngle) - .6deg)); }
+    42%{ transform:translate3d(4px,8px,0) rotate(calc(var(--gunAimAngle) + .8deg)); }
+    62%{ transform:translate3d(1px,11px,0) rotate(calc(var(--gunAimAngle) + 1.35deg)); }
+    82%{ transform:translate3d(-3px,6px,0) rotate(calc(var(--gunAimAngle) - .8deg)); }
   }
   #muzzleFx{ pointer-events:none; position:fixed; inset:0; z-index:6; overflow:hidden; contain:layout paint; }
   .muzzleParticle{ position:fixed; left:0; top:0; width:var(--size,8px); height:var(--size,8px); transform:translate3d(var(--x,0),var(--y,0),0) rotate(var(--spin,0deg)) scale(var(--start,.7)); opacity:0; image-rendering:pixelated; background:var(--color,#ffd84d); border:1px solid rgba(0,0,0,.22); box-shadow:0 0 var(--glow,14px) var(--halo,rgba(255,211,58,.45)); animation:muzzleParticle var(--life,.16s) steps(4,end) forwards; }
