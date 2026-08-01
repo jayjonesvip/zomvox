@@ -114,7 +114,7 @@ Common tuning options live in `config.js` under `window.ZOMVOX_CONFIG`. Edit tha
 
 ```js
 window.ZOMVOX_CONFIG = {
-  buildVersion: '2026.08.01.03',
+  buildVersion: '2026.08.01.05',
   initialSeed: 729641,
 
   environment: {
