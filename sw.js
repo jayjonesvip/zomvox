@@ -1,4 +1,4 @@
-const CACHE_NAME = 'zomvox-pwa-2026-08-01-01';
+const CACHE_NAME = 'zomvox-pwa-2026-08-01-02';
 
 const APP_SHELL = [
   './',
@@ -29,7 +29,6 @@ const APP_SHELL = [
   './assets/bullet-icon.svg',
   './assets/radio-operator.svg',
   './assets/zomvox-splash.png',
-  './assets/zomvox-block-blaster-v2.png',
   './assets/zomvox-gun-spritesheet.png',
   './assets/ambientAshlands.mp3',
   './assets/ambientDunes.mp3',
