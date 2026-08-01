@@ -521,7 +521,7 @@ function ambientOneShot(actx, bank, rng, kind, o = {}) {
     case 'heli': {
       // Rotor thump: an amplitude-modulated dark noise bed, no sample needed.
       // Ambient helicopter passes fade in slowly; care-package drops need a
-      // fast attack so players hear the reward immediately after a triple kill.
+      // fast attack so players hear the reward immediately after a kill streak.
       const carePackage = o.carePackage === true;
       const dur = carePackage ? rng.range(2.8, 4.0) : rng.range(6, 12);
       const src = bank.source('brown', rng, rng.range(0.8, 1.1));
