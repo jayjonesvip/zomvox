@@ -17,7 +17,7 @@ window.ZOMVOX_CONFIG = {
     Bump this when you make visible changes so you can tell the browser
     loaded the newest version.
   */
-  buildVersion: '2026.08.01.12',
+  buildVersion: '2026.08.01.13',
 
   /*
     Seed used for deterministic world generation.
@@ -349,6 +349,22 @@ window.ZOMVOX_CONFIG = {
       360000 = 6 minutes from dawn to dusk.
     */
     cycleHalfDayMs: 360000
+  },
+
+  comms: {
+    /*
+      Mission Command radio text.
+
+      Keep these short so the hologram-style transmission fits on mobile.
+      Use an empty string '' to disable a specific transmission.
+    */
+    dropIn: 'Follow your objective.',
+    bitten: 'You are bit. Keep your distance and finish the objective.',
+    death: 'Do you read me? Are you there?',
+    fewMore: 'Just a few more.',
+    lowHealth: 'Retreat and treat your wounds.',
+    longRange: 'Nice shot.',
+    ammoCache: 'Ammo cache marked nearby.'
   },
 
   audio: {

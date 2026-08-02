@@ -119,6 +119,7 @@
   const MISSION_CONFIG = configSection('mission');
   const PICKUP_CONFIG = configSection('pickups');
   const TIMER_CONFIG = configSection('timers');
+  const COMMS_CONFIG = configSection('comms');
 
   const GAME_OPTIONS = {
     timeMode: configString(ENV_CONFIG, 'timeMode', 'cycle'),
@@ -265,7 +266,14 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.12');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.13');
+  const COMMS_DROP_IN = configString(COMMS_CONFIG, 'dropIn', 'Follow your objective.');
+  const COMMS_BITTEN = configString(COMMS_CONFIG, 'bitten', 'You are bit. Keep your distance and finish the objective.');
+  const COMMS_DEATH = configString(COMMS_CONFIG, 'death', 'Do you read me? Are you there?');
+  const COMMS_FEW_MORE = configString(COMMS_CONFIG, 'fewMore', 'Just a few more.');
+  const COMMS_LOW_HEALTH = configString(COMMS_CONFIG, 'lowHealth', 'Retreat and treat your wounds.');
+  const COMMS_LONG_RANGE = configString(COMMS_CONFIG, 'longRange', 'Nice shot.');
+  const COMMS_AMMO_CACHE = configString(COMMS_CONFIG, 'ammoCache', 'Ammo cache marked nearby.');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -327,7 +335,8 @@
     toastLockTimer: 0,
     fewMoreVoicePlayed: false,
     lowHealthVoicePlayed: false,
-    longRangeVoicePlayed: false
+    longRangeVoicePlayed: false,
+    bittenVoicePlayed: false
   };
 
   const activePerks = {
@@ -425,6 +434,7 @@
 
   function showRadioComms(message, duration = 3.4) {
     if (!radioComms || !radioCommsText) return;
+    if (!message) return;
     radioCommsText.textContent = message;
     radioComms.hidden = false;
     radioComms.classList.add('show');
@@ -1172,22 +1182,28 @@
     const remaining = currentInfectedGoal() - player.kills;
     if (remaining > 0 && remaining <= 3) {
       mission.fewMoreVoicePlayed = true;
-      showRadioComms('Just a few more.');
+      showRadioComms(COMMS_FEW_MORE);
     }
+  }
+
+  function maybeVoiceBitten() {
+    if (mission.bittenVoicePlayed || deathState.active || player.health <= 0) return;
+    mission.bittenVoicePlayed = true;
+    showRadioComms(COMMS_BITTEN, 4.4);
   }
 
   function maybeVoiceLowHealth() {
     if (mission.lowHealthVoicePlayed || deathState.active || player.health <= 0) return;
     if (player.health <= STARTING_HEALTH * .33) {
       mission.lowHealthVoicePlayed = true;
-      showRadioComms('Retreat and treat your wounds.', 4.2);
+      showRadioComms(COMMS_LOW_HEALTH, 4.2);
     }
   }
 
   function maybeVoiceLongRangeKill(dist) {
     if (mission.longRangeVoicePlayed || dist < LONG_RANGE_KILL_DIST) return;
     mission.longRangeVoicePlayed = true;
-    showRadioComms('Nice shot.');
+    showRadioComms(COMMS_LONG_RANGE);
   }
 
   function isGameLive() {
@@ -1886,7 +1902,7 @@
     if (!spot) return;
     spawnPickupAt(spot.x, spot.y, spot.z, 'ammo');
     scorePop('AMMO CACHE', 'pickup small');
-    showToast('Mission Command: ammo cache marked nearby.');
+    showRadioComms(COMMS_AMMO_CACHE, 3.8);
   }
 
   function biomeSurfaceTypes(biome, x, z, h, beach, desert, lavaShore) {
@@ -2442,7 +2458,6 @@
     player.pos[1] = Math.min(MAX_Y + INSERTION_DROP_HEIGHT, groundY + INSERTION_DROP_HEIGHT);
     scorePop('DROP INBOUND', 'small');
     showToast('Frontier Hunt: drop started. Look around. Movement unlocks on touchdown.');
-    showRadioComms('Follow your objective. Over.', 4.2);
   }
 
   function finishInsertionDrop() {
@@ -2455,6 +2470,7 @@
     sound('land', 1, 1, { surface: playerAudioSurface(), gait: 'land' });
     scorePop('TOUCHDOWN', 'pickup small');
     showToast('Boots down. Hunt the infected.');
+    showRadioComms(COMMS_DROP_IN, 4.2);
   }
 
   function updateMovement(dt) {
@@ -2754,6 +2770,7 @@
     if (player.health <= 0) beginDeathSequence();
     else {
       woundGaspTimer = Math.min(woundGaspTimer || 999, 1.2 + Math.random() * 1.8);
+      maybeVoiceBitten();
       maybeVoiceLowHealth();
       sound('hurt');
     }
@@ -2782,12 +2799,13 @@
     player.vel = [0, 0, 0];
     cancelReload();
     sound('death');
+    showRadioComms(COMMS_DEATH, 4.6);
     spawnDeathBlood(player.pos[0], player.pos[1] + .65, player.pos[2], 36);
     deathTitle.textContent = 'RESPAWNING...';
     deathText.textContent = 'Respawning in 3.0s';
     renderAutoRespawnStats();
     renderDeathUnlocks(null);
-    deathGiveUp.textContent = 'Quit';
+    deathGiveUp.textContent = 'Exit';
     const run = {
       kills: player.lifeKills,
       seconds: runSeconds(),
@@ -2847,6 +2865,8 @@
     player.reserve = Math.max(player.reserve, RESPAWN_RESERVE_FLOOR);
     cancelReload();
     player.shotCooldown = 0;
+    mission.bittenVoicePlayed = false;
+    mission.lowHealthVoicePlayed = false;
     setWeaponUnlocked(gunUnlocked());
     lastKillTime = -999;
     killComboCount = 0;
@@ -3975,6 +3995,7 @@ function currentWaterIsDangerous() {
     mission.fewMoreVoicePlayed = false;
     mission.lowHealthVoicePlayed = false;
     mission.longRangeVoicePlayed = false;
+    mission.bittenVoicePlayed = false;
     resetLifeStats();
     nextSpawnTimer = 3.5;
     hordeLevel = 0;
