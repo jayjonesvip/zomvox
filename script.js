@@ -271,9 +271,9 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.16');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.17');
   const COMMS_DROP_IN = configString(COMMS_CONFIG, 'dropIn', 'You are on {islandName}. The mission is to kill {zombieTotal} infected.');
-  const COMMS_HUNT_COMPLETE = configString(COMMS_CONFIG, 'huntComplete', '{islandName} is clear. Good work, but there is more to do. Do you accept?');
+  const COMMS_HUNT_COMPLETE = configString(COMMS_CONFIG, 'huntComplete', '{islandName} is clear. Command has another island. Do you copy?');
   const COMMS_BITTEN = configString(COMMS_CONFIG, 'bitten', 'You are bit. Keep your distance and finish the objective.');
   const COMMS_DEATH = configString(COMMS_CONFIG, 'death', 'Can you hear me? Do you want to keep going?');
   const COMMS_FEW_MORE = configString(COMMS_CONFIG, 'fewMore', 'Just a few more.');
@@ -1299,7 +1299,7 @@
     briefingMeta.textContent = briefing.meta || currentIslandLabel();
     briefingObjective.textContent = briefing.title;
     briefingBody.textContent = briefing.body;
-    if (briefingOk) briefingOk.textContent = briefing.buttonText || 'OK';
+    if (briefingOk) briefingOk.textContent = briefing.buttonText || 'Copy';
     renderBriefingShare(briefing.shareSummary || null);
     objectiveBriefing.classList.add('show');
     document.body.classList.add('briefing-open');
@@ -1314,7 +1314,7 @@
     mission.briefingActive = false;
     objectiveBriefing.classList.remove('show');
     document.body.classList.remove('briefing-open');
-    if (briefingOk) briefingOk.textContent = 'OK';
+    if (briefingOk) briefingOk.textContent = 'Copy';
     renderBriefingShare(null);
     setHudObjective(mission.nextHudTitle || '', mission.nextHudMeta || '');
     const afterOk = mission.briefingAfterOk;
@@ -1427,8 +1427,8 @@
     player.vel = [0, 0, 0];
     document.body.classList.remove('hunt-complete-fade');
     document.body.classList.add('extraction-fade', 'stage-transition');
-    if (worldTitle) worldTitle.textContent = 'Extraction';
-    worldText.textContent = 'Contacting command for extraction...';
+    if (worldTitle) worldTitle.textContent = 'Command Link';
+    worldText.textContent = 'Contacting command...';
     worldFill.style.width = '0%';
     worldOverlay.classList.add('show');
   }
@@ -1440,7 +1440,7 @@
     mission.huntDecisionTimer = 0;
     mission.huntDecisionShown = false;
     document.body.classList.remove('hunt-complete-fade');
-    returnToMainMenu('Mission declined. Awaiting next hunt.');
+    returnToMainMenu('Negative received. Returning to base.');
   }
 
   function acceptHuntDecision() {
@@ -1458,9 +1458,9 @@
     extractionState.timer += dt;
     const progress = Math.min(1, extractionState.timer / extractionState.duration);
     worldFill.style.width = (progress * 100).toFixed(1) + '%';
-    if (progress < .38) worldText.textContent = 'Contacting command for extraction...';
-    else if (progress < .76) worldText.textContent = 'Extracting from island...';
-    else worldText.textContent = 'Preparing next drop...';
+    if (progress < .38) worldText.textContent = 'Contacting command...';
+    else if (progress < .76) worldText.textContent = 'Extraction confirmed...';
+    else worldText.textContent = 'Preparing redeploy...';
     updateParticles(dt);
     if (progress >= 1) {
       const nextSeed = extractionState.seed;
@@ -3351,7 +3351,6 @@
       sound(wasHeadshot ? 'head' : 'hit');
       if (hit.enemy.hp <= 0) {
         registerEnemyKill(hit.enemy, { headshot: wasHeadshot, dist: hit.dist, source: 'shot' });
-        showToast('Enemy down. Kills: ' + player.kills);
         checkMissionCompletion();
       } else {
         pulseHitMarker('hit');
@@ -3726,7 +3725,6 @@
     };
     recordQuickHuntRun(run);
     sound('objectiveClear');
-    scorePop('HUNT COMPLETE', 'wave');
     beginHuntCompleteDecision();
   }
 
