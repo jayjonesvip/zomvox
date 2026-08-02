@@ -44,6 +44,9 @@
   const commandBannerBody = $('commandBannerBody');
   const radioComms = $('radioComms');
   const radioCommsText = $('radioCommsText');
+  const huntDecisionOverlay = $('huntDecisionOverlay');
+  const huntAccept = $('huntAccept');
+  const huntDecline = $('huntDecline');
   const disableOverlay = $('disableOverlay');
   const disableTitle = disableOverlay ? disableOverlay.querySelector('.disableTitle') : null;
   const disableFill = $('disableFill');
@@ -66,6 +69,7 @@
   const reloadOverlay = $('reloadOverlay');
   const reloadOverlayFill = $('reloadOverlayFill');
   const worldOverlay = $('worldOverlay');
+  const worldTitle = $('worldTitle');
   const worldText = $('worldText');
   const worldFill = $('worldFill');
   const deathOverlay = $('deathOverlay');
@@ -75,6 +79,7 @@
   const deathStats = $('deathStats');
   const deathUnlocks = $('deathUnlocks');
   const deathShare = $('deathShare');
+  const deathContinue = $('deathContinue');
   const deathGiveUp = $('deathGiveUp');
   const mobileControls = $('mobileControls');
   const stickBase = $('stickBase');
@@ -266,10 +271,11 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.14');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.16');
   const COMMS_DROP_IN = configString(COMMS_CONFIG, 'dropIn', 'You are on {islandName}. The mission is to kill {zombieTotal} infected.');
+  const COMMS_HUNT_COMPLETE = configString(COMMS_CONFIG, 'huntComplete', '{islandName} is clear. Good work, but there is more to do. Do you accept?');
   const COMMS_BITTEN = configString(COMMS_CONFIG, 'bitten', 'You are bit. Keep your distance and finish the objective.');
-  const COMMS_DEATH = configString(COMMS_CONFIG, 'death', 'Do you read me? Are you there?');
+  const COMMS_DEATH = configString(COMMS_CONFIG, 'death', 'Can you hear me? Do you want to keep going?');
   const COMMS_FEW_MORE = configString(COMMS_CONFIG, 'fewMore', 'Just a few more.');
   const COMMS_LOW_HEALTH = configString(COMMS_CONFIG, 'lowHealth', 'Retreat and treat your wounds.');
   const COMMS_LONG_RANGE = configString(COMMS_CONFIG, 'longRange', 'Nice shot.');
@@ -306,12 +312,16 @@
     ready: false,
     fadeStarted: false,
     overlayShown: false,
+    decisionActive: false,
+    reviving: false,
+    reviveTimer: 0,
     bloodTimer: 0,
     eye: [0, 0, 0],
     yaw: Math.PI,
     pitch: 0
   };
   const worldRebuildState = { active: false, timer: 0, startedAt: 0, duration: WORLD_REBUILD_DURATION, seed: null };
+  const extractionState = { active: false, timer: 0, duration: 3, seed: null };
   const mission = {
     quickBiome: 'forest',
     quickGoal: 0,
@@ -331,6 +341,9 @@
     upgradeActive: false,
     upgradeAfterChoice: null,
     completed: false,
+    huntDecisionActive: false,
+    huntDecisionTimer: 0,
+    huntDecisionShown: false,
     commandBannerTimer: 0,
     toastLockTimer: 0,
     fewMoreVoicePlayed: false,
@@ -1003,6 +1016,7 @@
     worldRebuildState.timer = 0;
     worldRebuildState.startedAt = performance.now();
     worldRebuildState.seed = nextSeed;
+    if (worldTitle) worldTitle.textContent = 'Rebuilding World';
     worldText.textContent = 'Building frontier...';
     worldFill.style.width = '0%';
     worldOverlay.classList.add('show');
@@ -1036,6 +1050,18 @@
   function quickSeedForBiome(biome) {
     const idx = QUICK_BIOMES.indexOf(normalizeBiome(biome));
     return monthlyRandomSeed(Math.max(0, idx) + 1);
+  }
+
+  function pickRandomHunt() {
+    const choices = QUICK_BIOMES.filter(biome => biome !== lastQuickHuntBiome);
+    const pool = choices.length ? choices : QUICK_BIOMES;
+    const biome = pool[Math.floor(Math.random() * pool.length)] || 'forest';
+    lastQuickHuntBiome = biome;
+    return {
+      biome,
+      goal: 20 + Math.floor(Math.random() * 21),
+      seed: quickSeedForBiome(biome)
+    };
   }
 
   function currentBiome() {
@@ -1214,7 +1240,8 @@
   }
 
   function isGameLive() {
-    return menu.style.display === 'none' && splash.style.display === 'none' && !worldRebuildState.active && !deathState.active;
+    return menu.style.display === 'none' && splash.style.display === 'none' &&
+      !worldRebuildState.active && !extractionState.active && !mission.huntDecisionActive && !deathState.active;
   }
 
   function shouldPauseForPortrait() {
@@ -1224,6 +1251,8 @@
       menu.style.display === 'none' &&
       splash.style.display === 'none' &&
       !worldRebuildState.active &&
+      !extractionState.active &&
+      !mission.huntDecisionActive &&
       !deathState.active &&
       !isBriefingOpen() &&
       !isUpgradeOpen();
@@ -1338,6 +1367,7 @@
   function updateWorldRebuild(dt) {
     worldRebuildState.timer = (performance.now() - worldRebuildState.startedAt) / 1000;
     const progress = Math.min(1, worldRebuildState.timer / worldRebuildState.duration);
+    if (worldTitle) worldTitle.textContent = 'Rebuilding World';
     worldFill.style.width = (progress * 100).toFixed(1) + '%';
     if (progress < .38) worldText.textContent = 'Building frontier...';
     else if (progress < .76) worldText.textContent = 'Clearing old voxels...';
@@ -1347,6 +1377,97 @@
       worldRebuildState.active = false;
       worldOverlay.classList.remove('show');
       generateWorld(nextSeed);
+    }
+  }
+
+  function hideHuntDecisionOverlay() {
+    if (!huntDecisionOverlay) return;
+    huntDecisionOverlay.classList.remove('show');
+    huntDecisionOverlay.hidden = true;
+  }
+
+  function showHuntDecisionPrompt() {
+    if (mission.huntDecisionShown) return;
+    mission.huntDecisionShown = true;
+    if (huntDecisionOverlay) {
+      huntDecisionOverlay.hidden = false;
+      void huntDecisionOverlay.offsetWidth;
+      huntDecisionOverlay.classList.add('show');
+    }
+    showRadioComms(formatCommsMessage(COMMS_HUNT_COMPLETE), 6.2);
+  }
+
+  function beginHuntCompleteDecision() {
+    clearMovementInput();
+    mission.huntDecisionActive = true;
+    mission.huntDecisionTimer = 0;
+    mission.huntDecisionShown = false;
+    player.vel = [0, 0, 0];
+    document.body.classList.add('hunt-complete-fade');
+    if (document.pointerLockElement === canvas && document.exitPointerLock) document.exitPointerLock();
+  }
+
+  function chooseNextHunt() {
+    const next = pickRandomHunt();
+    mission.quickBiome = next.biome;
+    mission.quickGoal = next.goal;
+    return next;
+  }
+
+  function beginExtractionRedeploy() {
+    const next = chooseNextHunt();
+    hideHuntDecisionOverlay();
+    mission.huntDecisionActive = false;
+    mission.huntDecisionTimer = 0;
+    mission.huntDecisionShown = false;
+    extractionState.active = true;
+    extractionState.timer = 0;
+    extractionState.seed = next.seed;
+    clearMovementInput();
+    player.vel = [0, 0, 0];
+    document.body.classList.remove('hunt-complete-fade');
+    document.body.classList.add('extraction-fade', 'stage-transition');
+    if (worldTitle) worldTitle.textContent = 'Extraction';
+    worldText.textContent = 'Contacting command for extraction...';
+    worldFill.style.width = '0%';
+    worldOverlay.classList.add('show');
+  }
+
+  function declineHuntDecision() {
+    sound('confirm');
+    hideHuntDecisionOverlay();
+    mission.huntDecisionActive = false;
+    mission.huntDecisionTimer = 0;
+    mission.huntDecisionShown = false;
+    document.body.classList.remove('hunt-complete-fade');
+    returnToMainMenu('Mission declined. Awaiting next hunt.');
+  }
+
+  function acceptHuntDecision() {
+    sound('confirm');
+    beginExtractionRedeploy();
+  }
+
+  function updateHuntDecision(dt) {
+    mission.huntDecisionTimer += dt;
+    updateParticles(dt);
+    if (mission.huntDecisionTimer >= .85) showHuntDecisionPrompt();
+  }
+
+  function updateExtractionRedeploy(dt) {
+    extractionState.timer += dt;
+    const progress = Math.min(1, extractionState.timer / extractionState.duration);
+    worldFill.style.width = (progress * 100).toFixed(1) + '%';
+    if (progress < .38) worldText.textContent = 'Contacting command for extraction...';
+    else if (progress < .76) worldText.textContent = 'Extracting from island...';
+    else worldText.textContent = 'Preparing next drop...';
+    updateParticles(dt);
+    if (progress >= 1) {
+      const nextSeed = extractionState.seed;
+      extractionState.active = false;
+      extractionState.seed = null;
+      document.body.classList.remove('extraction-fade');
+      beginWorldRebuild(nextSeed);
     }
   }
 
@@ -2762,7 +2883,7 @@
   }
 
   function canDamagePlayer() {
-    return !(deathState.active || worldRebuildState.active || player.invuln > 0 || isMenuOpen());
+    return !(deathState.active || worldRebuildState.active || extractionState.active || mission.huntDecisionActive || player.invuln > 0 || isMenuOpen());
   }
 
   function damagePlayer(amount, impactSound = null) {
@@ -2789,6 +2910,9 @@
     deathState.ready = false;
     deathState.fadeStarted = false;
     deathState.overlayShown = false;
+    deathState.decisionActive = false;
+    deathState.reviving = false;
+    deathState.reviveTimer = 0;
     deathState.bloodTimer = 0;
     deathState.yaw = player.yaw;
     deathState.pitch = .78;
@@ -2804,13 +2928,16 @@
     player.vel = [0, 0, 0];
     cancelReload();
     sound('death');
-    showRadioComms(COMMS_DEATH, 4.6);
+    showRadioComms(COMMS_DEATH, 5.8);
     spawnDeathBlood(player.pos[0], player.pos[1] + .65, player.pos[2], 36);
-    deathTitle.textContent = 'RESPAWNING...';
-    deathText.textContent = 'Respawning in 3.0s';
-    renderAutoRespawnStats();
+    deathTitle.textContent = 'DOWNED';
+    deathText.textContent = 'Respond to Mission Command';
+    deathStats.textContent = '';
+    deathStats.classList.remove('simple');
     renderDeathUnlocks(null);
-    deathGiveUp.textContent = 'Exit';
+    hideDeathShare();
+    if (deathGiveUp) deathGiveUp.textContent = 'Negative';
+    if (deathContinue) deathContinue.textContent = 'Copy';
     const run = {
       kills: player.lifeKills,
       seconds: runSeconds(),
@@ -2821,7 +2948,7 @@
       sound('objectiveClear');
     }
     deathFill.style.width = '0%';
-    deathOverlay.classList.remove('show', 'ready', 'cinematic');
+    deathOverlay.classList.remove('show', 'ready', 'cinematic', 'awaiting-choice', 'reviving');
     void deathOverlay.offsetWidth;
   }
   function updateDeath(dt) {
@@ -2841,20 +2968,36 @@
     }
     if (!deathState.overlayShown && deathState.timer >= DEATH_RESPAWN_START) {
       deathState.overlayShown = true;
+      deathState.decisionActive = true;
       document.body.classList.remove('death-cinematic');
       document.body.classList.add('death-card-ready');
       deathOverlay.classList.remove('cinematic');
-      deathOverlay.classList.add('ready');
+      deathOverlay.classList.add('ready', 'awaiting-choice');
+      showRadioComms(COMMS_DEATH, 6.4);
       void deathOverlay.offsetWidth;
     }
-    const respawnElapsed = Math.max(0, deathState.timer - DEATH_RESPAWN_START);
-    const progress = Math.min(1, respawnElapsed / deathState.duration);
+    if (!deathState.reviving) return;
+    deathState.reviveTimer += dt;
+    const progress = Math.min(1, deathState.reviveTimer / deathState.duration);
     deathFill.style.width = (progress * 100).toFixed(1) + '%';
-    const remaining = Math.max(0, deathState.duration - respawnElapsed);
-    deathText.textContent = 'Respawning in ' + remaining.toFixed(1) + 's';
-    if (deathState.overlayShown && progress >= 1) {
+    const remaining = Math.max(0, deathState.duration - deathState.reviveTimer);
+    deathText.textContent = 'Reviving in ' + remaining.toFixed(1) + 's';
+    if (progress >= 1) {
       respawn();
     }
+  }
+
+  function acceptDeathRevive() {
+    if (!deathState.active || !deathState.decisionActive || deathState.reviving) return;
+    sound('confirm');
+    deathState.decisionActive = false;
+    deathState.reviving = true;
+    deathState.reviveTimer = 0;
+    deathTitle.textContent = 'REVIVING...';
+    deathText.textContent = 'Reviving in ' + deathState.duration.toFixed(1) + 's';
+    deathFill.style.width = '0%';
+    deathOverlay.classList.remove('awaiting-choice');
+    deathOverlay.classList.add('reviving');
   }
   function respawn() {
     clearMovementInput();
@@ -2863,6 +3006,9 @@
     deathState.timer = 0;
     deathState.fadeStarted = false;
     deathState.overlayShown = false;
+    deathState.decisionActive = false;
+    deathState.reviving = false;
+    deathState.reviveTimer = 0;
     deathState.bloodTimer = 0;
     player.deaths++;
     player.health = STARTING_HEALTH;
@@ -2879,13 +3025,13 @@
     woundGaspTimer = 0;
     document.body.classList.remove('dead', 'low-health', 'wounded', 'death-cinematic', 'death-fading', 'death-card-ready');
     deathOverlay.classList.remove('show', 'cinematic');
-    deathOverlay.classList.remove('ready', 'cinematic');
+    deathOverlay.classList.remove('ready', 'cinematic', 'awaiting-choice', 'reviving');
     deathStats.textContent = '';
     deathStats.classList.remove('simple');
     renderDeathUnlocks(null);
     hideDeathShare();
-    deathTitle.textContent = 'RESPAWNING...';
-    deathText.textContent = 'Respawning...';
+    deathTitle.textContent = 'DOWNED';
+    deathText.textContent = 'Respond to Mission Command';
     deathFill.style.width = '0%';
     const sx = 0, sz = 0;
     cameraStepOffsetY = 0;
@@ -2899,7 +3045,7 @@
       if (!keep) stopEnemySounds(e);
       return keep;
     });
-    showToast('Respawned at the old marker. Deaths: ' + player.deaths);
+    showToast('Revived at the old marker. Deaths: ' + player.deaths);
   }
 
   function returnToMainMenu(message = 'Awaiting orders.') {
@@ -2909,20 +3055,31 @@
     deathState.timer = 0;
     deathState.fadeStarted = false;
     deathState.overlayShown = false;
+    deathState.decisionActive = false;
+    deathState.reviving = false;
+    deathState.reviveTimer = 0;
     deathState.bloodTimer = 0;
+    extractionState.active = false;
+    extractionState.timer = 0;
+    extractionState.seed = null;
+    mission.huntDecisionActive = false;
+    mission.huntDecisionTimer = 0;
+    mission.huntDecisionShown = false;
+    hideHuntDecisionOverlay();
     woundGaspTimer = 0;
     locked = false;
     if (document.pointerLockElement === canvas && document.exitPointerLock) document.exitPointerLock();
-    document.body.classList.remove('dead', 'low-health', 'wounded', 'death-cinematic', 'death-fading', 'death-card-ready', 'stage-cleared', 'quick-mode');
-    deathOverlay.classList.remove('show', 'ready', 'cinematic');
+    document.body.classList.remove('dead', 'low-health', 'wounded', 'death-cinematic', 'death-fading', 'death-card-ready', 'stage-cleared', 'quick-mode', 'hunt-complete-fade', 'extraction-fade');
+    deathOverlay.classList.remove('show', 'ready', 'cinematic', 'awaiting-choice', 'reviving');
     objectiveBriefing.classList.remove('show');
     document.body.classList.remove('briefing-open');
+    worldOverlay.classList.remove('show');
     deathStats.textContent = '';
     deathStats.classList.remove('simple');
     renderDeathUnlocks(null);
     hideDeathShare();
-    deathTitle.textContent = 'RESPAWNING...';
-    deathText.textContent = 'Respawning...';
+    deathTitle.textContent = 'DOWNED';
+    deathText.textContent = 'Respond to Mission Command';
     deathFill.style.width = '0%';
     menu.style.display = 'flex';
     mission.quickBiome = 'forest';
@@ -2938,18 +3095,29 @@
     deathState.timer = 0;
     deathState.fadeStarted = false;
     deathState.overlayShown = false;
+    deathState.decisionActive = false;
+    deathState.reviving = false;
+    deathState.reviveTimer = 0;
     deathState.bloodTimer = 0;
+    extractionState.active = false;
+    extractionState.timer = 0;
+    extractionState.seed = null;
+    mission.huntDecisionActive = false;
+    mission.huntDecisionTimer = 0;
+    mission.huntDecisionShown = false;
+    hideHuntDecisionOverlay();
     woundGaspTimer = 0;
     locked = false;
     if (document.pointerLockElement === canvas && document.exitPointerLock) document.exitPointerLock();
-    document.body.classList.remove('dead', 'low-health', 'wounded', 'death-cinematic', 'death-fading', 'death-card-ready');
-    deathOverlay.classList.remove('show', 'ready', 'cinematic');
+    document.body.classList.remove('dead', 'low-health', 'wounded', 'death-cinematic', 'death-fading', 'death-card-ready', 'hunt-complete-fade', 'extraction-fade');
+    deathOverlay.classList.remove('show', 'ready', 'cinematic', 'awaiting-choice', 'reviving');
+    worldOverlay.classList.remove('show');
     deathStats.textContent = '';
     deathStats.classList.remove('simple');
     renderDeathUnlocks(null);
     hideDeathShare();
-    deathTitle.textContent = 'RESPAWNING...';
-    deathText.textContent = 'Respawning...';
+    deathTitle.textContent = 'DOWNED';
+    deathText.textContent = 'Respond to Mission Command';
     deathFill.style.width = '0%';
     menu.style.display = 'flex';
     mission.quickBiome = 'forest';
@@ -2961,12 +3129,12 @@
 
   function giveUpMission() {
     if (!deathState.active) return;
-    returnToMainMenuFromDeath('Frontier Hunt ended. Awaiting next run.', false);
+    returnToMainMenuFromDeath('Signal lost. Awaiting next hunt.', false);
   }
 
   function startReload() {
     if (!gunUnlocked()) return;
-    if (deathState.active || worldRebuildState.active) return;
+    if (deathState.active || worldRebuildState.active || extractionState.active || mission.huntDecisionActive) return;
     if (player.reloading || player.mag >= player.magSize || player.reserve <= 0) return;
     const need = player.magSize - player.mag;
     const total = Math.min(need, player.reserve);
@@ -3156,7 +3324,7 @@
   }
 
   function shoot() {
-    if (deathState.active) return;
+    if (deathState.active || extractionState.active || mission.huntDecisionActive) return;
     if (!gunUnlocked()) {
       showToast('Weapon unavailable.');
       return;
@@ -3245,7 +3413,7 @@
   }
 
   function placeC4() {
-    if (deathState.active || worldRebuildState.active || mission.insertionActive || isBriefingOpen() || isUpgradeOpen()) return;
+    if (deathState.active || worldRebuildState.active || extractionState.active || mission.huntDecisionActive || mission.insertionActive || isBriefingOpen() || isUpgradeOpen()) return;
     if (!gunUnlocked()) {
       showToast('C4 locked until combat starts.');
       sound('empty');
@@ -3558,18 +3726,8 @@
     };
     recordQuickHuntRun(run);
     sound('objectiveClear');
-    showCommandBanner('HUNT COMPLETE', currentBiomeLabel() + ' Island cleared', 4.2);
     scorePop('HUNT COMPLETE', 'wave');
-    openObjectiveBriefing({
-      title: 'Hunt complete',
-      meta: 'Frontier Hunt // ' + currentBiomeLabel() + ' Island',
-      body: 'Command confirms the island is clear. Take the win and return to the main menu.',
-      buttonText: 'Continue',
-      shareSummary: buildRunSummary('Frontier Hunt complete'),
-      hudTitle: 'Hunt complete',
-      hudMeta: 'Returning to menu',
-      afterOk: () => returnToMainMenu('Hunt complete. Choose your next run.')
-    });
+    beginHuntCompleteDecision();
   }
 
   function checkMissionCompletion() {
@@ -3619,6 +3777,16 @@
     }
     if (worldRebuildState.active) {
       updateWorldRebuild(dt);
+      updateHud();
+      return;
+    }
+    if (extractionState.active) {
+      updateExtractionRedeploy(dt);
+      updateHud();
+      return;
+    }
+    if (mission.huntDecisionActive) {
+      updateHuntDecision(dt);
       updateHud();
       return;
     }
@@ -3995,6 +4163,9 @@ function currentWaterIsDangerous() {
     mission.upgradeActive = false;
     mission.upgradeAfterChoice = null;
     mission.completed = false;
+    mission.huntDecisionActive = false;
+    mission.huntDecisionTimer = 0;
+    mission.huntDecisionShown = false;
     mission.commandBannerTimer = 0;
     mission.toastLockTimer = 0;
     mission.fewMoreVoicePlayed = false;
@@ -4014,11 +4185,18 @@ function currentWaterIsDangerous() {
     deathState.timer = 0;
     deathState.fadeStarted = false;
     deathState.overlayShown = false;
+    deathState.decisionActive = false;
+    deathState.reviving = false;
+    deathState.reviveTimer = 0;
     deathState.bloodTimer = 0;
     woundGaspTimer = 0;
-    document.body.classList.remove('dead', 'low-health', 'wounded', 'death-cinematic', 'death-fading', 'death-card-ready', 'stage-cleared');
+    extractionState.active = false;
+    extractionState.timer = 0;
+    extractionState.seed = null;
+    hideHuntDecisionOverlay();
+    document.body.classList.remove('dead', 'low-health', 'wounded', 'death-cinematic', 'death-fading', 'death-card-ready', 'stage-cleared', 'hunt-complete-fade', 'extraction-fade');
     document.body.classList.add('quick-mode');
-    deathOverlay.classList.remove('show', 'ready', 'cinematic');
+    deathOverlay.classList.remove('show', 'ready', 'cinematic', 'awaiting-choice', 'reviving');
     upgradeOverlay.classList.remove('show');
     document.body.classList.remove('upgrade-open');
     deathStats.textContent = '';
@@ -4027,8 +4205,8 @@ function currentWaterIsDangerous() {
     setKillHud(false, 0);
     hideDeathShare();
     renderBriefingShare(null);
-    deathTitle.textContent = 'RESPAWNING...';
-    deathText.textContent = 'Respawning...';
+    deathTitle.textContent = 'DOWNED';
+    deathText.textContent = 'Respond to Mission Command';
     deathFill.style.width = '0%';
     disableOverlay.classList.remove('show');
     disableFill.style.width = '0%';
@@ -4081,14 +4259,9 @@ function currentWaterIsDangerous() {
 
   function startRandomQuickHunt() {
     sound('confirm');
-    const choices = QUICK_BIOMES.filter(biome => biome !== lastQuickHuntBiome);
-    const pool = choices.length ? choices : QUICK_BIOMES;
-    const biome = pool[Math.floor(Math.random() * pool.length)] || 'forest';
-    lastQuickHuntBiome = biome;
-    mission.quickBiome = biome;
-    mission.quickGoal = 20 + Math.floor(Math.random() * 21);
+    const next = chooseNextHunt();
     document.body.classList.add('quick-mode');
-    generateWorld(quickSeedForBiome(mission.quickBiome));
+    generateWorld(next.seed);
     enterGameFromMenu();
   }
 
@@ -4139,9 +4312,12 @@ function currentWaterIsDangerous() {
   briefingOk.addEventListener('click', acknowledgeObjectiveBriefing);
   if (briefingShareButton) briefingShareButton.addEventListener('click', () => shareRunFromButton(briefingShareButton));
   if (deathShare) deathShare.addEventListener('click', () => shareRunFromButton(deathShare));
+  if (deathContinue) deathContinue.addEventListener('click', acceptDeathRevive);
   deathGiveUp.addEventListener('click', giveUpMission);
+  if (huntAccept) huntAccept.addEventListener('click', acceptHuntDecision);
+  if (huntDecline) huntDecline.addEventListener('click', declineHuntDecision);
   canvas.addEventListener('click', () => {
-    if (deathState.active) {
+    if (deathState.active || extractionState.active || mission.huntDecisionActive) {
       return;
     }
     if (!locked && !touchMode) requestPointerLockSafe();
@@ -4150,7 +4326,7 @@ function currentWaterIsDangerous() {
     if (touchMode) return;
     locked = document.pointerLockElement === canvas;
     clearKeyboardState();
-    menu.style.display = locked || deathState.active || isBriefingOpen() || isUpgradeOpen() ? 'none' : 'flex';
+    menu.style.display = locked || deathState.active || extractionState.active || mission.huntDecisionActive || isBriefingOpen() || isUpgradeOpen() ? 'none' : 'flex';
     updateAmbientSound(true);
   });
   document.addEventListener('mousemove', (e) => {
@@ -4161,6 +4337,30 @@ function currentWaterIsDangerous() {
     player.pitch = Math.max(-cap, Math.min(cap, player.pitch));
   });
   document.addEventListener('keydown', (e) => {
+    if (deathState.active && deathState.decisionActive) {
+      if (e.code === 'Enter' || e.code === 'KeyY') {
+        e.preventDefault();
+        acceptDeathRevive();
+        return;
+      }
+      if (e.code === 'Escape' || e.code === 'KeyN') {
+        e.preventDefault();
+        giveUpMission();
+        return;
+      }
+    }
+    if (mission.huntDecisionActive && mission.huntDecisionShown) {
+      if (e.code === 'Enter' || e.code === 'KeyY') {
+        e.preventDefault();
+        acceptHuntDecision();
+        return;
+      }
+      if (e.code === 'Escape' || e.code === 'KeyN') {
+        e.preventDefault();
+        declineHuntDecision();
+        return;
+      }
+    }
     if (isBriefingOpen() && (e.code === 'Enter' || e.code === 'Space')) {
       e.preventDefault();
       acknowledgeObjectiveBriefing();
@@ -4195,7 +4395,7 @@ function currentWaterIsDangerous() {
     if (document.hidden) clearMovementInput();
   });
   canvas.addEventListener('mousedown', (e) => {
-    if (deathState.active) {
+    if (deathState.active || extractionState.active || mission.huntDecisionActive) {
       return;
     }
     if (!locked) { requestPointerLockSafe(); return; }

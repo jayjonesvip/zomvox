@@ -14,6 +14,8 @@
   #atmosphereVignette{ pointer-events:none; position:fixed; inset:0; z-index:2; opacity:.34; background:radial-gradient(circle at 50% 45%, rgba(255,255,255,.02) 0 28%, rgba(0,0,0,.12) 58%, rgba(0,0,0,.46) 100%); mix-blend-mode:multiply; }
   #damageFlash{ pointer-events:none; position:fixed; inset:0; background:radial-gradient(circle at 50% 48%, rgba(255,40,20,0) 0 30%, rgba(110,0,0,.22) 62%, rgba(0,0,0,.64) 100%); opacity:0; transition:opacity .26s; z-index:12; mix-blend-mode:multiply; }
   #damageFlash.hit{ opacity:1; transition:opacity .04s; }
+  #phaseFade{ pointer-events:none; position:fixed; inset:0; z-index:21; background:#000; opacity:0; visibility:hidden; transition:opacity .9s ease, visibility .9s ease; }
+  body.hunt-complete-fade #phaseFade, body.extraction-fade #phaseFade{ opacity:.92; visibility:visible; }
   body.dead #game{ filter:grayscale(.55) contrast(.86) brightness(.55); transition:filter .18s; }
   body.death-fading #game{ filter:grayscale(1) contrast(.72) brightness(.18); transition:filter 1.05s ease; }
   body.shaking #game{ animation:screenShake .22s cubic-bezier(.36,.07,.19,.97) both; }
@@ -174,6 +176,17 @@
   #radioCommsText{ position:relative; z-index:1; color:#e9fbff; font-size:13px; line-height:1.18; font-weight:900; text-transform:uppercase; text-shadow:0 0 10px rgba(120,220,255,.45), 0 2px 0 rgba(0,0,0,.74); }
   @keyframes radioScan{ from{ transform:translateY(-6px); } to{ transform:translateY(6px); } }
   @keyframes radioCommsFlicker{ 0%,100%{ filter:brightness(1); } 50%{ filter:brightness(1.16) contrast(1.08); } }
+  #huntDecisionOverlay{ position:fixed; inset:0; z-index:24; display:flex; align-items:center; justify-content:center; padding:20px; opacity:0; visibility:hidden; transition:opacity .18s ease, visibility .18s ease; }
+  #huntDecisionOverlay[hidden]{ display:none; }
+  #huntDecisionOverlay.show{ opacity:1; visibility:visible; }
+  .huntDecisionCard{ width:min(420px, calc(100vw - 40px)); padding:18px; border:1px solid rgba(144,225,255,.52); border-radius:8px; background:linear-gradient(180deg, rgba(8,22,28,.80), rgba(2,6,10,.86)); box-shadow:0 28px 80px rgba(0,0,0,.62), inset 0 0 24px rgba(120,220,255,.1), 0 0 30px rgba(122,221,255,.16); text-align:center; }
+  .huntDecisionTitle{ color:#e9fbff; font-size:clamp(24px, 4vw, 34px); font-weight:1000; line-height:.95; text-transform:uppercase; text-shadow:0 0 18px rgba(120,220,255,.36),0 3px 0 rgba(0,0,0,.72); }
+  .huntDecisionBody{ margin:10px auto 15px; color:#c8e9ef; font-size:13px; font-weight:900; line-height:1.32; text-transform:uppercase; max-width:320px; text-shadow:0 2px 0 rgba(0,0,0,.62); }
+  .huntDecisionActions{ display:flex; justify-content:center; gap:12px; }
+  #huntAccept,#huntDecline{ appearance:none; border:1px solid rgba(255,255,255,.2); border-radius:8px; min-width:102px; padding:10px 18px; font-size:15px; font-weight:1000; letter-spacing:.08em; text-transform:uppercase; cursor:pointer; box-shadow:0 12px 34px rgba(0,0,0,.28), inset 0 2px 0 rgba(255,255,255,.22); }
+  #huntAccept{ color:#071508; background:linear-gradient(180deg,#d8ff75,#74ef59); }
+  #huntDecline{ color:#f4f1e8; background:linear-gradient(180deg,#303842,#12161d); }
+  #huntAccept:hover,#huntDecline:hover{ filter:brightness(1.06); }
   #disableOverlay{ pointer-events:none; position:fixed; left:50%; bottom:20%; transform:translateX(-50%) translateY(8px); width:min(390px, calc(100vw - 42px)); padding:11px 12px; border-radius:8px; background:rgba(4,10,12,.84); border:1px solid rgba(145,243,110,.38); box-shadow:0 16px 48px rgba(0,0,0,.4),0 0 28px rgba(78,255,74,.12); opacity:0; visibility:hidden; transition:.14s; z-index:10; }
   #disableOverlay.show{ opacity:1; visibility:visible; transform:translateX(-50%) translateY(0); }
   .disableTitle{ color:#d7ffc7; font-size:13px; font-weight:1000; letter-spacing:.16em; text-transform:uppercase; text-align:center; margin-bottom:8px; text-shadow:0 0 18px rgba(145,243,110,.32); }
@@ -220,15 +233,21 @@
   #deathOverlay.cinematic .deathCard{ display:none; }
   .deathCard{ width:min(620px, calc(100vw - 34px)); text-align:center; transform:skewY(-2deg); opacity:0; animation:none; }
   #deathOverlay.ready .deathCard{ animation:deathCardPop .42s ease forwards; }
+  body.death-card-ready .radioComms{ z-index:35; }
   .deathTitle{ color:#ff3838; font-size:clamp(42px, 9vw, 96px); line-height:.86; font-weight:1000; letter-spacing:.02em; text-transform:uppercase; text-shadow:0 5px 0 rgba(0,0,0,.75), 0 0 32px rgba(255,0,0,.45); filter:drop-shadow(0 0 16px rgba(255,38,38,.36)); }
   .deathText{ margin:16px 0 10px; color:#f7f0e8; font-size:13px; font-weight:900; letter-spacing:.18em; text-transform:uppercase; text-shadow:0 2px 0 rgba(0,0,0,.9); }
   .deathStats{ margin-bottom:8px; }
+  .deathStats:empty{ display:none; }
   .deathStats.simple{ width:min(380px, 78vw); grid-template-columns:repeat(2,minmax(0,1fr)); }
   .deathMeter{ width:min(420px, 74vw); height:13px; margin:0 auto; border:1px solid rgba(255,255,255,.24); background:rgba(0,0,0,.56); border-radius:999px; overflow:hidden; box-shadow:inset 0 2px 8px rgba(0,0,0,.48); }
+  #deathOverlay.awaiting-choice .deathMeter{ display:none; }
   #deathFill{ height:100%; width:0%; background:linear-gradient(90deg,#ff2d2d,#ffcf45); box-shadow:0 0 22px rgba(255,47,47,.56); transition:width .08s linear; }
-  #deathGiveUp{ display:none; margin:16px auto 0; appearance:none; border:0; border-radius:10px; padding:10px 20px; color:#210606; font-size:16px; font-weight:1000; text-transform:uppercase; background:linear-gradient(180deg,#ffe16d,#ff5d3d); box-shadow:0 14px 40px rgba(255,50,50,.3), inset 0 2px 0 rgba(255,255,255,.34); cursor:pointer; }
-  #deathGiveUp{ color:#f4f1e8; background:linear-gradient(180deg,#303842,#12161d); border:1px solid rgba(255,255,255,.22); box-shadow:0 14px 40px rgba(0,0,0,.32), inset 0 2px 0 rgba(255,255,255,.12); }
-  #deathOverlay.ready #deathGiveUp{ display:block; width:max-content; }
+  .deathActions{ display:none; justify-content:center; gap:12px; margin:16px auto 0; }
+  #deathContinue,#deathGiveUp{ appearance:none; border:1px solid rgba(255,255,255,.22); border-radius:10px; min-width:108px; padding:10px 20px; font-size:16px; font-weight:1000; letter-spacing:.08em; text-transform:uppercase; box-shadow:0 14px 40px rgba(0,0,0,.32), inset 0 2px 0 rgba(255,255,255,.12); cursor:pointer; }
+  #deathContinue{ color:#071508; background:linear-gradient(180deg,#d8ff75,#74ef59); }
+  #deathGiveUp{ color:#f4f1e8; background:linear-gradient(180deg,#303842,#12161d); }
+  #deathOverlay.awaiting-choice.ready .deathActions{ display:flex; }
+  #deathOverlay.reviving .deathActions{ display:none; }
   @keyframes deathCardPop{ from{ opacity:0; transform:translateY(14px) scale(.96); } to{ opacity:1; transform:translateY(0) scale(1); } }
   #menu{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center; padding:22px; overflow:hidden; background:radial-gradient(circle at 50% 35%, rgba(35,85,110,.45), rgba(2,7,12,.82) 62%, rgba(0,0,0,.93)); z-index:20; }
   .card{ width:min(760px, 96vw); border:1px solid rgba(255,255,255,.18); background:linear-gradient(180deg, rgba(13,24,35,.88), rgba(5,9,14,.8)); border-radius:26px; padding:28px; box-shadow:0 30px 90px rgba(0,0,0,.55); backdrop-filter:blur(12px); }
