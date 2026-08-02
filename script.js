@@ -293,7 +293,7 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.09');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.10');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -945,9 +945,17 @@
     if (splashVersion) splashVersion.textContent = buildVersionText();
     let audioProgress = (soundEnabled || ambientEnabled) ? 0 : 1;
     let audioReady = !(soundEnabled || ambientEnabled);
-    const preload = (soundEnabled || ambientEnabled) ? window.ZomVoxSound?.prime?.(info => {
-      audioProgress = Math.max(audioProgress, info.progress || 0);
-    }) : null;
+    let splashDone = false;
+    let preload = null;
+    try {
+      preload = (soundEnabled || ambientEnabled) ? window.ZomVoxSound?.prime?.(info => {
+        audioProgress = Math.max(audioProgress, info.progress || 0);
+      }) : null;
+    } catch (err) {
+      console.warn('ZomVox audio preload skipped:', err);
+      audioProgress = 1;
+      audioReady = true;
+    }
     if (preload && typeof preload.finally === 'function') {
       preload.finally(() => {
         audioProgress = 1;
@@ -966,7 +974,22 @@
     const duration = 2600;
     const maxDuration = 4400;
     const start = performance.now();
+    function finishSplash() {
+      if (splashDone) return;
+      splashDone = true;
+      splashStatus.textContent = 'Ready.';
+      splashFill.style.width = '100%';
+      setTimeout(() => {
+        splash.classList.add('hide');
+        setTimeout(() => {
+          splash.style.display = 'none';
+          updateAmbientSound(true);
+        }, 420);
+      }, 180);
+    }
+    const failsafe = setTimeout(finishSplash, 6500);
     function step(now) {
+      if (splashDone) return;
       const t = Math.min(1, (now - start) / duration);
       const timeout = (now - start) >= maxDuration;
       const eased = 1 - Math.pow(1 - t, 2.2);
@@ -977,15 +1000,8 @@
       if (t < 1 || (!audioReady && !timeout)) {
         requestAnimationFrame(step);
       } else {
-        splashStatus.textContent = 'Ready.';
-        splashFill.style.width = '100%';
-        setTimeout(() => {
-          splash.classList.add('hide');
-          setTimeout(() => {
-            splash.style.display = 'none';
-            updateAmbientSound(true);
-          }, 420);
-        }, 180);
+        clearTimeout(failsafe);
+        finishSplash();
       }
     }
     requestAnimationFrame(step);
