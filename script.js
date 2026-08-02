@@ -37,7 +37,7 @@
   const fieldStatusText = $('fieldStatusText');
   const fieldLocationName = $('fieldLocationName');
   const fieldObjectiveText = $('fieldObjectiveText');
-  const fieldPerksList = $('fieldPerksList');
+  const perkHud = $('perkHud');
   const objectiveText = $('objectiveText');
   const objectiveMeta = $('objectiveMeta');
   const killHud = $('killHud');
@@ -277,7 +277,7 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.21');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.22');
   const COMMS_DROP_IN = configString(COMMS_CONFIG, 'dropIn', 'You are on {islandName}. The mission is to kill {zombieTotal} infected.');
   const COMMS_HUNT_COMPLETE = configString(COMMS_CONFIG, 'huntComplete', '{islandName} is clear. Ready for the next mission?');
   const COMMS_BITTEN = configString(COMMS_CONFIG, 'bitten', 'You are bit. Keep your distance and finish the objective.');
@@ -525,15 +525,15 @@
   }
 
   function renderFieldPerks() {
-    if (!fieldPerksList) return;
+    if (!perkHud) return;
     const perks = activePerkNames();
-    fieldPerksList.innerHTML = '';
-    fieldPerksList.hidden = perks.length === 0;
+    perkHud.innerHTML = '';
+    perkHud.hidden = perks.length === 0;
     for (const perk of perks) {
       const row = document.createElement('div');
       row.className = 'fieldPerkRow';
       row.textContent = perk;
-      fieldPerksList.appendChild(row);
+      perkHud.appendChild(row);
     }
   }
 

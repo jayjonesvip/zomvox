@@ -48,13 +48,10 @@ body::after{
 .fieldBrand small{display:none}
 .fieldObjective{padding-top:1px;text-align:left}
 #fieldObjectiveText{color:#f3fff1;font-size:12px;line-height:1;font-weight:1000;letter-spacing:.08em;text-transform:uppercase;text-shadow:0 2px 0 rgba(0,0,0,.72),0 0 14px rgba(145,243,110,.22)}
-#fieldPerksList{margin-top:6px;display:grid;gap:3px}
-#fieldPerksList[hidden]{display:none}
-.fieldPerkRow{color:#a8d7ff;font-size:8px;line-height:1;font-weight:900;letter-spacing:.12em;text-transform:uppercase;text-shadow:0 2px 0 rgba(0,0,0,.7),0 0 10px rgba(72,169,255,.18)}
 .fieldOperation{position:absolute;left:50%;top:13px;transform:translateX(-50%);text-align:center}
 .fieldOperation span{display:block;color:var(--tactical-green);font-size:7px;letter-spacing:.28em}
 .fieldOperation b{display:block;margin-top:4px;font-size:10px;color:#ced8d2}
-.fieldSignal{display:flex;align-items:center;gap:8px;color:#b8c3bd;font-size:9px}
+.fieldSignal{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:7px;color:#b8c3bd;font-size:8px}
 .fieldSignal i{width:7px;height:7px;border-radius:50%;background:var(--tactical-green);box-shadow:0 0 8px var(--tactical-green)}
 .fieldSignal.warn i{background:var(--tactical-amber);box-shadow:0 0 8px var(--tactical-amber)}
 .fieldSignal.danger i{background:var(--tactical-red);box-shadow:0 0 9px var(--tactical-red)}
@@ -75,7 +72,7 @@ body::after{
 #healthStatus .healthLabel{opacity:0}
 #healthBigText{font-size:27px;font-weight:700}
 .bigHealthBar{height:4px;border:0;border-radius:0;background:rgba(255,255,255,.13)}
-#weaponPanel{right:28px;min-width:124px;padding:9px 14px;border-bottom-color:rgba(255,212,93,.62)}
+#weaponPanel{top:12px;right:28px;bottom:auto;min-width:124px;padding:9px 14px;border-bottom-color:rgba(255,212,93,.62)}
 #weaponPanel .label{display:none}
 #bulletRack{display:none}
 #ammoReadout{justify-content:flex-end}
@@ -83,6 +80,9 @@ body::after{
 #reserveText{font-size:14px;color:#95a49e}
 .ammoSlash{font-size:15px;color:#718079}
 .ammoIcon{width:14px;height:31px;opacity:.75}
+#perkHud{position:fixed;right:28px;top:76px;z-index:9;display:grid;gap:4px;width:150px;pointer-events:none;text-align:right}
+#perkHud[hidden]{display:none}
+.fieldPerkRow{justify-self:end;max-width:150px;padding:4px 7px;border-right:2px solid rgba(86,180,255,.58);border-radius:4px;background:linear-gradient(270deg,rgba(5,13,20,.72),rgba(5,13,20,.16));color:#a8d7ff;font-size:8px;line-height:1;font-weight:900;letter-spacing:.12em;text-transform:uppercase;text-shadow:0 2px 0 rgba(0,0,0,.7),0 0 10px rgba(72,169,255,.18);white-space:nowrap}
 
 #missionPanel{
   display:none;
@@ -480,6 +480,8 @@ body::after{
   .ammoIcon{display:none}
   #clipText{font-size:26px;line-height:1}
   #reserveText,.ammoSlash{font-size:11px}
+  #perkHud{right:calc(10px + env(safe-area-inset-right));top:calc(52px + env(safe-area-inset-top));width:112px;gap:3px}
+  .fieldPerkRow{max-width:112px;padding:3px 5px;border-right-width:1px;border-radius:3px;font-size:7px;letter-spacing:.08em}
   #missionPanel{display:block;left:calc(10px + env(safe-area-inset-left));top:calc(57px + env(safe-area-inset-top));min-width:0;max-width:150px;padding:4px 7px}
   .missionLabel,#objectiveMeta{display:none}
   #objectiveText{font-size:8px;white-space:normal}
