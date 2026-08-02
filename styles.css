@@ -148,10 +148,10 @@
     50%{ box-shadow:inset 0 2px 0 rgba(255,255,255,.2), inset 0 -5px 12px rgba(0,0,0,.38), inset 0 0 0 2px rgba(255,76,76,.58), 0 16px 40px rgba(0,0,0,.42), 0 0 28px rgba(255,54,54,.38); }
   }
 
-  #missionPanel{ pointer-events:none; position:fixed; left:50%; top:12px; width:min(210px, calc(100vw - 310px)); transform:translateX(-50%); padding:0; border-radius:0; background:transparent; border:0; box-shadow:none; backdrop-filter:none; z-index:9; text-align:center; }
+  #missionPanel{ pointer-events:none; position:fixed; left:14px; top:82px; width:auto; max-width:min(300px, calc(100vw - 28px)); transform:none; padding:6px 9px; border-radius:6px; background:rgba(3,9,12,.62); border:1px solid rgba(145,243,110,.24); box-shadow:0 10px 28px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.08); backdrop-filter:blur(5px); z-index:9; text-align:left; }
   .missionLabel,#objectiveMeta{ display:none; }
-  #objectiveText{ color:#f3fff1; font-size:18px; line-height:.92; font-weight:900; letter-spacing:0; text-shadow:0 3px 0 rgba(0,0,0,.68),0 0 14px rgba(145,243,110,.18); white-space:nowrap; }
-  .killHud{ display:flex; align-items:center; justify-content:center; gap:9px; margin-bottom:4px; }
+  #objectiveText{ color:#f3fff1; font-size:11px; line-height:1.12; font-weight:900; letter-spacing:.08em; text-transform:uppercase; text-shadow:0 2px 0 rgba(0,0,0,.72),0 0 12px rgba(145,243,110,.18); white-space:nowrap; }
+  .killHud{ display:none; }
   .killHud[hidden]{ display:none; }
   .killHudIcon{ width:42px; height:42px; image-rendering:pixelated; filter:drop-shadow(0 4px 0 rgba(0,0,0,.7)) drop-shadow(0 0 12px rgba(255,34,34,.36)); flex:0 0 auto; }
   #killHudCount{ color:#ff3434; font-size:39px; line-height:.82; font-weight:900; letter-spacing:0; text-shadow:0 4px 0 rgba(0,0,0,.84),2px 0 0 rgba(0,0,0,.55),-2px 0 0 rgba(0,0,0,.55),0 0 18px rgba(255,28,28,.42); }
@@ -417,8 +417,8 @@
     #healthStatus .healthLabel{ display:none; }
     #healthBigText{ font-size:18px; }
     .bigHealthBar{ height:8px; }
-    #missionPanel{ left:50%; right:auto; top:8px; width:min(170px, calc(100vw - 242px)); transform:translateX(-50%); padding:7px 7px; }
-    #objectiveText{ font-size:13px; }
+    #missionPanel{ left:calc(10px + env(safe-area-inset-left)); right:auto; top:calc(57px + env(safe-area-inset-top)); width:auto; max-width:150px; transform:none; padding:4px 6px; }
+    #objectiveText{ font-size:8px; white-space:normal; }
     .killHud{ gap:6px; margin-bottom:3px; }
     .killHudIcon{ width:32px; height:32px; }
     #killHudCount{ font-size:30px; }

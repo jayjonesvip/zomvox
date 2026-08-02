@@ -273,7 +273,7 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.18');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.19');
   const COMMS_DROP_IN = configString(COMMS_CONFIG, 'dropIn', 'You are on {islandName}. The mission is to kill {zombieTotal} infected.');
   const COMMS_HUNT_COMPLETE = configString(COMMS_CONFIG, 'huntComplete', '{islandName} is clear. Ready for the next mission?');
   const COMMS_BITTEN = configString(COMMS_CONFIG, 'bitten', 'You are bit. Keep your distance and finish the objective.');
@@ -3757,9 +3757,8 @@
   }
 
   function setKillHud(show, count) {
-    if (!killHud || !killHudCount) return;
-    killHud.hidden = !show;
-    if (show) killHudCount.textContent = String(Math.max(0, Math.floor(count)));
+    if (killHud) killHud.hidden = !show;
+    if (killHudCount && show) killHudCount.textContent = String(Math.max(0, Math.floor(count)));
   }
 
   function updateMissionHud() {
@@ -3767,9 +3766,9 @@
     document.body.classList.toggle('stage-cleared', mission.completed);
     document.body.classList.add('quick-mode');
     const count = Math.max(0, currentInfectedGoal() - player.kills);
-    setKillHud(true, count);
-    objectiveText.textContent = '';
-    objectiveMeta.textContent = mission.completed ? 'Hunt complete' : 'Remaining';
+    setKillHud(false, count);
+    objectiveText.textContent = mission.completed ? 'Objective: clear' : `Objective: ${count} remain`;
+    objectiveMeta.textContent = '';
   }
 
   function update(dt) {

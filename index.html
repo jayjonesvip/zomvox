@@ -105,21 +105,7 @@
 </div>
 <div id="missionPanel">
   <div class="missionLabel">Objective</div>
-  <div class="killHud" id="killHud" hidden>
-    <svg class="killHudIcon" viewBox="0 0 64 64" aria-hidden="true">
-      <rect x="8" y="10" width="48" height="42" rx="4" fill="#315f24"/>
-      <rect x="8" y="10" width="12" height="12" fill="#6aa846"/>
-      <rect x="20" y="10" width="12" height="12" fill="#76b852"/>
-      <rect x="32" y="10" width="12" height="12" fill="#57903a"/>
-      <rect x="44" y="10" width="12" height="12" fill="#3c742c"/>
-      <rect x="12" y="24" width="12" height="12" fill="#ff2424"/>
-      <rect x="40" y="24" width="12" height="12" fill="#ff2424"/>
-      <rect x="22" y="40" width="20" height="8" fill="#071007"/>
-      <rect x="22" y="40" width="5" height="5" fill="#dfe4c9"/>
-      <rect x="37" y="40" width="5" height="5" fill="#dfe4c9"/>
-    </svg>
-    <span id="killHudCount">0</span>
-  </div>
+  <div class="killHud" id="killHud" hidden></div>
   <div id="objectiveText"></div>
   <div id="objectiveMeta">Remaining</div>
 </div>
@@ -239,20 +225,10 @@
 </div>
 <div id="menu">
   <div id="mainMenuCard" class="card">
-    <div class="menuClassification">FIELD BUILD // ZV-01</div>
     <h1>Zom<b>Vox</b></h1>
-    <p class="menuTagline">DROP INTO THE FRONTIER.<br><span>CONTAIN THE INFECTION.</span></p>
-    <div class="menuReadout" aria-label="Game features">
-      <span><b>06</b> HOSTILE BIOMES</span>
-      <span><b>01</b> HUNT MODE</span>
-      <span><b>20-40</b> TARGETS</span>
-    </div>
+    <p class="menuTagline">Kill zombies. Contain the infection.</p>
     <div class="startActions">
-      <button id="play" class="startBtn primaryStart" type="button"><span>Frontier Hunt</span><small>Random island drop</small></button>
-    </div>
-    <div class="menuFieldGuide">
-      <span><kbd>WASD</kbd> MOVE</span><span><kbd>MOUSE</kbd> AIM</span>
-      <span><kbd>LMB</kbd> FIRE</span><span><kbd>R</kbd> RELOAD</span>
+      <button id="play" class="startBtn primaryStart" type="button"><span>Start Hunt</span></button>
     </div>
   </div>
   <button id="controlsButton" class="controlsButton" type="button" aria-label="Open controls">&#9000;</button>
