@@ -45,6 +45,8 @@
   const radioComms = $('radioComms');
   const radioCommsText = $('radioCommsText');
   const huntDecisionOverlay = $('huntDecisionOverlay');
+  const huntDecisionTitle = huntDecisionOverlay ? huntDecisionOverlay.querySelector('.huntDecisionTitle') : null;
+  const huntDecisionBody = huntDecisionOverlay ? huntDecisionOverlay.querySelector('.huntDecisionBody') : null;
   const huntAccept = $('huntAccept');
   const huntDecline = $('huntDecline');
   const disableOverlay = $('disableOverlay');
@@ -271,9 +273,9 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.17');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.18');
   const COMMS_DROP_IN = configString(COMMS_CONFIG, 'dropIn', 'You are on {islandName}. The mission is to kill {zombieTotal} infected.');
-  const COMMS_HUNT_COMPLETE = configString(COMMS_CONFIG, 'huntComplete', '{islandName} is clear. Command has another island. Do you copy?');
+  const COMMS_HUNT_COMPLETE = configString(COMMS_CONFIG, 'huntComplete', '{islandName} is clear. Ready for the next mission?');
   const COMMS_BITTEN = configString(COMMS_CONFIG, 'bitten', 'You are bit. Keep your distance and finish the objective.');
   const COMMS_DEATH = configString(COMMS_CONFIG, 'death', 'Can you hear me? Do you want to keep going?');
   const COMMS_FEW_MORE = configString(COMMS_CONFIG, 'fewMore', 'Just a few more.');
@@ -313,6 +315,7 @@
     fadeStarted: false,
     overlayShown: false,
     decisionActive: false,
+    decisionShown: false,
     reviving: false,
     reviveTimer: 0,
     bloodTimer: 0,
@@ -1299,7 +1302,7 @@
     briefingMeta.textContent = briefing.meta || currentIslandLabel();
     briefingObjective.textContent = briefing.title;
     briefingBody.textContent = briefing.body;
-    if (briefingOk) briefingOk.textContent = briefing.buttonText || 'Copy';
+    if (briefingOk) briefingOk.textContent = briefing.buttonText || 'OK';
     renderBriefingShare(briefing.shareSummary || null);
     objectiveBriefing.classList.add('show');
     document.body.classList.add('briefing-open');
@@ -1314,7 +1317,7 @@
     mission.briefingActive = false;
     objectiveBriefing.classList.remove('show');
     document.body.classList.remove('briefing-open');
-    if (briefingOk) briefingOk.textContent = 'Copy';
+    if (briefingOk) briefingOk.textContent = 'OK';
     renderBriefingShare(null);
     setHudObjective(mission.nextHudTitle || '', mission.nextHudMeta || '');
     const afterOk = mission.briefingAfterOk;
@@ -1386,15 +1389,23 @@
     huntDecisionOverlay.hidden = true;
   }
 
-  function showHuntDecisionPrompt() {
-    if (mission.huntDecisionShown) return;
-    mission.huntDecisionShown = true;
+  function showRadioDecisionPrompt(title, body, radioMessage, duration = 5.4) {
+    if (huntDecisionTitle) huntDecisionTitle.textContent = title;
+    if (huntDecisionBody) huntDecisionBody.textContent = body;
+    if (huntAccept) huntAccept.textContent = 'Yes';
+    if (huntDecline) huntDecline.textContent = 'No';
     if (huntDecisionOverlay) {
       huntDecisionOverlay.hidden = false;
       void huntDecisionOverlay.offsetWidth;
       huntDecisionOverlay.classList.add('show');
     }
-    showRadioComms(formatCommsMessage(COMMS_HUNT_COMPLETE), 6.2);
+    showRadioComms(radioMessage, duration);
+  }
+
+  function showHuntDecisionPrompt() {
+    if (mission.huntDecisionShown) return;
+    mission.huntDecisionShown = true;
+    showRadioDecisionPrompt('Awaiting Orders', 'Ready for the next mission?', formatCommsMessage(COMMS_HUNT_COMPLETE), 6.2);
   }
 
   function beginHuntCompleteDecision() {
@@ -1403,7 +1414,6 @@
     mission.huntDecisionTimer = 0;
     mission.huntDecisionShown = false;
     player.vel = [0, 0, 0];
-    document.body.classList.add('hunt-complete-fade');
     if (document.pointerLockElement === canvas && document.exitPointerLock) document.exitPointerLock();
   }
 
@@ -1440,7 +1450,7 @@
     mission.huntDecisionTimer = 0;
     mission.huntDecisionShown = false;
     document.body.classList.remove('hunt-complete-fade');
-    returnToMainMenu('Negative received. Returning to base.');
+    returnToMainMenu('Returning to base.');
   }
 
   function acceptHuntDecision() {
@@ -2911,6 +2921,7 @@
     deathState.fadeStarted = false;
     deathState.overlayShown = false;
     deathState.decisionActive = false;
+    deathState.decisionShown = false;
     deathState.reviving = false;
     deathState.reviveTimer = 0;
     deathState.bloodTimer = 0;
@@ -2928,7 +2939,6 @@
     player.vel = [0, 0, 0];
     cancelReload();
     sound('death');
-    showRadioComms(COMMS_DEATH, 5.8);
     spawnDeathBlood(player.pos[0], player.pos[1] + .65, player.pos[2], 36);
     deathTitle.textContent = 'DOWNED';
     deathText.textContent = 'Respond to Mission Command';
@@ -2936,8 +2946,8 @@
     deathStats.classList.remove('simple');
     renderDeathUnlocks(null);
     hideDeathShare();
-    if (deathGiveUp) deathGiveUp.textContent = 'Negative';
-    if (deathContinue) deathContinue.textContent = 'Copy';
+    if (deathGiveUp) deathGiveUp.textContent = 'No';
+    if (deathContinue) deathContinue.textContent = 'Yes';
     const run = {
       kills: player.lifeKills,
       seconds: runSeconds(),
@@ -2961,20 +2971,10 @@
       }
     }
     updateParticles(dt);
-    if (!deathState.fadeStarted && deathState.timer >= DEATH_CINEMATIC_DURATION) {
-      deathState.fadeStarted = true;
-      document.body.classList.add('death-fading');
-      deathOverlay.classList.add('show', 'cinematic');
-    }
-    if (!deathState.overlayShown && deathState.timer >= DEATH_RESPAWN_START) {
-      deathState.overlayShown = true;
+    if (!deathState.decisionShown && deathState.timer >= .55) {
+      deathState.decisionShown = true;
       deathState.decisionActive = true;
-      document.body.classList.remove('death-cinematic');
-      document.body.classList.add('death-card-ready');
-      deathOverlay.classList.remove('cinematic');
-      deathOverlay.classList.add('ready', 'awaiting-choice');
-      showRadioComms(COMMS_DEATH, 6.4);
-      void deathOverlay.offsetWidth;
+      showRadioDecisionPrompt('Signal Check', 'Do you want to keep going?', COMMS_DEATH, 6.4);
     }
     if (!deathState.reviving) return;
     deathState.reviveTimer += dt;
@@ -2993,11 +2993,15 @@
     deathState.decisionActive = false;
     deathState.reviving = true;
     deathState.reviveTimer = 0;
+    hideHuntDecisionOverlay();
+    document.body.classList.remove('death-cinematic');
+    document.body.classList.add('death-fading', 'death-card-ready');
     deathTitle.textContent = 'REVIVING...';
     deathText.textContent = 'Reviving in ' + deathState.duration.toFixed(1) + 's';
     deathFill.style.width = '0%';
-    deathOverlay.classList.remove('awaiting-choice');
-    deathOverlay.classList.add('reviving');
+    deathOverlay.classList.remove('cinematic', 'awaiting-choice');
+    deathOverlay.classList.add('show', 'ready', 'reviving');
+    void deathOverlay.offsetWidth;
   }
   function respawn() {
     clearMovementInput();
@@ -3007,6 +3011,7 @@
     deathState.fadeStarted = false;
     deathState.overlayShown = false;
     deathState.decisionActive = false;
+    deathState.decisionShown = false;
     deathState.reviving = false;
     deathState.reviveTimer = 0;
     deathState.bloodTimer = 0;
@@ -3056,6 +3061,7 @@
     deathState.fadeStarted = false;
     deathState.overlayShown = false;
     deathState.decisionActive = false;
+    deathState.decisionShown = false;
     deathState.reviving = false;
     deathState.reviveTimer = 0;
     deathState.bloodTimer = 0;
@@ -3096,6 +3102,7 @@
     deathState.fadeStarted = false;
     deathState.overlayShown = false;
     deathState.decisionActive = false;
+    deathState.decisionShown = false;
     deathState.reviving = false;
     deathState.reviveTimer = 0;
     deathState.bloodTimer = 0;
@@ -4184,6 +4191,7 @@ function currentWaterIsDangerous() {
     deathState.fadeStarted = false;
     deathState.overlayShown = false;
     deathState.decisionActive = false;
+    deathState.decisionShown = false;
     deathState.reviving = false;
     deathState.reviveTimer = 0;
     deathState.bloodTimer = 0;
@@ -4312,8 +4320,14 @@ function currentWaterIsDangerous() {
   if (deathShare) deathShare.addEventListener('click', () => shareRunFromButton(deathShare));
   if (deathContinue) deathContinue.addEventListener('click', acceptDeathRevive);
   deathGiveUp.addEventListener('click', giveUpMission);
-  if (huntAccept) huntAccept.addEventListener('click', acceptHuntDecision);
-  if (huntDecline) huntDecline.addEventListener('click', declineHuntDecision);
+  if (huntAccept) huntAccept.addEventListener('click', () => {
+    if (deathState.active && deathState.decisionActive) acceptDeathRevive();
+    else acceptHuntDecision();
+  });
+  if (huntDecline) huntDecline.addEventListener('click', () => {
+    if (deathState.active && deathState.decisionActive) giveUpMission();
+    else declineHuntDecision();
+  });
   canvas.addEventListener('click', () => {
     if (deathState.active || extractionState.active || mission.huntDecisionActive) {
       return;

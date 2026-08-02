@@ -65,15 +65,15 @@ flowchart TD
     F --> G[Clear infected countdown]
     G --> H{Target cleared?}
     H -->|Cleared| I[Mission Command asks for next island]
-    I -->|Copy| M[Extraction meter]
+    I -->|Yes| M[Extraction meter]
     M --> D
-    I -->|Negative| B
+    I -->|No| B
     H -->|Still hunting| J{Player dies?}
     J -->|Active| G
     J -->|Downed| K[Mission Command checks signal]
-    K -->|Copy| L[Reviving meter]
+    K -->|Yes| L[Reviving meter]
     L --> G
-    K -->|Negative| B
+    K -->|No| B
 ```
 
 ## Desktop Controls
@@ -116,7 +116,7 @@ Common tuning options live in `config.js` under `window.ZOMVOX_CONFIG`. Edit tha
 
 ```js
 window.ZOMVOX_CONFIG = {
-  buildVersion: '2026.08.01.17',
+  buildVersion: '2026.08.01.18',
   initialSeed: 729641,
 
   environment: {
@@ -173,7 +173,7 @@ window.ZOMVOX_CONFIG = {
 
   comms: {
     dropIn: 'You are on {islandName}. The mission is to kill {zombieTotal} infected.',
-    huntComplete: '{islandName} is clear. Command has another island. Do you copy?',
+    huntComplete: '{islandName} is clear. Ready for the next mission?',
     bitten: 'You are bit. Keep your distance and finish the objective.',
     death: 'Can you hear me? Do you want to keep going?',
     fewMore: 'Just a few more.',
