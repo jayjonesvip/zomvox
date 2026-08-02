@@ -18,7 +18,7 @@
   body.death-fading #game{ filter:grayscale(1) contrast(.72) brightness(.18); transition:filter 1.05s ease; }
   body.shaking #game{ animation:screenShake .22s cubic-bezier(.36,.07,.19,.97) both; }
   body.low-health #vignette{ box-shadow: inset 0 0 160px rgba(90,0,0,.72), inset 0 -95px 135px rgba(0,0,0,.3); }
-  body.wounded #vignette{ box-shadow: inset 0 0 185px rgba(115,0,0,.82), inset 0 0 48px rgba(170,0,0,.26), inset 0 -95px 135px rgba(0,0,0,.35); animation:woundPulse 2.6s ease-in-out infinite; }
+  body.wounded #vignette{ z-index:13; mix-blend-mode:normal; background:radial-gradient(circle at 50% 48%, rgba(255,0,0,0) 0 46%, rgba(150,0,0,.26) 70%, rgba(95,0,0,.72) 100%); box-shadow:inset 0 0 34px rgba(255,22,22,.72), inset 0 0 105px rgba(150,0,0,.62), inset 0 0 210px rgba(60,0,0,.88); animation:woundPulse 2.6s ease-in-out infinite; }
   @keyframes woundPulse{
     0%,100%{ opacity:.86; }
     45%{ opacity:.62; }
@@ -223,9 +223,8 @@
   .deathStats.simple{ width:min(380px, 78vw); grid-template-columns:repeat(2,minmax(0,1fr)); }
   .deathMeter{ width:min(420px, 74vw); height:13px; margin:0 auto; border:1px solid rgba(255,255,255,.24); background:rgba(0,0,0,.56); border-radius:999px; overflow:hidden; box-shadow:inset 0 2px 8px rgba(0,0,0,.48); }
   #deathFill{ height:100%; width:0%; background:linear-gradient(90deg,#ff2d2d,#ffcf45); box-shadow:0 0 22px rgba(255,47,47,.56); transition:width .08s linear; }
-  #deathContinue,#deathGiveUp{ display:none; margin:16px 5px 0; appearance:none; border:0; border-radius:10px; padding:10px 20px; color:#210606; font-size:16px; font-weight:1000; text-transform:uppercase; background:linear-gradient(180deg,#ffe16d,#ff5d3d); box-shadow:0 14px 40px rgba(255,50,50,.3), inset 0 2px 0 rgba(255,255,255,.34); cursor:pointer; }
+  #deathGiveUp{ display:none; margin:16px 5px 0; appearance:none; border:0; border-radius:10px; padding:10px 20px; color:#210606; font-size:16px; font-weight:1000; text-transform:uppercase; background:linear-gradient(180deg,#ffe16d,#ff5d3d); box-shadow:0 14px 40px rgba(255,50,50,.3), inset 0 2px 0 rgba(255,255,255,.34); cursor:pointer; }
   #deathGiveUp{ color:#f4f1e8; background:linear-gradient(180deg,#303842,#12161d); border:1px solid rgba(255,255,255,.22); box-shadow:0 14px 40px rgba(0,0,0,.32), inset 0 2px 0 rgba(255,255,255,.12); }
-  #deathOverlay.ready #deathContinue{ display:none; }
   #deathOverlay.ready #deathGiveUp{ display:inline-block; }
   @keyframes deathCardPop{ from{ opacity:0; transform:translateY(14px) scale(.96); } to{ opacity:1; transform:translateY(0) scale(1); } }
   body.story-reviving #deathOverlay{ opacity:1; visibility:visible; pointer-events:none; background:#000; transition:opacity .7s ease, visibility .7s ease; }
@@ -438,7 +437,7 @@
     .deathStats{ width:min(420px, 88vw); margin-bottom:6px; }
     .deathStats.simple{ grid-template-columns:repeat(2,minmax(0,1fr)); }
     .deathMeter{ width:min(320px, 70vw); height:10px; }
-    #deathContinue,#deathGiveUp{ margin-top:10px; padding:8px 14px; font-size:12px; border-radius:8px; }
+    #deathGiveUp{ margin-top:10px; padding:8px 14px; font-size:12px; border-radius:8px; }
     .shareRunBtn{ padding:8px 12px; font-size:11px; margin-bottom:8px; }
     #briefingOk{ padding:9px 18px; font-size:13px; }
     #upgradeOverlay{ padding:12px; }
