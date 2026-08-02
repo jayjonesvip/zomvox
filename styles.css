@@ -227,10 +227,6 @@
   #deathGiveUp{ color:#f4f1e8; background:linear-gradient(180deg,#303842,#12161d); border:1px solid rgba(255,255,255,.22); box-shadow:0 14px 40px rgba(0,0,0,.32), inset 0 2px 0 rgba(255,255,255,.12); }
   #deathOverlay.ready #deathGiveUp{ display:inline-block; }
   @keyframes deathCardPop{ from{ opacity:0; transform:translateY(14px) scale(.96); } to{ opacity:1; transform:translateY(0) scale(1); } }
-  body.story-reviving #deathOverlay{ opacity:1; visibility:visible; pointer-events:none; background:#000; transition:opacity .7s ease, visibility .7s ease; }
-  body.story-reviving.story-revive-fade #deathOverlay{ opacity:0; visibility:visible; }
-  body.story-reviving .deathCard{ display:none; }
-
   #menu{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center; padding:22px; overflow:hidden; background:radial-gradient(circle at 50% 35%, rgba(35,85,110,.45), rgba(2,7,12,.82) 62%, rgba(0,0,0,.93)); z-index:20; }
   .card{ width:min(760px, 96vw); border:1px solid rgba(255,255,255,.18); background:linear-gradient(180deg, rgba(13,24,35,.88), rgba(5,9,14,.8)); border-radius:26px; padding:28px; box-shadow:0 30px 90px rgba(0,0,0,.55); backdrop-filter:blur(12px); }
   #mainMenuCard{ width:min(640px, 96vw); text-align:center; }

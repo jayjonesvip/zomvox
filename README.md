@@ -33,7 +33,7 @@ ZomVox is listed on [IGDB](https://www.igdb.com/) and [DEAD.ARMY](https://dead.a
 - Sand and mud surfaces slow players and zombies by 15%.
 - Fixed-size chunk generation so the game area stays bounded and performance remains predictable.
 - Player movement is clamped inside the generated world.
-- Targeted mesh rebuilding for mission set pieces and world updates.
+- Targeted mesh rebuilding for world updates, pickups, C4, and enemy effects.
 - One-button Frontier Hunt loop with random biome selection and a random infected target from 20 to 40 kills.
 - Center combat HUD with a voxel zombie head countdown for infected remaining.
 - Compact ammo HUD on desktop and mobile, plus a six-round blaster magazine with magazine-swap reloads, reserve ammo, recoil, and fire-rate cooldown.
@@ -114,7 +114,7 @@ Common tuning options live in `config.js` under `window.ZOMVOX_CONFIG`. Edit tha
 
 ```js
 window.ZOMVOX_CONFIG = {
-  buildVersion: '2026.08.01.11',
+  buildVersion: '2026.08.01.12',
   initialSeed: 729641,
 
   environment: {
@@ -164,14 +164,8 @@ window.ZOMVOX_CONFIG = {
   },
 
   mission: {
-    islandSeeds: [29190, 482177, 735331, 918244, 126509],
-    biomes: ['forest', 'dunes', 'rocky', 'swamp', 'ashlands'],
-    toxinDamagePerSecond: 1.15,
-    disableSeconds: 3,
     insertionDropHeight: 30,
     insertionFallSpeed: 5.8,
-    infectedGoals: [25, 50, 100, 250, 500],
-    infectedGoal: 50,
     firstWaveSize: 3
   }
 };
@@ -213,7 +207,7 @@ Other sections in `config.js` expose safe defaults for:
 - `player`: collision size, one-block terrain auto-step height, camera step smoothing, starting health, starting ammo reserve, starting C4, respawn reserve floor, and low-health heartbeat threshold.
 - `weapon`: magazine size, magazine-swap reload time, fire cooldown, recoil, perk multipliers, and long-range kill distance.
 - `enemies`: base enemy cap, horde escalation values, and close-range zombie moan radius/voice/timing controls.
-- `mission`: legacy/story mission tuning plus insertion drop timing and first wave size. Frontier Hunt currently rolls random hunt seeds and targets at runtime.
+- `mission`: Frontier Hunt insertion drop timing and first wave size. The active hunt loop rolls random biome seeds and infected targets at runtime.
 - `pickups`: ammo and C4 pickup amounts/drop chances. Health pickups are intentionally disabled.
 - `timers`: auto-respawn countdown, world rebuild meter duration, heartbeat interval, and day/night cycle length.
 - `audio.files`: optional file-backed sounds for weapon, impact, pickup, UI, zombie, and ambient cues. File cues are tried first when configured; blank cues fall back to procedural audio.

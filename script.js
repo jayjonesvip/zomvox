@@ -18,8 +18,6 @@
   const menu = $('menu');
   const mainMenuCard = $('mainMenuCard');
   const play = $('play');
-  const quickStart = $('quickStart');
-  const survivalStart = $('survivalStart');
   const controlsButton = $('controlsButton');
   const controlsModal = $('controlsModal');
   const controlsClose = $('controlsClose');
@@ -27,8 +25,6 @@
   const settingsModal = $('settingsModal');
   const settingsClose = $('settingsClose');
   const portraitInstallCallout = $('portraitInstallCallout');
-  const quickBiomePanel = $('quickBiomePanel');
-  const quickBack = $('quickBack');
   const toast = $('toast');
   const gunSprite = $('gunSprite');
   const muzzleFx = $('muzzleFx');
@@ -97,7 +93,6 @@
   const settingFullscreen = $('settingFullscreen');
   const updatePrompt = $('updatePrompt');
   const updateReload = $('updateReload');
-  const quickBiomeButtons = quickBiomePanel ? Array.from(quickBiomePanel.querySelectorAll('[data-biome]')) : [];
 
   const CONFIG = window.ZOMVOX_CONFIG || {};
   function configSection(name) {
@@ -115,14 +110,6 @@
   function configBoolean(section, key, fallback) {
     const value = section[key];
     return typeof value === 'boolean' ? value : fallback;
-  }
-  function configNumberArray(section, key, fallback) {
-    const value = section[key];
-    return (Array.isArray(value) ? value : fallback).filter(Number.isFinite).map(v => Math.floor(v));
-  }
-  function configStringArray(section, key, fallback) {
-    const value = section[key];
-    return (Array.isArray(value) ? value : fallback).filter(v => typeof v === 'string');
   }
   const ENV_CONFIG = configSection('environment');
   const WORLD_CONFIG = configSection('world');
@@ -204,22 +191,11 @@
   const ZOMBIE_MOAN_MAX_VOICES = Math.max(1, Math.floor(configNumber(ENEMY_CONFIG, 'zombieMoanMaxVoices', 3)));
   const ZOMBIE_MOAN_INTERVAL_MIN = Math.max(0.5, configNumber(ENEMY_CONFIG, 'zombieMoanIntervalMin', 4));
   const ZOMBIE_MOAN_INTERVAL_MAX = Math.max(ZOMBIE_MOAN_INTERVAL_MIN, configNumber(ENEMY_CONFIG, 'zombieMoanIntervalMax', 5));
-  const TOXIN_DAMAGE_PER_SECOND = Math.max(0, configNumber(MISSION_CONFIG, 'toxinDamagePerSecond', 1.15));
-  const MACHINE_DISABLE_SECONDS = Math.max(0.5, configNumber(MISSION_CONFIG, 'disableSeconds', 3));
   const INSERTION_DROP_HEIGHT = Math.max(10, configNumber(MISSION_CONFIG, 'insertionDropHeight', 30));
   const INSERTION_FALL_SPEED = Math.max(2, configNumber(MISSION_CONFIG, 'insertionFallSpeed', 5.8));
   const FIRST_WAVE_SIZE = Math.max(0, Math.floor(configNumber(MISSION_CONFIG, 'firstWaveSize', 3)));
   const INITIAL_SEED = Math.floor(configNumber(CONFIG, 'initialSeed', 729641));
-  const CONFIGURED_MISSION_SEEDS = configNumberArray(MISSION_CONFIG, 'islandSeeds', [INITIAL_SEED, 482177, 735331, 918244, 126509]).slice(0, 5);
-  const MISSION_SEEDS = CONFIGURED_MISSION_SEEDS.length ? CONFIGURED_MISSION_SEEDS : [INITIAL_SEED];
-  const DEFAULT_MISSION_BIOMES = ['forest', 'dunes', 'rocky', 'swamp', 'ashlands'];
   const QUICK_BIOMES = ['forest', 'dunes', 'rocky', 'swamp', 'ashlands', 'tundra'];
-  const CONFIGURED_MISSION_BIOMES = configStringArray(MISSION_CONFIG, 'biomes', DEFAULT_MISSION_BIOMES).slice(0, MISSION_SEEDS.length);
-  const MISSION_BIOMES = MISSION_SEEDS.map((_, i) => normalizeBiome(CONFIGURED_MISSION_BIOMES[i] || DEFAULT_MISSION_BIOMES[i] || 'forest'));
-  const DEFAULT_INFECTED_GOALS = [25, 50, 100, 250, 500];
-  const FALLBACK_INFECTED_GOAL = Math.max(1, Math.floor(configNumber(MISSION_CONFIG, 'infectedGoal', 50)));
-  const CONFIGURED_INFECTED_GOALS = configNumberArray(MISSION_CONFIG, 'infectedGoals', DEFAULT_INFECTED_GOALS).slice(0, MISSION_SEEDS.length);
-  const MISSION_INFECTED_GOALS = MISSION_SEEDS.map((_, i) => Math.max(1, CONFIGURED_INFECTED_GOALS[i] || DEFAULT_INFECTED_GOALS[i] || FALLBACK_INFECTED_GOAL));
   const AMMO_PICKUP_ROUNDS = Math.max(1, Math.floor(configNumber(PICKUP_CONFIG, 'ammoRounds', 6)));
   const MAP_AMMO_PICKUP_CHANCE = Math.max(0, Math.min(1, configNumber(PICKUP_CONFIG, 'mapAmmoChance', 0.28)));
   const ENEMY_C4_DROP_CHANCE = Math.max(0, Math.min(1, configNumber(PICKUP_CONFIG, 'enemyC4DropChance', 0.06)));
@@ -230,12 +206,8 @@
   const HEARTBEAT_INTERVAL = Math.max(0.2, configNumber(TIMER_CONFIG, 'heartbeatInterval', 0.95));
   const CYCLE_HALF_DAY_MS = Math.max(1000, configNumber(TIMER_CONFIG, 'cycleHalfDayMs', 360000));
   const PHASE_DROP = 'drop';
-  const PHASE_DISABLE_MACHINE = 'disableMachine';
   const PHASE_ZOMBIE_THREAT = 'zombieThreat';
-  const MODE_STORY = 'story';
-  const MODE_QUICK = 'quick';
-
-  let currentSeed = MISSION_SEEDS[0] || INITIAL_SEED;
+  let currentSeed = INITIAL_SEED;
   let world = new Map();
   let edits = new Map();
   let loadedChunks = new Set();
@@ -293,7 +265,7 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.11');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.12');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -333,18 +305,9 @@
   };
   const worldRebuildState = { active: false, timer: 0, startedAt: 0, duration: WORLD_REBUILD_DURATION, seed: null };
   const mission = {
-    mode: MODE_STORY,
     quickBiome: 'forest',
-    quickVariant: 'survival',
     quickGoal: 0,
     phase: PHASE_DROP,
-    machine: null,
-    supplyCrate: null,
-    dropBeacon: null,
-    disableProgress: 0,
-    toxinRemainder: 0,
-    toxinSoundTicks: 0,
-    smokeTimer: 0,
     firstWaveSpawned: false,
     insertionActive: false,
     insertionTargetY: 0,
@@ -360,10 +323,6 @@
     upgradeActive: false,
     upgradeAfterChoice: null,
     completed: false,
-    extractionProgress: 0,
-    extractionCalled: false,
-    beaconMessageCooldown: 0,
-    beaconReminderTimer: 0,
     commandBannerTimer: 0,
     toastLockTimer: 0,
     fewMoreVoicePlayed: false,
@@ -1036,7 +995,7 @@
   }
 
   function currentIslandLabel() {
-    return 'Island ' + (mission.islandIndex + 1) + ' / ' + MISSION_SEEDS.length;
+    return 'Frontier Hunt';
   }
 
   function normalizeBiome(value) {
@@ -1063,8 +1022,7 @@
   }
 
   function currentBiome() {
-    if (mission.mode === MODE_QUICK) return normalizeBiome(mission.quickBiome);
-    return MISSION_BIOMES[mission.islandIndex] || 'forest';
+    return normalizeBiome(mission.quickBiome);
   }
 
   function currentBiomeLabel() {
@@ -1138,23 +1096,6 @@
     return quickProgress.unlockedBiomes.includes(normalizeBiome(biome));
   }
 
-  function renderQuickBiomeLocks() {
-    for (const btn of quickBiomeButtons) {
-      const biome = normalizeBiome(btn.dataset.biome);
-      const rule = QUICK_UNLOCK_RULES[biome] || QUICK_UNLOCK_RULES.forest;
-      const unlocked = isQuickBiomeUnlocked(biome);
-      const name = document.createElement('span');
-      const meta = document.createElement('small');
-      name.textContent = rule.label + ' Island';
-      meta.textContent = unlocked ? 'Unlocked' : rule.requirement;
-      btn.replaceChildren(name, meta);
-      btn.disabled = !unlocked;
-      btn.classList.toggle('locked', !unlocked);
-      btn.setAttribute('aria-disabled', unlocked ? 'false' : 'true');
-      btn.title = unlocked ? rule.label : 'Locked: ' + rule.requirement;
-    }
-  }
-
   function applyQuickUnlockRules() {
     const newlyUnlocked = [];
     for (const biome of QUICK_BIOMES) {
@@ -1174,7 +1115,6 @@
     if (!QUICK_BIOMES.includes(normalized) || isQuickBiomeUnlocked(normalized)) return [];
     quickProgress.unlockedBiomes.push(normalized);
     saveQuickProgress();
-    renderQuickBiomeLocks();
     return [normalized];
   }
 
@@ -1187,7 +1127,6 @@
     if (run.bestCombo >= 5) quickProgress.stats.streakPerks++;
     saveQuickProgress();
     const newlyUnlocked = applyQuickUnlockRules();
-    renderQuickBiomeLocks();
     return newlyUnlocked;
   }
 
@@ -1225,10 +1164,7 @@
   }
 
   function currentInfectedGoal() {
-    if (mission.mode === MODE_QUICK && mission.quickVariant === 'hunt') {
-      return Math.max(1, Math.floor(mission.quickGoal || 30));
-    }
-    return MISSION_INFECTED_GOALS[mission.islandIndex] || MISSION_INFECTED_GOALS[MISSION_INFECTED_GOALS.length - 1] || FALLBACK_INFECTED_GOAL;
+    return Math.max(1, Math.floor(mission.quickGoal || 30));
   }
 
   function maybeVoiceFewMore() {
@@ -1252,16 +1188,6 @@
     if (mission.longRangeVoicePlayed || dist < LONG_RANGE_KILL_DIST) return;
     mission.longRangeVoicePlayed = true;
     showRadioComms('Nice shot.');
-  }
-
-  function missionSeedIndex(seed) {
-    const idx = MISSION_SEEDS.indexOf(seed);
-    return idx >= 0 ? idx : 0;
-  }
-
-  function nextMissionSeed() {
-    mission.islandIndex = (mission.islandIndex + 1) % MISSION_SEEDS.length;
-    return MISSION_SEEDS[mission.islandIndex];
   }
 
   function isGameLive() {
@@ -1398,7 +1324,6 @@
       worldRebuildState.active = false;
       worldOverlay.classList.remove('show');
       generateWorld(nextSeed);
-      if (isGameLive() && mission.mode === MODE_STORY) openObjectiveBriefing();
     }
   }
 
@@ -2217,125 +2142,6 @@
     sound('footstep', level, 1, { surface, gait });
   }
 
-  function highestMissionPoint() {
-    let best = { x: 0, z: 0, h: terrainHeight(0, 0), score: -Infinity };
-    for (let x = WORLD_MIN + 7; x <= WORLD_MAX - 7; x++) {
-      for (let z = WORLD_MIN + 8; z <= WORLD_MAX - 7; z++) {
-        const h = terrainHeight(x, z);
-        if (h <= WATER_LEVEL + 3) continue;
-        const distanceFromDrop = Math.hypot(x, z);
-        if (distanceFromDrop < 15) continue;
-        const slope =
-          Math.abs(h - terrainHeight(x + 1, z)) +
-          Math.abs(h - terrainHeight(x - 1, z)) +
-          Math.abs(h - terrainHeight(x, z + 1)) +
-          Math.abs(h - terrainHeight(x, z - 1));
-        const broadSlope =
-          Math.abs(h - terrainHeight(x + 3, z)) +
-          Math.abs(h - terrainHeight(x - 3, z)) +
-          Math.abs(h - terrainHeight(x, z + 4)) +
-          Math.abs(h - terrainHeight(x, z - 4));
-        if (slope > 8 || broadSlope > 18) continue;
-        const score = h * 10 + distanceFromDrop * .06 - slope * 1.8 - broadSlope * .6 + seededHash(x * 1.7, z * 2.1);
-        if (score > best.score) best = { x, z, h, score };
-      }
-    }
-    return best;
-  }
-
-  function clearingSurfaceBlock() {
-    const biome = currentBiome();
-    if (biome === 'dunes') return BLOCK.SAND;
-    if (biome === 'swamp') return BLOCK.MUD;
-    if (biome === 'ashlands') return BLOCK.ASH;
-    if (biome === 'rocky') return BLOCK.STONE;
-    if (biome === 'tundra') return BLOCK.SNOW;
-    return BLOCK.GRASS;
-  }
-
-  function prepareMissionClearing(cx, baseY, cz) {
-    const floorY = baseY - 1;
-    const surfaceType = clearingSurfaceBlock();
-    for (let dx = -5; dx <= 5; dx++) {
-      for (let dz = -6; dz <= 5; dz++) {
-        const x = cx + dx, z = cz + dz;
-        for (let y = floorY + 1; y <= floorY + 22; y++) setBlock(x, y, z, 0, true);
-        for (let y = Math.max(0, floorY - 2); y < floorY; y++) setBlock(x, y, z, BLOCK.STONE, true);
-        setBlock(x, floorY, z, surfaceType, true);
-      }
-    }
-  }
-
-  function setMachineBlock(x, y, z, type, machineBlocks) {
-    setBlock(x, y, z, type, true);
-    machineBlocks.push([x, y, z]);
-  }
-
-  function placeContaminationMachine() {
-    const spot = highestMissionPoint();
-    const x = spot.x, z = spot.z, baseY = terrainHeight(x, z) + 1;
-    const padX = x, padZ = z - 4, padY = baseY;
-    const towerBlocks = [];
-    const beaconBlocks = [];
-    const padBlocks = [];
-    prepareMissionClearing(x, baseY, z);
-    // Compact silo/smoke-stack: a 3x3 grey tower with a red beacon cap and
-    // a separate translucent yellow shutdown block in front.
-    for (let y = 0; y < 15; y++) {
-      for (let dx = -1; dx <= 1; dx++) {
-        for (let dz = -1; dz <= 1; dz++) {
-          const blocks = y < 14 ? towerBlocks : beaconBlocks;
-          setMachineBlock(x + dx, baseY + y, z + dz, y < 14 ? BLOCK.SPIRE_METAL : BLOCK.RED_LIGHT, blocks);
-        }
-      }
-    }
-    // Shutdown is triggered by standing on the translucent yellow pressure block.
-    setMachineBlock(padX, padY, padZ, BLOCK.SHUTDOWN_PAD, padBlocks);
-    mission.machine = {
-      x: x + .5,
-      y: baseY,
-      z: z + .5,
-      smokeY: baseY + 15.8,
-      active: true,
-      blocks: [...towerBlocks, ...beaconBlocks, ...padBlocks],
-      towerBlocks,
-      beaconBlocks,
-      padBlocks,
-      pad: { x: padX, y: padY, z: padZ }
-    };
-    mission.supplyCrate = null;
-    queueRebuild();
-  }
-
-function playerOnMachinePad() {
-  const pad = mission.machine && mission.machine.pad;
-  if (!pad || !mission.machine.active) return false;
-
-  // Player body box
-  const pxMin = player.pos[0] - PLAYER_RADIUS;
-  const pxMax = player.pos[0] + PLAYER_RADIUS;
-  const pyMin = player.pos[1];
-  const pyMax = player.pos[1] + PLAYER_HEIGHT;
-  const pzMin = player.pos[2] - PLAYER_RADIUS;
-  const pzMax = player.pos[2] + PLAYER_RADIUS;
-
-  // Yellow shutdown block box, slightly expanded so "touching" counts
-  const touchPad = 0.18;
-  const bxMin = pad.x - touchPad;
-  const bxMax = pad.x + 1 + touchPad;
-  const byMin = pad.y - touchPad;
-  const byMax = pad.y + 1 + touchPad;
-  const bzMin = pad.z - touchPad;
-  const bzMax = pad.z + 1 + touchPad;
-
-  return pxMax >= bxMin &&
-         pxMin <= bxMax &&
-         pyMax >= byMin &&
-         pyMin <= byMax &&
-         pzMax >= bzMin &&
-         pzMin <= bzMax;
-}
-  
   const faces = [
     { n: [ 1, 0, 0], v: [[1,0,0],[1,1,0],[1,1,1],[1,0,1]] },
     { n: [-1, 0, 0], v: [[0,0,1],[0,1,1],[0,1,0],[0,0,0]] },
@@ -2627,7 +2433,6 @@ function playerOnMachinePad() {
     const groundY = topSolidY(x, z) + 1.001;
     mission.insertionActive = true;
     mission.insertionTargetY = groundY;
-    mission.disableProgress = 0;
     touchInput.moveX = 0;
     touchInput.moveY = 0;
     touchInput.jump = false;
@@ -2636,10 +2441,8 @@ function playerOnMachinePad() {
     player.vel = [0, -INSERTION_FALL_SPEED * .55, 0];
     player.pos[1] = Math.min(MAX_Y + INSERTION_DROP_HEIGHT, groundY + INSERTION_DROP_HEIGHT);
     scorePop('DROP INBOUND', 'small');
-    showToast(mission.mode === MODE_QUICK
-      ? 'Frontier Hunt: drop started. Look around. Movement unlocks on touchdown.'
-      : 'Mission Command: insertion started. Look around. Movement unlocks on touchdown.');
-    if (mission.mode === MODE_QUICK) showRadioComms('Follow your objective. Over.', 4.2);
+    showToast('Frontier Hunt: drop started. Look around. Movement unlocks on touchdown.');
+    showRadioComms('Follow your objective. Over.', 4.2);
   }
 
   function finishInsertionDrop() {
@@ -2651,9 +2454,7 @@ function playerOnMachinePad() {
     player.grounded = true;
     sound('land', 1, 1, { surface: playerAudioSurface(), gait: 'land' });
     scorePop('TOUCHDOWN', 'pickup small');
-    showToast(mission.mode === MODE_QUICK
-      ? 'Boots down. Hunt the infected.'
-      : 'Boots down. Locate the contamination source.');
+    showToast('Boots down. Hunt the infected.');
   }
 
   function updateMovement(dt) {
@@ -2982,25 +2783,19 @@ function playerOnMachinePad() {
     cancelReload();
     sound('death');
     spawnDeathBlood(player.pos[0], player.pos[1] + .65, player.pos[2], 36);
-    document.body.classList.toggle('story-death', mission.mode === MODE_STORY);
     deathTitle.textContent = 'RESPAWNING...';
     deathText.textContent = 'Respawning in 3.0s';
     renderAutoRespawnStats();
     renderDeathUnlocks(null);
     deathGiveUp.textContent = 'Quit';
-    if (mission.mode === MODE_STORY) {
-      // Story mode still records the failure visually as an automatic remote
-      // revive, but the player only chooses whether to quit.
-    } else {
-      const run = {
-        kills: player.lifeKills,
-        seconds: runSeconds(),
-        bestCombo: player.lifeBestCombo
-      };
-      const unlockedBiomes = recordQuickHuntRun(run);
-      if (unlockedBiomes.length) {
-        sound('objectiveClear');
-      }
+    const run = {
+      kills: player.lifeKills,
+      seconds: runSeconds(),
+      bestCombo: player.lifeBestCombo
+    };
+    const unlockedBiomes = recordQuickHuntRun(run);
+    if (unlockedBiomes.length) {
+      sound('objectiveClear');
     }
     deathFill.style.width = '0%';
     deathOverlay.classList.remove('show', 'ready', 'cinematic');
@@ -3052,20 +2847,13 @@ function playerOnMachinePad() {
     player.reserve = Math.max(player.reserve, RESPAWN_RESERVE_FLOOR);
     cancelReload();
     player.shotCooldown = 0;
-    mission.disableProgress = 0;
-    mission.toxinRemainder = 0;
-    mission.toxinSoundTicks = 0;
     setWeaponUnlocked(gunUnlocked());
     lastKillTime = -999;
     killComboCount = 0;
     resetLifeStats();
     woundGaspTimer = 0;
-    document.body.classList.remove('dead', 'low-health', 'wounded', 'death-cinematic', 'death-fading', 'death-card-ready', 'story-death');
-    if (mission.mode === MODE_STORY) {
-      document.body.classList.add('story-reviving');
-    } else {
-      deathOverlay.classList.remove('show', 'cinematic');
-    }
+    document.body.classList.remove('dead', 'low-health', 'wounded', 'death-cinematic', 'death-fading', 'death-card-ready');
+    deathOverlay.classList.remove('show', 'cinematic');
     deathOverlay.classList.remove('ready', 'cinematic');
     deathStats.textContent = '';
     deathStats.classList.remove('simple');
@@ -3086,19 +2874,7 @@ function playerOnMachinePad() {
       if (!keep) stopEnemySounds(e);
       return keep;
     });
-    if (mission.mode === MODE_STORY) {
-      showToast('Mission Command: remote revive complete.');
-      setTimeout(() => {
-        document.body.classList.add('story-revive-fade');
-      }, 120);
-      setTimeout(() => {
-        deathOverlay.classList.remove('show', 'cinematic');
-        document.body.classList.remove('story-reviving', 'story-revive-fade');
-        if (!touchMode && menu.style.display === 'none') requestPointerLockSafe();
-      }, 880);
-    } else {
-      showToast('Respawned at the old marker. Deaths: ' + player.deaths);
-    }
+    showToast('Respawned at the old marker. Deaths: ' + player.deaths);
   }
 
   function returnToMainMenu(message = 'Awaiting orders.') {
@@ -3112,7 +2888,7 @@ function playerOnMachinePad() {
     woundGaspTimer = 0;
     locked = false;
     if (document.pointerLockElement === canvas && document.exitPointerLock) document.exitPointerLock();
-    document.body.classList.remove('dead', 'low-health', 'wounded', 'death-cinematic', 'death-fading', 'death-card-ready', 'story-death', 'story-reviving', 'story-revive-fade', 'stage-cleared', 'quick-mode');
+    document.body.classList.remove('dead', 'low-health', 'wounded', 'death-cinematic', 'death-fading', 'death-card-ready', 'stage-cleared', 'quick-mode');
     deathOverlay.classList.remove('show', 'ready', 'cinematic');
     objectiveBriefing.classList.remove('show');
     document.body.classList.remove('briefing-open');
@@ -3124,11 +2900,8 @@ function playerOnMachinePad() {
     deathText.textContent = 'Respawning...';
     deathFill.style.width = '0%';
     menu.style.display = 'flex';
-    mission.mode = MODE_QUICK;
     mission.quickBiome = 'forest';
-    mission.quickVariant = 'hunt';
     mission.quickGoal = 0;
-    setQuickBiomeScreen(false);
     updateAmbientSound(true);
     showToast(message);
   }
@@ -3144,7 +2917,7 @@ function playerOnMachinePad() {
     woundGaspTimer = 0;
     locked = false;
     if (document.pointerLockElement === canvas && document.exitPointerLock) document.exitPointerLock();
-    document.body.classList.remove('dead', 'low-health', 'wounded', 'death-cinematic', 'death-fading', 'death-card-ready', 'story-death', 'story-reviving', 'story-revive-fade');
+    document.body.classList.remove('dead', 'low-health', 'wounded', 'death-cinematic', 'death-fading', 'death-card-ready');
     deathOverlay.classList.remove('show', 'ready', 'cinematic');
     deathStats.textContent = '';
     deathStats.classList.remove('simple');
@@ -3154,11 +2927,8 @@ function playerOnMachinePad() {
     deathText.textContent = 'Respawning...';
     deathFill.style.width = '0%';
     menu.style.display = 'flex';
-    mission.mode = MODE_QUICK;
     mission.quickBiome = 'forest';
-    mission.quickVariant = 'hunt';
     mission.quickGoal = 0;
-    setQuickBiomeScreen(false);
     document.body.classList.remove('quick-mode');
     updateAmbientSound(true);
     showToast(message);
@@ -3166,10 +2936,6 @@ function playerOnMachinePad() {
 
   function giveUpMission() {
     if (!deathState.active) return;
-    if (mission.mode === MODE_STORY) {
-      returnToMainMenuFromDeath('Mission abandoned. Awaiting new orders.');
-      return;
-    }
     returnToMainMenuFromDeath('Frontier Hunt ended. Awaiting next run.', false);
   }
 
@@ -3367,7 +3133,7 @@ function playerOnMachinePad() {
   function shoot() {
     if (deathState.active) return;
     if (!gunUnlocked()) {
-      showToast('Disable the contamination source first.');
+      showToast('Weapon unavailable.');
       return;
     }
     if (player.reloading) return;
@@ -3755,52 +3521,6 @@ function playerOnMachinePad() {
     scorePop('INFECTED PURGED', 'wave small');
   }
 
-  function completeMissionIsland() {
-    if (mission.completed) return;
-    mission.completed = true;
-    mission.extractionProgress = 0;
-    mission.extractionCalled = false;
-    nextSpawnTimer = 999;
-    clearRemainingMissionEnemies();
-    mission.hudMeta = 'Return to drop beacon';
-    mission.toastLockTimer = 2.4;
-    mission.beaconReminderTimer = 6.5;
-    showToast('Mission Command: stage cleared. Return to drop beacon for extraction.', true);
-    showCommandBanner('STAGE CLEARED', 'Return to drop beacon for extraction', 4.6);
-    scorePop('STAGE CLEARED', 'wave');
-    sound('objectiveClear');
-  }
-
-  function completeExtraction() {
-    if (mission.extractionCalled) return;
-    const storyUnlocks = mission.mode === MODE_STORY ? unlockQuickBiome(currentBiome()) : [];
-    const unlockText = storyUnlocks.length
-      ? ' Quick Hunt island unlocked: ' + storyUnlocks.map(quickBiomeLabel).join(' + ') + '.'
-      : '';
-    mission.extractionCalled = true;
-    mission.extractionProgress = 1;
-    mission.commandBannerTimer = 0;
-    mission.beaconReminderTimer = 0;
-    hideProgressOverlay();
-    if (commandBanner) commandBanner.classList.remove('show');
-    document.body.classList.remove('stage-cleared');
-    document.body.classList.add('stage-transition');
-    openObjectiveBriefing({
-      title: 'Island contained',
-      meta: currentIslandLabel() + ' // ' + currentBiomeLabel() + ' // Mission Complete',
-      body: 'Mission Command: extraction confirmed. Confirm redeploy and we will drop you onto the next contaminated island.' + unlockText,
-      shareSummary: buildRunSummary('Mission cleared'),
-      hudTitle: 'Island breach contained',
-      hudMeta: 'Redeploying',
-      afterOk: () => beginWorldRebuild(nextMissionSeed())
-    });
-    if (storyUnlocks.length) {
-      showToast('Quick Hunt island unlocked: ' + storyUnlocks.map(quickBiomeLabel).join(' + '), true);
-      scorePop('ISLAND UNLOCKED', 'wave');
-    }
-    scorePop('EXTRACTION CONFIRMED', 'wave');
-  }
-
   function completeQuickHunt() {
     if (mission.completed) return;
     mission.completed = true;
@@ -3829,157 +3549,7 @@ function playerOnMachinePad() {
 
   function checkMissionCompletion() {
     if (mission.phase !== PHASE_ZOMBIE_THREAT) return;
-    if (mission.mode === MODE_STORY && player.kills >= currentInfectedGoal()) completeMissionIsland();
-    else if (mission.mode === MODE_QUICK && mission.quickVariant === 'hunt' && player.kills >= currentInfectedGoal()) completeQuickHunt();
-  }
-
-  function spawnSupplyCrate() {
-    if (!mission.machine) return;
-    const pad = mission.machine.pad || { x: Math.floor(mission.machine.x), z: Math.floor(mission.machine.z) };
-    const x = pad.x, z = pad.z;
-    mission.supplyCrate = { x: x + .5, y: pickupAirY(x, z), z: z + .5, looted: false };
-  }
-
-  function burstSupplyCrate() {
-    const c = mission.supplyCrate;
-    if (!c || c.looted) return;
-    c.looted = true;
-    mission.supplyCrate = null;
-    for (let i = 0; i < 18; i++) {
-      const angle = (Math.PI * 2 * i) / 18;
-      particles.push({
-        x: c.x,
-        y: c.y + .45,
-        z: c.z,
-        vx: Math.cos(angle) * (1.6 + Math.random() * 2.4),
-        vy: 1.6 + Math.random() * 3.2,
-        vz: Math.sin(angle) * (1.6 + Math.random() * 2.4),
-        life: .42 + Math.random() * .35,
-        type: i % 3 === 0 ? 14 : 4
-      });
-    }
-    for (let i = 0; i < 4; i++) {
-      const angle = -Math.PI * .75 + i * (Math.PI * .5);
-      spawnThrownPickup(c.x, c.y + .75, c.z, 'ammo', angle, 3.7 + i * .35);
-    }
-    scorePop('SUPPLY CRATE OPENED', 'pickup small');
-    showToast('Crate popped: ammo cache deployed.');
-    sound('pickup');
-  }
-
-  function updateSupplyCrate() {
-    const c = mission.supplyCrate;
-    if (!c) return;
-    if (Math.hypot(c.x - player.pos[0], c.z - player.pos[2]) < 2.05 && Math.abs(c.y - player.pos[1]) < 2.4) burstSupplyCrate();
-  }
-
-  function explodeShutdownPad() {
-    if (!mission.machine) return;
-    const m = mission.machine;
-    const pad = m.pad || { x: Math.floor(m.x), y: Math.floor(m.y), z: Math.floor(m.z) };
-    const cx = pad.x + .5, cy = pad.y + .45, cz = pad.z + .5;
-    for (let i = 0; i < 34; i++) {
-      const angle = Math.random() * Math.PI * 2;
-      const speed = 2.0 + Math.random() * 6.6;
-      particles.push({
-        x: cx,
-        y: cy + Math.random() * .55,
-        z: cz,
-        vx: Math.cos(angle) * speed,
-        vy: 1.8 + Math.random() * 5.4,
-        vz: Math.sin(angle) * speed,
-        life: .45 + Math.random() * .7,
-        type: i % 4 === 0 ? 30 : (i % 3 === 0 ? 14 : 15)
-      });
-    }
-    let dx = player.pos[0] - cx;
-    let dz = player.pos[2] - cz;
-    let dist = Math.hypot(dx, dz);
-    if (dist < .12) {
-      dx = cx - m.x;
-      dz = cz - m.z;
-      dist = Math.hypot(dx, dz) || 1;
-    }
-    const force = Math.max(5.8, 10 - dist * .65);
-    player.vel[0] += (dx / dist) * force;
-    player.vel[2] += (dz / dist) * force;
-    player.vel[1] = Math.max(player.vel[1], 4.8);
-    shakeScreen();
-    sound('block');
-  }
-
-  function disableMachine() {
-    if (!mission.machine || !mission.machine.active) return;
-    const infectedGoal = currentInfectedGoal();
-    mission.machine.active = false;
-    mission.disableProgress = 0;
-    disableOverlay.classList.remove('show');
-    // Gun unlock happens only after shutdown: the pressure pad detonates,
-    // reveals a supply crate, the beacon dies down, and zombie spawning begins.
-    explodeShutdownPad();
-    for (const b of mission.machine.padBlocks || []) setBlock(b[0], b[1], b[2], 0, true);
-    for (const b of mission.machine.towerBlocks || []) setBlock(b[0], b[1], b[2], BLOCK.METAL, true);
-    for (const b of mission.machine.beaconBlocks || []) setBlock(b[0], b[1], b[2], BLOCK.DARK_RED, true);
-    queueRebuild();
-    spawnSupplyCrate();
-    mission.phase = PHASE_ZOMBIE_THREAT;
-    setWeaponUnlocked(true);
-    scorePop('CONTAMINATION SOURCE DISABLED', 'wave');
-    openObjectiveBriefing({
-      title: 'Eliminate infected: 0 / ' + infectedGoal,
-      meta: currentIslandLabel() + ' // ' + currentBiomeLabel() + ' // Mission Updated',
-      body: 'Mission Command: source disabled. Supply crate revealed at the shutdown block. Open it, arm up, and eliminate ' + infectedGoal + ' infected before redeploy.',
-      hudTitle: 'Eliminate infected',
-      hudMeta: 'Gun online',
-      afterOk: () => {
-        scorePop('MISSION UPDATED: ELIMINATE ' + infectedGoal + ' INFECTED', 'wave small');
-        spawnInitialWave();
-      }
-    });
-    showToast('Mission Command: source disabled. New orders incoming.');
-    sound('wave');
-  }
-
-  function updateToxinDamage(dt) {
-    if (!mission.machine || !mission.machine.active || mission.insertionActive || deathState.active || worldRebuildState.active || isMenuOpen()) {
-      mission.toxinRemainder = 0;
-      mission.toxinSoundTicks = 0;
-      return;
-    }
-    // Toxin damage is a slow environmental drain during the opening drop,
-    // separate from direct enemy/lava hits so it does not constantly restart invuln.
-    mission.toxinRemainder += TOXIN_DAMAGE_PER_SECOND * dt;
-    if (mission.toxinRemainder < 1) return;
-    const amount = Math.floor(mission.toxinRemainder);
-    mission.toxinRemainder -= amount;
-    player.health -= amount;
-    if (amount > 0) pulseDamage();
-    mission.toxinSoundTicks += amount;
-    if (mission.toxinSoundTicks >= 5) {
-      mission.toxinSoundTicks %= 5;
-      sound('toxin');
-    }
-    if (player.health <= 0) beginDeathSequence();
-    else maybeVoiceLowHealth();
-  }
-
-  function updateMachineSmoke(dt) {
-    if (!mission.machine || !mission.machine.active || isMenuOpen() || deathState.active) return;
-    mission.smokeTimer -= dt;
-    if (mission.smokeTimer > 0) return;
-    mission.smokeTimer = .12;
-    const jitterX = (Math.random() - .5) * .9;
-    const jitterZ = (Math.random() - .5) * .9;
-    particles.push({
-      x: mission.machine.x + jitterX,
-      y: mission.machine.smokeY || mission.machine.y + 6.7,
-      z: mission.machine.z + jitterZ,
-      vx: (Math.random() - .5) * .7,
-      vy: 1.6 + Math.random() * .9,
-      vz: (Math.random() - .5) * .7,
-      life: .75 + Math.random() * .55,
-      type: 23
-    });
+    if (player.kills >= currentInfectedGoal()) completeQuickHunt();
   }
 
   function spawnThrownPickup(x, y, z, kind, angle, force = 4.2) {
@@ -3998,63 +3568,6 @@ function playerOnMachinePad() {
     return true;
   }
 
-  function updateDisableInteraction(dt) {
-    if (mission.mode !== MODE_STORY) {
-      mission.disableProgress = 0;
-      hideProgressOverlay();
-      return;
-    }
-    if (!mission.machine || !mission.machine.active) {
-      disableOverlay.classList.remove('show');
-      return;
-    }
-    const onPad = playerOnMachinePad();
-    mission.phase = onPad ? PHASE_DISABLE_MACHINE : PHASE_DROP;
-    // Shutdown is pressure-pad based. Step off the translucent yellow block and the
-    // meter resets, making the disable moment physical and readable.
-    if (onPad) {
-      mission.disableProgress = Math.min(1, mission.disableProgress + dt / MACHINE_DISABLE_SECONDS);
-      showProgressOverlay('DISABLING SOURCE', mission.disableProgress);
-      if (mission.disableProgress >= 1) disableMachine();
-      return;
-    }
-    mission.disableProgress = 0;
-    hideProgressOverlay();
-  }
-
-  function updateExtractionBeacon(dt) {
-    if (mission.mode !== MODE_STORY) return;
-    mission.beaconMessageCooldown = Math.max(0, mission.beaconMessageCooldown - dt);
-    const nearBeacon = playerNearDropBeacon();
-    if (!nearBeacon) {
-      mission.extractionProgress = 0;
-      if (mission.phase === PHASE_ZOMBIE_THREAT && mission.completed && !mission.extractionCalled) {
-        hideProgressOverlay();
-        mission.beaconReminderTimer = Math.max(0, mission.beaconReminderTimer - dt);
-        if (mission.beaconReminderTimer <= 0) {
-          mission.beaconReminderTimer = 7.5;
-          showToast('Mission Command: return to drop beacon for extraction.', true);
-          scorePop('RETURN TO BEACON', 'pickup small');
-        }
-      }
-      return;
-    }
-    mission.beaconReminderTimer = 7.5;
-    if (mission.phase !== PHASE_ZOMBIE_THREAT || !mission.completed) {
-      mission.extractionProgress = 0;
-      if (mission.beaconMessageCooldown <= 0 && !mission.insertionActive) {
-        mission.beaconMessageCooldown = 2.6;
-        showToast('Mission Command: extraction denied. Clear the infected first.');
-        scorePop('MISSION NOT COMPLETE', 'small');
-      }
-      return;
-    }
-    if (mission.extractionCalled) return;
-    mission.extractionProgress = Math.min(1, mission.extractionProgress + dt / 3);
-    showProgressOverlay('CONTACTING COMMAND FOR EXTRACTION', mission.extractionProgress);
-    if (mission.extractionProgress >= 1) completeExtraction();
-  }
-
   function setKillHud(show, count) {
     if (!killHud || !killHudCount) return;
     killHud.hidden = !show;
@@ -4063,45 +3576,12 @@ function playerOnMachinePad() {
 
   function updateMissionHud() {
     if (!objectiveText || !objectiveMeta) return;
-    document.body.classList.toggle('stage-cleared', mission.completed && !mission.extractionCalled);
-    document.body.classList.toggle('quick-mode', mission.mode === MODE_QUICK);
-    if (mission.mode === MODE_QUICK) {
-      const count = mission.quickVariant === 'hunt'
-        ? Math.max(0, currentInfectedGoal() - player.kills)
-        : player.kills;
-      setKillHud(true, count);
-      objectiveText.textContent = '';
-      objectiveMeta.textContent = mission.quickVariant === 'hunt' ? 'Remaining' : 'Kills';
-      return;
-    }
-    setKillHud(false, 0);
-    if (!mission.objectiveAcknowledged) {
-      objectiveText.textContent = '[ orders ]';
-      objectiveMeta.textContent = currentIslandLabel();
-      return;
-    }
-    if (mission.insertionActive) {
-      objectiveText.textContent = '[ dropping ]';
-      objectiveMeta.textContent = 'Insertion active';
-      return;
-    }
-    if (mission.phase === PHASE_ZOMBIE_THREAT) {
-      const infectedGoal = currentInfectedGoal();
-      if (mission.completed) {
-        objectiveText.textContent = playerNearDropBeacon() ? '[ contacting command ]' : '[ return to beacon ]';
-        objectiveMeta.textContent = mission.extractionCalled ? 'Extraction confirmed' : 'Stage cleared';
-        return;
-      }
-      const remaining = Math.max(0, infectedGoal - player.kills);
-      setKillHud(true, remaining);
-      objectiveText.textContent = '';
-      objectiveMeta.textContent = mission.hudMeta || 'Gun online';
-      return;
-    }
-    objectiveText.textContent = playerOnMachinePad() ? '[ shutdown ]' : '[ find yellow block ]';
-    objectiveMeta.textContent = playerOnMachinePad()
-      ? 'Shutdown meter active'
-      : (mission.hudMeta || 'Toxin exposure active');
+    document.body.classList.toggle('stage-cleared', mission.completed);
+    document.body.classList.add('quick-mode');
+    const count = Math.max(0, currentInfectedGoal() - player.kills);
+    setKillHud(true, count);
+    objectiveText.textContent = '';
+    objectiveMeta.textContent = mission.completed ? 'Hunt complete' : 'Remaining';
   }
 
   function update(dt) {
@@ -4140,18 +3620,13 @@ function playerOnMachinePad() {
     if (player.shotCooldown > 0) player.shotCooldown -= dt;
     updateWeaponReload(dt);
     updateMovement(dt);
-    updateDisableInteraction(dt);
-    updateExtractionBeacon(dt);
-    updateToxinDamage(dt);
     updateWaterHazard(dt);
     updateLowHealthFeedback(dt);
     updateEnemies(dt);
     updateZombieMoans(dt);
     updateC4Charges(dt);
-    updateSupplyCrate();
     updateAmmoMercyDrops(dt);
     updatePickups(dt);
-    updateMachineSmoke(dt);
     updateParticles(dt);
     updateHud();
   }
@@ -4358,17 +3833,6 @@ function playerOnMachinePad() {
     for (const c of c4Charges) {
       pushC4Charge(arr, c, c.y);
     }
-    if (mission.supplyCrate) {
-      const c = mission.supplyCrate;
-      const lidBob = Math.sin(time * 2.5) * .025;
-      pushBox(arr, c.x - .52, c.y, c.z - .52, 1.04, .46, 1.04, 4);
-      pushBox(arr, c.x - .56, c.y + .13, c.z - .12, 1.12, .12, .24, 14);
-      pushBox(arr, c.x - .12, c.y + .13, c.z - .56, .24, .12, 1.12, 14);
-      pushBox(arr, c.x - .48, c.y + .46 + lidBob, c.z - .48, .96, .12, .96, 4);
-      pushBox(arr, c.x - .50, c.y + .50 + lidBob, c.z - .08, 1.00, .08, .16, 14);
-      pushBox(arr, c.x - .08, c.y + .50 + lidBob, c.z - .50, .16, .08, 1.00, 14);
-      pushBox(arr, c.x - .12, c.y + .60, c.z - .53, .24, .10, .035, 9);
-    }
     for (const p of particles) {
       const s = .07 + p.life * .05;
       pushBox(arr, p.x - s/2, p.y - s/2, p.z - s/2, s, s, s, p.type || 15);
@@ -4465,62 +3929,12 @@ function currentWaterIsDangerous() {
     requestAnimationFrame(loop);
   }
 
-  function placeDropBeacon(cx = 2, cz = 2) {
-  const baseY = topSolidY(cx, cz) + 1;
-
-  // Clear a little space around the beacon
-  for (let dx = -1; dx <= 1; dx++) {
-    for (let dz = -1; dz <= 1; dz++) {
-      for (let y = baseY; y <= baseY + 7; y++) {
-        setBlock(cx + dx, y, cz + dz, 0, true);
-      }
-    }
-  }
-
-  // 3x3 metal landing base
-  for (let dx = -1; dx <= 1; dx++) {
-    for (let dz = -1; dz <= 1; dz++) {
-      setBlock(cx + dx, baseY, cz + dz, BLOCK.METAL, true);
-    }
-  }
-
-  // Thin beacon pole
-  for (let y = baseY + 1; y <= baseY + 4; y++) {
-    setBlock(cx, y, cz, BLOCK.METAL, true);
-  }
-
-  // Yellow beacon lamp cap
-  setBlock(cx, baseY + 5, cz, BLOCK.LAMP, true);
-
-  // Red guide lights around the top
-  setBlock(cx + 1, baseY + 4, cz, BLOCK.RED_LIGHT, true);
-  setBlock(cx - 1, baseY + 4, cz, BLOCK.RED_LIGHT, true);
-  setBlock(cx, baseY + 4, cz + 1, BLOCK.RED_LIGHT, true);
-  setBlock(cx, baseY + 4, cz - 1, BLOCK.RED_LIGHT, true);
-
-  // Small support feet / antenna-ish shape
-  setBlock(cx + 1, baseY + 1, cz, BLOCK.METAL, true);
-  setBlock(cx - 1, baseY + 1, cz, BLOCK.METAL, true);
-  setBlock(cx, baseY + 1, cz + 1, BLOCK.METAL, true);
-  setBlock(cx, baseY + 1, cz - 1, BLOCK.METAL, true);
-  mission.dropBeacon = { x: cx + .5, y: baseY, z: cz + .5, radius: 2.35 };
-}
-
-  function playerNearDropBeacon() {
-    const b = mission.dropBeacon;
-    if (!b || mission.insertionActive || deathState.active || worldRebuildState.active) return false;
-    return Math.hypot(player.pos[0] - b.x, player.pos[2] - b.z) <= b.radius &&
-      Math.abs(player.pos[1] - (b.y + 1)) < 6.5;
-  }
-
   function generateWorld(seed) {
     clearMovementInput();
-    const activeMode = mission.mode || MODE_STORY;
     const activeQuickBiome = normalizeBiome(mission.quickBiome);
-    const activeQuickVariant = mission.quickVariant || 'survival';
     const activeQuickGoal = Math.max(0, Math.floor(mission.quickGoal || 0));
     currentSeed = seed;
-    mission.islandIndex = missionSeedIndex(seed);
+    mission.islandIndex = 0;
     world = new Map();
     edits = new Map();
     loadedChunks = new Set();
@@ -4539,18 +3953,9 @@ function currentWaterIsDangerous() {
     player.deaths = 0;
     cancelReload();
     player.shotCooldown = 0;
-    mission.mode = activeMode;
     mission.quickBiome = activeQuickBiome;
-    mission.quickVariant = activeQuickVariant;
     mission.quickGoal = activeQuickGoal;
     mission.phase = PHASE_DROP;
-    mission.machine = null;
-    mission.supplyCrate = null;
-    mission.dropBeacon = null;
-    mission.disableProgress = 0;
-    mission.toxinRemainder = 0;
-    mission.toxinSoundTicks = 0;
-    mission.smokeTimer = 0;
     mission.firstWaveSpawned = false;
     mission.insertionActive = false;
     mission.insertionTargetY = 0;
@@ -4565,10 +3970,6 @@ function currentWaterIsDangerous() {
     mission.upgradeActive = false;
     mission.upgradeAfterChoice = null;
     mission.completed = false;
-    mission.extractionProgress = 0;
-    mission.extractionCalled = false;
-    mission.beaconMessageCooldown = 0;
-    mission.beaconReminderTimer = 0;
     mission.commandBannerTimer = 0;
     mission.toastLockTimer = 0;
     mission.fewMoreVoicePlayed = false;
@@ -4589,8 +3990,8 @@ function currentWaterIsDangerous() {
     deathState.overlayShown = false;
     deathState.bloodTimer = 0;
     woundGaspTimer = 0;
-    document.body.classList.remove('dead', 'low-health', 'wounded', 'death-cinematic', 'death-fading', 'death-card-ready', 'stage-cleared', 'story-death', 'story-reviving', 'story-revive-fade');
-    document.body.classList.toggle('quick-mode', mission.mode === MODE_QUICK);
+    document.body.classList.remove('dead', 'low-health', 'wounded', 'death-cinematic', 'death-fading', 'death-card-ready', 'stage-cleared');
+    document.body.classList.add('quick-mode');
     deathOverlay.classList.remove('show', 'ready', 'cinematic');
     upgradeOverlay.classList.remove('show');
     document.body.classList.remove('upgrade-open');
@@ -4613,45 +4014,20 @@ function currentWaterIsDangerous() {
     // Center landmark and starting chunks.
     player.pos = [0.5, 18, 0.5];
     ensureChunks(true);
-    if (mission.mode === MODE_STORY) {
-      placeDropBeacon(2, 2);
-      placeContaminationMachine();
-    }
     player.pos = [0.5, topSolidY(0, 0) + 2.2, 0.5];
     player.vel = [0, 0, 0];
     ensureChunks(true);
     rebuildMeshes();
-    if (mission.mode === MODE_QUICK) {
-      mission.phase = PHASE_ZOMBIE_THREAT;
-      mission.objectiveAcknowledged = true;
-      mission.hudTitle = 'Frontier Hunt';
-      mission.hudMeta = mission.quickVariant === 'hunt'
-        ? currentBiomeLabel() + ' // Clear ' + currentInfectedGoal()
-        : currentBiomeLabel();
-      setWeaponUnlocked(true);
-      nextSpawnTimer = 1.6;
-      if (mission.quickVariant === 'hunt') {
-        startInsertionDrop();
-        spawnInitialWave();
-        showCommandBanner('FRONTIER HUNT', currentBiomeLabel() + ' Island // Clear ' + currentInfectedGoal(), 3.0);
-        showToast('Frontier Hunt: clear ' + currentInfectedGoal() + ' infected.');
-        return;
-      }
-      startInsertionDrop();
-      spawnInitialWave();
-      showCommandBanner('SURVIVAL MODE', currentBiomeLabel() + ' Island', 2.8);
-      showToast('Survival Mode: survive the infected.');
-      return;
-    }
-    queueObjectiveBriefing({
-      title: 'Locate the contamination source',
-      meta: currentIslandLabel() + ' // ' + currentBiomeLabel() + ' // Drop Phase',
-      body: 'Mission Command: toxin readings are climbing. You are unarmed until the source is shut down. Find the blinking metal spire on the high ground, then jump onto the translucent yellow block to disable it.',
-      hudTitle: 'Locate the contamination source',
-      hudMeta: 'Toxin exposure active',
-      afterOk: startInsertionDrop
-    });
-    showToast('Drop beacon online. Locate the contamination source.');
+    mission.phase = PHASE_ZOMBIE_THREAT;
+    mission.objectiveAcknowledged = true;
+    mission.hudTitle = 'Frontier Hunt';
+    mission.hudMeta = currentBiomeLabel() + ' // Clear ' + currentInfectedGoal();
+    setWeaponUnlocked(true);
+    nextSpawnTimer = 1.6;
+    startInsertionDrop();
+    spawnInitialWave();
+    showCommandBanner('FRONTIER HUNT', currentBiomeLabel() + ' Island // Clear ' + currentInfectedGoal(), 3.0);
+    showToast('Frontier Hunt: clear ' + currentInfectedGoal() + ' infected.');
   }
 
   function enterGameFromMenu() {
@@ -4660,7 +4036,6 @@ function currentWaterIsDangerous() {
     if (settingsModal) settingsModal.hidden = true;
     if (soundEnabled || ambientEnabled) window.ZomVoxSound?.prime();
     clearMovementInput();
-    setQuickBiomeScreen(false);
     menu.style.display = 'none';
     updateAmbientSound(true);
     if (touchMode) requestMobileFullscreen();
@@ -4680,67 +4055,13 @@ function currentWaterIsDangerous() {
     requestPointerLockSafe();
   }
 
-  function startStoryGame() {
-    sound('confirm');
-    if (mission.mode !== MODE_STORY || !mission.pendingBriefing) {
-      mission.mode = MODE_STORY;
-      mission.quickBiome = 'forest';
-      mission.quickVariant = 'survival';
-      mission.quickGoal = 0;
-      document.body.classList.remove('quick-mode');
-      generateWorld(MISSION_SEEDS[0] || INITIAL_SEED);
-    }
-    enterGameFromMenu();
-  }
-
-  function setQuickBiomeScreen(show) {
-    if (!quickBiomePanel) return;
-    if (controlsModal) controlsModal.hidden = true;
-    if (settingsModal) settingsModal.hidden = true;
-    if (show) renderQuickBiomeLocks();
-    if (mainMenuCard) mainMenuCard.hidden = show;
-    quickBiomePanel.hidden = !show;
-    menu.classList.toggle('quick-select', show);
-  }
-
-  function openQuickBiomeScreen() {
-    sound('confirm');
-    setQuickBiomeScreen(true);
-  }
-
-  function closeQuickBiomeScreen() {
-    sound('confirm');
-    setQuickBiomeScreen(false);
-  }
-
-  function startSurvivalGame(biome) {
-    const selectedBiome = normalizeBiome(biome);
-    if (!isQuickBiomeUnlocked(selectedBiome)) {
-      const rule = QUICK_UNLOCK_RULES[selectedBiome] || QUICK_UNLOCK_RULES.forest;
-      sound('empty');
-      showToast('Locked: ' + rule.requirement);
-      renderQuickBiomeLocks();
-      return;
-    }
-    sound('confirm');
-    mission.mode = MODE_QUICK;
-    mission.quickBiome = selectedBiome;
-    mission.quickVariant = 'survival';
-    mission.quickGoal = 0;
-    document.body.classList.add('quick-mode');
-    generateWorld(quickSeedForBiome(mission.quickBiome));
-    enterGameFromMenu();
-  }
-
   function startRandomQuickHunt() {
     sound('confirm');
     const choices = QUICK_BIOMES.filter(biome => biome !== lastQuickHuntBiome);
     const pool = choices.length ? choices : QUICK_BIOMES;
     const biome = pool[Math.floor(Math.random() * pool.length)] || 'forest';
     lastQuickHuntBiome = biome;
-    mission.mode = MODE_QUICK;
     mission.quickBiome = biome;
-    mission.quickVariant = 'hunt';
     mission.quickGoal = 20 + Math.floor(Math.random() * 21);
     document.body.classList.add('quick-mode');
     generateWorld(quickSeedForBiome(mission.quickBiome));
@@ -4779,8 +4100,6 @@ function currentWaterIsDangerous() {
     } catch (_) {}
   }
   play.addEventListener('click', startRandomQuickHunt);
-  if (survivalStart) survivalStart.addEventListener('click', openQuickBiomeScreen);
-  if (quickStart) quickStart.addEventListener('click', startRandomQuickHunt);
   if (controlsButton) controlsButton.addEventListener('click', openControlsModal);
   if (controlsClose) controlsClose.addEventListener('click', closeControlsModal);
   if (controlsModal) controlsModal.addEventListener('click', event => {
@@ -4793,10 +4112,6 @@ function currentWaterIsDangerous() {
   });
   if (portraitInstallCallout) portraitInstallCallout.addEventListener('click', installZomVox);
   if (updateReload) updateReload.addEventListener('click', reloadForPwaUpdate);
-  if (quickBack) quickBack.addEventListener('click', closeQuickBiomeScreen);
-  for (const btn of quickBiomeButtons) {
-    btn.addEventListener('click', () => startSurvivalGame(btn.dataset.biome));
-  }
   briefingOk.addEventListener('click', acknowledgeObjectiveBriefing);
   if (briefingShareButton) briefingShareButton.addEventListener('click', () => shareRunFromButton(briefingShareButton));
   if (deathShare) deathShare.addEventListener('click', () => shareRunFromButton(deathShare));
@@ -4841,7 +4156,7 @@ function currentWaterIsDangerous() {
     if (e.code === 'KeyR' && !e.repeat) startReload();
     if (e.code === 'KeyC' && !e.repeat) placeC4();
     if (e.code === 'KeyN' && !e.repeat) {
-      beginWorldRebuild(mission.mode === MODE_QUICK ? quickSeedForBiome(mission.quickBiome) : nextMissionSeed());
+      beginWorldRebuild(quickSeedForBiome(mission.quickBiome));
     }
   });
   document.addEventListener('keyup', (e) => {

@@ -17,7 +17,7 @@ window.ZOMVOX_CONFIG = {
     Bump this when you make visible changes so you can tell the browser
     loaded the newest version.
   */
-  buildVersion: '2026.08.01.11',
+  buildVersion: '2026.08.01.12',
 
   /*
     Seed used for deterministic world generation.
@@ -143,7 +143,7 @@ window.ZOMVOX_CONFIG = {
       Auto-step height for walking up normal terrain without jumping.
 
       1.05 lets players climb one-block hills while still stopping at
-      taller ledges and mission props.
+      taller ledges and temporary world props.
     */
     stepHeight: 1.05,
 
@@ -184,7 +184,7 @@ window.ZOMVOX_CONFIG = {
     respawnReserveFloor: 24,
 
     /*
-      Legacy low-health threshold kept for older mission/status logic.
+      Low-health threshold used by status warnings and heartbeat feedback.
 
       Main combat now uses a two-bite wounded/dead loop instead of a visible
       health meter.
@@ -272,39 +272,7 @@ window.ZOMVOX_CONFIG = {
 
   mission: {
     /*
-      Five deterministic mission islands.
-
-      Clearing the infected objective redeploys to the next seed.
-    */
-    islandSeeds: [721456, 482177, 535331, 918244, 126509],
-
-    /*
-      Biome for each mission island.
-
-      Options:
-      - 'forest' = mostly grass with frequent trees
-      - 'dunes' = mostly sand with saguaros and no trees
-      - 'rocky' = mostly stone with boulders and rare trees
-      - 'swamp' = mud/grass mix with sparse wet trees
-      - 'ashlands' = ash/stone with dead trees and boulders
-      - 'tundra' = snow, frozen water, pine trees, and sparse rocks
-
-      These line up with islandSeeds by position.
-    */
-    biomes: ['forest', 'rocky', 'dunes', 'swamp', 'ashlands'],
-
-    /*
-      Health drained per second while the contamination machine is active.
-    */
-    toxinDamagePerSecond: 2.50,
-
-    /*
-      Seconds the player must stand on the translucent yellow shutdown block.
-    */
-    disableSeconds: 3,
-
-    /*
-      Cinematic insertion after accepting each island briefing.
+      Cinematic insertion at the start of each Frontier Hunt.
 
       Height is in world blocks. Fall speed is blocks per second.
     */
@@ -312,19 +280,7 @@ window.ZOMVOX_CONFIG = {
     insertionFallSpeed: 5.8,
 
     /*
-      Combat objective for each island after the gun unlocks.
-
-      These line up with islandSeeds by position.
-    */
-    infectedGoals: [20, 25, 50, 75, 100],
-
-    /*
-      Fallback combat objective if infectedGoals is removed.
-    */
-    infectedGoal: 50,
-
-    /*
-      Zombies spawned immediately after shutdown before normal horde pressure.
+      Zombies spawned immediately after touchdown before normal horde pressure.
     */
     firstWaveSize: 3
   },
