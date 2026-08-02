@@ -266,8 +266,8 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.13');
-  const COMMS_DROP_IN = configString(COMMS_CONFIG, 'dropIn', 'Follow your objective.');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.14');
+  const COMMS_DROP_IN = configString(COMMS_CONFIG, 'dropIn', 'You are on {islandName}. The mission is to kill {zombieTotal} infected.');
   const COMMS_BITTEN = configString(COMMS_CONFIG, 'bitten', 'You are bit. Keep your distance and finish the objective.');
   const COMMS_DEATH = configString(COMMS_CONFIG, 'death', 'Do you read me? Are you there?');
   const COMMS_FEW_MORE = configString(COMMS_CONFIG, 'fewMore', 'Just a few more.');
@@ -445,6 +445,13 @@
         if (!radioComms.classList.contains('show')) radioComms.hidden = true;
       }, 180);
     }, duration * 1000);
+  }
+
+  function formatCommsMessage(template) {
+    return String(template || '')
+      .replace(/\{islandName\}/g, currentBiomeLabel() + ' Island')
+      .replace(/\{zombieTotal\}/g, String(currentInfectedGoal()))
+      .replace(/\{biome\}/g, currentBiomeLabel());
   }
 
   function updateCommandBanner(dt) {
@@ -2457,7 +2464,6 @@
     player.vel = [0, -INSERTION_FALL_SPEED * .55, 0];
     player.pos[1] = Math.min(MAX_Y + INSERTION_DROP_HEIGHT, groundY + INSERTION_DROP_HEIGHT);
     scorePop('DROP INBOUND', 'small');
-    showToast('Frontier Hunt: drop started. Look around. Movement unlocks on touchdown.');
   }
 
   function finishInsertionDrop() {
@@ -2469,8 +2475,7 @@
     player.grounded = true;
     sound('land', 1, 1, { surface: playerAudioSurface(), gait: 'land' });
     scorePop('TOUCHDOWN', 'pickup small');
-    showToast('Boots down. Hunt the infected.');
-    showRadioComms(COMMS_DROP_IN, 4.2);
+    showRadioComms(formatCommsMessage(COMMS_DROP_IN), 4.8);
   }
 
   function updateMovement(dt) {
@@ -4047,8 +4052,6 @@ function currentWaterIsDangerous() {
     nextSpawnTimer = 1.6;
     startInsertionDrop();
     spawnInitialWave();
-    showCommandBanner('FRONTIER HUNT', currentBiomeLabel() + ' Island // Clear ' + currentInfectedGoal(), 3.0);
-    showToast('Frontier Hunt: clear ' + currentInfectedGoal() + ' infected.');
   }
 
   function enterGameFromMenu() {

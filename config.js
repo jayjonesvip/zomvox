@@ -17,7 +17,7 @@ window.ZOMVOX_CONFIG = {
     Bump this when you make visible changes so you can tell the browser
     loaded the newest version.
   */
-  buildVersion: '2026.08.01.13',
+  buildVersion: '2026.08.01.14',
 
   /*
     Seed used for deterministic world generation.
@@ -356,9 +356,10 @@ window.ZOMVOX_CONFIG = {
       Mission Command radio text.
 
       Keep these short so the hologram-style transmission fits on mobile.
+      dropIn supports {islandName}, {biome}, and {zombieTotal}.
       Use an empty string '' to disable a specific transmission.
     */
-    dropIn: 'Follow your objective.',
+    dropIn: 'You are on {islandName}. The mission is to kill {zombieTotal} infected.',
     bitten: 'You are bit. Keep your distance and finish the objective.',
     death: 'Do you read me? Are you there?',
     fewMore: 'Just a few more.',
