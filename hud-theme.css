@@ -45,7 +45,7 @@ body::after{
 }
 .fieldBrand b,.fieldBrand small{display:block}
 .fieldBrand b{font-size:13px;line-height:1}
-.fieldBrand small{margin-top:5px;color:#8e9d97;font-size:7px;letter-spacing:.18em}
+.fieldBrand small{display:none}
 .fieldOperation{position:absolute;left:50%;top:13px;transform:translateX(-50%);text-align:center}
 .fieldOperation span{display:block;color:var(--tactical-green);font-size:7px;letter-spacing:.28em}
 .fieldOperation b{display:block;margin-top:4px;font-size:10px;color:#ced8d2}
@@ -70,8 +70,8 @@ body::after{
 #healthStatus .healthLabel{opacity:0}
 #healthBigText{font-size:27px;font-weight:700}
 .bigHealthBar{height:4px;border:0;border-radius:0;background:rgba(255,255,255,.13)}
-#weaponPanel{right:28px;min-width:205px;padding:9px 14px;border-bottom-color:rgba(255,212,93,.62)}
-#weaponPanel .label{display:block;color:#97a49f;font-size:7px;letter-spacing:.15em}
+#weaponPanel{right:28px;min-width:124px;padding:9px 14px;border-bottom-color:rgba(255,212,93,.62)}
+#weaponPanel .label{display:none}
 #bulletRack{display:none}
 #ammoReadout{justify-content:flex-end}
 #clipText{font-size:42px;font-weight:600}
