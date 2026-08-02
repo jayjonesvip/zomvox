@@ -114,7 +114,7 @@ Common tuning options live in `config.js` under `window.ZOMVOX_CONFIG`. Edit tha
 
 ```js
 window.ZOMVOX_CONFIG = {
-  buildVersion: '2026.08.01.14',
+  buildVersion: '2026.08.01.15',
   initialSeed: 729641,
 
   environment: {
@@ -171,6 +171,7 @@ window.ZOMVOX_CONFIG = {
 
   comms: {
     dropIn: 'You are on {islandName}. The mission is to kill {zombieTotal} infected.',
+    huntComplete: '{islandName} is clear. Good work, but there is more to do. Do you accept?',
     bitten: 'You are bit. Keep your distance and finish the objective.',
     death: 'Do you read me? Are you there?',
     fewMore: 'Just a few more.',
@@ -218,7 +219,7 @@ Other sections in `config.js` expose safe defaults for:
 - `weapon`: magazine size, magazine-swap reload time, fire cooldown, recoil, perk multipliers, and long-range kill distance.
 - `enemies`: base enemy cap, horde escalation values, and close-range zombie moan radius/voice/timing controls.
 - `mission`: Frontier Hunt insertion drop timing and first wave size. The active hunt loop rolls random biome seeds and infected targets at runtime.
-- `comms`: short Mission Command radio lines for drop-in, bite, death, objective, long-range, and ammo-cache events. `dropIn` supports `{islandName}`, `{biome}`, and `{zombieTotal}` placeholders.
+- `comms`: short Mission Command radio lines for drop-in, hunt-complete, bite, death, objective, long-range, and ammo-cache events. `dropIn` supports `{islandName}`, `{biome}`, and `{zombieTotal}` placeholders; `huntComplete` supports `{islandName}` and `{biome}`.
 - `pickups`: ammo and C4 pickup amounts/drop chances. Health pickups are intentionally disabled.
 - `timers`: auto-respawn countdown, world rebuild meter duration, heartbeat interval, and day/night cycle length.
 - `audio.files`: optional file-backed sounds for weapon, impact, pickup, UI, zombie, and ambient cues. File cues are tried first when configured; blank cues fall back to procedural audio.

@@ -135,6 +135,18 @@
     <div id="radioCommsText">Follow your objective.</div>
   </div>
 </div>
+<div id="phaseFade" aria-hidden="true"></div>
+<div id="huntDecisionOverlay" aria-live="polite" role="dialog" aria-modal="true" hidden>
+  <div class="huntDecisionCard">
+    <div class="briefingTopline">Mission Command</div>
+    <div class="huntDecisionTitle">Continue Mission?</div>
+    <div class="huntDecisionBody">There is more to do. Do you accept?</div>
+    <div class="huntDecisionActions">
+      <button id="huntAccept" type="button">Yes</button>
+      <button id="huntDecline" type="button">No</button>
+    </div>
+  </div>
+</div>
 <div id="scoreFeed"></div>
 <div id="disableOverlay">
   <div class="disableTitle">DISABLING SOURCE</div>
@@ -166,7 +178,7 @@
 <div id="reloadOverlay"><div class="reloadTitle">Reloading</div><div class="reloadBar"><div id="reloadOverlayFill"></div></div></div>
 <div id="worldOverlay">
   <div class="worldCard">
-    <div class="worldTitle">Rebuilding World</div>
+    <div class="worldTitle" id="worldTitle">Rebuilding World</div>
     <div class="worldText" id="worldText">Building frontier...</div>
     <div class="worldMeter"><div id="worldFill"></div></div>
   </div>
