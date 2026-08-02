@@ -17,7 +17,7 @@ window.ZOMVOX_CONFIG = {
     Bump this when you make visible changes so you can tell the browser
     loaded the newest version.
   */
-  buildVersion: '2026.08.01.07',
+  buildVersion: '2026.08.01.08',
 
   /*
     Seed used for deterministic world generation.
@@ -184,10 +184,10 @@ window.ZOMVOX_CONFIG = {
     respawnReserveFloor: 24,
 
     /*
-      Health level where low-health warning effects begin.
+      Legacy low-health threshold kept for older mission/status logic.
 
-      Lower = warnings happen later.
-      Higher = warnings happen sooner.
+      Main combat now uses a two-bite wounded/dead loop instead of a visible
+      health meter.
     */
     lowHealthThreshold: 25
   },

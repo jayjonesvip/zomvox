@@ -44,13 +44,13 @@ ZomVox is listed on [IGDB](https://www.igdb.com/) and [DEAD.ARMY](https://dead.a
 - Weighted zombie variants: normal, speedy one-shot runners, slower brute attackers, and rare grey stalkers.
 - Mobile-only landscape gate.
 - Mobile joystick movement plus separate shoot and C4 controls.
-- Main menu settings for health HUD, ammo HUD, controls, sound, and fullscreen.
+- Main menu settings for ammo HUD, controls, sound, ambient audio, and fullscreen.
 - Day/night lighting with code-based mode options.
 - Optional custom sky color through code.
 - Optional fog through code.
 - Dangerous water enabled by default through code.
 - Damage flash and screen shake when the player is hit.
-- Black-screen death fade with a short `RESPAWNING...` countdown, simple run stats, and a quit option.
+- Two-bite wound/death loop with a red wounded vignette, ground-level death camera, blood particles, black fade, and `RESPAWNING...` countdown.
 - Menu-safe gameplay pause so the player does not take damage before pressing Play.
 
 ## Game Flow
@@ -114,7 +114,7 @@ Common tuning options live in `config.js` under `window.ZOMVOX_CONFIG`. Edit tha
 
 ```js
 window.ZOMVOX_CONFIG = {
-  buildVersion: '2026.08.01.07',
+  buildVersion: '2026.08.01.08',
   initialSeed: 729641,
 
   environment: {

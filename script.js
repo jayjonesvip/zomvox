@@ -294,7 +294,7 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.07');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.08');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -314,8 +314,24 @@
   let waterDamageTimer = 0;
   let hordeLevel = 0;
   let heartbeatTimer = 0;
+  let woundGaspTimer = 0;
   let cameraStepOffsetY = 0;
-  const deathState = { active: false, timer: 0, duration: DEATH_READY_DELAY, ready: false };
+  const DEATH_CINEMATIC_DURATION = 2.65;
+  const DEATH_FADE_DURATION = 1.05;
+  const DEATH_RESPAWN_START = DEATH_CINEMATIC_DURATION + DEATH_FADE_DURATION;
+  const DEATH_BLOOD_DURATION = 2.45;
+  const deathState = {
+    active: false,
+    timer: 0,
+    duration: DEATH_READY_DELAY,
+    ready: false,
+    fadeStarted: false,
+    overlayShown: false,
+    bloodTimer: 0,
+    eye: [0, 0, 0],
+    yaw: Math.PI,
+    pitch: 0
+  };
   const worldRebuildState = { active: false, timer: 0, startedAt: 0, duration: WORLD_REBUILD_DURATION, seed: null };
   const mission = {
     mode: MODE_STORY,
@@ -406,7 +422,10 @@
   }
 
   function currentZombieDamage(amount) {
-    return amount * (activePerks.bodyArmor ? 0.8 : 1);
+    // Zombie bites are intentionally binary now: first bite wounds, second
+    // bite kills. Enemy variants still differ in movement and health, but not
+    // bite lethality.
+    return STARTING_HEALTH / 2;
   }
 
   function resetActivePerks() {
@@ -800,16 +819,18 @@
   }
 
   function updateLowHealthFeedback(dt) {
-    const low = player.health > 0 && player.health < LOW_HEALTH_THRESHOLD && !deathState.active && !isMenuOpen();
-    document.body.classList.toggle('low-health', low);
-    if (!low) {
+    const wounded = player.health > 0 && player.health < STARTING_HEALTH && !deathState.active && !isMenuOpen();
+    document.body.classList.toggle('wounded', wounded);
+    document.body.classList.toggle('low-health', false);
+    if (!wounded) {
       heartbeatTimer = 0;
+      woundGaspTimer = 0;
       return;
     }
-    heartbeatTimer -= dt;
-    if (heartbeatTimer <= 0) {
-      sound('heartbeat');
-      heartbeatTimer = HEARTBEAT_INTERVAL;
+    woundGaspTimer -= dt;
+    if (woundGaspTimer <= 0) {
+      sound('toxin', .68);
+      woundGaspTimer = 3.4 + Math.random() * 5.6;
     }
   }
 
@@ -1722,8 +1743,18 @@
     const cp = Math.cos(player.pitch);
     return [Math.sin(player.yaw) * cp, Math.sin(player.pitch), Math.cos(player.yaw) * cp];
   }
+  function deathLookDir() {
+    const t = Math.min(1, deathState.timer / DEATH_CINEMATIC_DURATION);
+    const ease = 1 - Math.pow(1 - t, 3);
+    const yaw = deathState.yaw + Math.sin(t * Math.PI) * .12;
+    const pitch = deathState.pitch + (1.18 - deathState.pitch) * ease;
+    const cp = Math.cos(pitch);
+    return [Math.sin(yaw) * cp, Math.sin(pitch), Math.cos(yaw) * cp];
+  }
   function eyePos() { return [player.pos[0], player.pos[1] + 1.58, player.pos[2]]; }
   function cameraEyePos() { return [player.pos[0], player.pos[1] + 1.58 + cameraStepOffsetY, player.pos[2]]; }
+  function renderEyePos() { return deathState.active ? deathState.eye : cameraEyePos(); }
+  function renderLookDir() { return deathState.active ? deathLookDir() : lookDir(); }
   function keyOf(x, y, z) { return x + ',' + y + ',' + z; }
   function chunkKey(cx, cz) { return cx + ',' + cz; }
   function chunkCoord(v) { return Math.floor(v / CHUNK_SIZE); }
@@ -2906,6 +2937,7 @@ function playerOnMachinePad() {
     if (impactSound) sound(impactSound);
     if (player.health <= 0) beginDeathSequence();
     else {
+      woundGaspTimer = Math.min(woundGaspTimer || 999, 1.2 + Math.random() * 1.8);
       maybeVoiceLowHealth();
       sound('hurt');
     }
@@ -2917,13 +2949,24 @@ function playerOnMachinePad() {
     deathState.active = true;
     deathState.timer = 0;
     deathState.ready = false;
+    deathState.fadeStarted = false;
+    deathState.overlayShown = false;
+    deathState.bloodTimer = 0;
+    deathState.yaw = player.yaw;
+    deathState.pitch = Math.max(-.25, Math.min(.25, player.pitch));
+    deathState.eye = [
+      player.pos[0],
+      topSolidY(Math.floor(player.pos[0]), Math.floor(player.pos[2])) + .72,
+      player.pos[2]
+    ];
     if (document.pointerLockElement === canvas && document.exitPointerLock) document.exitPointerLock();
-    document.body.classList.add('dead');
-    document.body.classList.remove('low-health');
+    document.body.classList.add('dead', 'death-cinematic');
+    document.body.classList.remove('low-health', 'wounded', 'death-fading', 'death-card-ready');
     player.health = 0;
     player.vel = [0, 0, 0];
     cancelReload();
     sound('death');
+    spawnDeathBlood(player.pos[0], player.pos[1] + .65, player.pos[2], 36);
     document.body.classList.toggle('story-death', mission.mode === MODE_STORY);
     deathTitle.textContent = 'RESPAWNING...';
     deathText.textContent = 'Respawning in 3.0s';
@@ -2946,18 +2989,38 @@ function playerOnMachinePad() {
       }
     }
     deathFill.style.width = '0%';
-    deathOverlay.classList.remove('show', 'ready');
+    deathOverlay.classList.remove('show', 'ready', 'cinematic');
     void deathOverlay.offsetWidth;
-    deathOverlay.classList.add('ready');
-    deathOverlay.classList.add('show');
   }
   function updateDeath(dt) {
     deathState.timer += dt;
-    const progress = Math.min(1, deathState.timer / deathState.duration);
+    if (deathState.timer < DEATH_BLOOD_DURATION) {
+      deathState.bloodTimer -= dt;
+      if (deathState.bloodTimer <= 0) {
+        spawnDeathBlood(player.pos[0], player.pos[1] + .45, player.pos[2], 6);
+        deathState.bloodTimer = .16 + Math.random() * .18;
+      }
+    }
+    updateParticles(dt);
+    if (!deathState.fadeStarted && deathState.timer >= DEATH_CINEMATIC_DURATION) {
+      deathState.fadeStarted = true;
+      document.body.classList.add('death-fading');
+      deathOverlay.classList.add('show', 'cinematic');
+    }
+    if (!deathState.overlayShown && deathState.timer >= DEATH_RESPAWN_START) {
+      deathState.overlayShown = true;
+      document.body.classList.remove('death-cinematic');
+      document.body.classList.add('death-card-ready');
+      deathOverlay.classList.remove('cinematic');
+      deathOverlay.classList.add('ready');
+      void deathOverlay.offsetWidth;
+    }
+    const respawnElapsed = Math.max(0, deathState.timer - DEATH_RESPAWN_START);
+    const progress = Math.min(1, respawnElapsed / deathState.duration);
     deathFill.style.width = (progress * 100).toFixed(1) + '%';
-    const remaining = Math.max(0, deathState.duration - deathState.timer);
+    const remaining = Math.max(0, deathState.duration - respawnElapsed);
     deathText.textContent = 'Respawning in ' + remaining.toFixed(1) + 's';
-    if (progress >= 1) {
+    if (deathState.overlayShown && progress >= 1) {
       respawn();
     }
   }
@@ -2966,6 +3029,9 @@ function playerOnMachinePad() {
     deathState.active = false;
     deathState.ready = false;
     deathState.timer = 0;
+    deathState.fadeStarted = false;
+    deathState.overlayShown = false;
+    deathState.bloodTimer = 0;
     player.deaths++;
     player.health = STARTING_HEALTH;
     player.mag = player.magSize;
@@ -2979,13 +3045,14 @@ function playerOnMachinePad() {
     lastKillTime = -999;
     killComboCount = 0;
     resetLifeStats();
-    document.body.classList.remove('dead', 'low-health', 'story-death');
+    woundGaspTimer = 0;
+    document.body.classList.remove('dead', 'low-health', 'wounded', 'death-cinematic', 'death-fading', 'death-card-ready', 'story-death');
     if (mission.mode === MODE_STORY) {
       document.body.classList.add('story-reviving');
     } else {
-      deathOverlay.classList.remove('show');
+      deathOverlay.classList.remove('show', 'cinematic');
     }
-    deathOverlay.classList.remove('ready');
+    deathOverlay.classList.remove('ready', 'cinematic');
     deathStats.textContent = '';
     deathStats.classList.remove('simple');
     renderDeathUnlocks(null);
@@ -3011,7 +3078,7 @@ function playerOnMachinePad() {
         document.body.classList.add('story-revive-fade');
       }, 120);
       setTimeout(() => {
-        deathOverlay.classList.remove('show');
+        deathOverlay.classList.remove('show', 'cinematic');
         document.body.classList.remove('story-reviving', 'story-revive-fade');
         if (!touchMode && menu.style.display === 'none') requestPointerLockSafe();
       }, 880);
@@ -3025,10 +3092,14 @@ function playerOnMachinePad() {
     deathState.active = false;
     deathState.ready = false;
     deathState.timer = 0;
+    deathState.fadeStarted = false;
+    deathState.overlayShown = false;
+    deathState.bloodTimer = 0;
+    woundGaspTimer = 0;
     locked = false;
     if (document.pointerLockElement === canvas && document.exitPointerLock) document.exitPointerLock();
-    document.body.classList.remove('dead', 'low-health', 'story-death', 'story-reviving', 'story-revive-fade', 'stage-cleared', 'quick-mode');
-    deathOverlay.classList.remove('show', 'ready');
+    document.body.classList.remove('dead', 'low-health', 'wounded', 'death-cinematic', 'death-fading', 'death-card-ready', 'story-death', 'story-reviving', 'story-revive-fade', 'stage-cleared', 'quick-mode');
+    deathOverlay.classList.remove('show', 'ready', 'cinematic');
     objectiveBriefing.classList.remove('show');
     document.body.classList.remove('briefing-open');
     deathStats.textContent = '';
@@ -3053,10 +3124,14 @@ function playerOnMachinePad() {
     deathState.active = false;
     deathState.ready = false;
     deathState.timer = 0;
+    deathState.fadeStarted = false;
+    deathState.overlayShown = false;
+    deathState.bloodTimer = 0;
+    woundGaspTimer = 0;
     locked = false;
     if (document.pointerLockElement === canvas && document.exitPointerLock) document.exitPointerLock();
-    document.body.classList.remove('dead', 'low-health', 'story-death', 'story-reviving', 'story-revive-fade');
-    deathOverlay.classList.remove('show', 'ready');
+    document.body.classList.remove('dead', 'low-health', 'wounded', 'death-cinematic', 'death-fading', 'death-card-ready', 'story-death', 'story-reviving', 'story-revive-fade');
+    deathOverlay.classList.remove('show', 'ready', 'cinematic');
     deathStats.textContent = '';
     deathStats.classList.remove('simple');
     renderDeathUnlocks(null);
@@ -3320,6 +3395,24 @@ function playerOnMachinePad() {
       particles.push({ x, y, z, vx: (Math.random() - .5) * 5, vy: Math.random() * 3.8, vz: (Math.random() - .5) * 5, life: .35 + Math.random() * .35, type });
     }
   }
+
+  function spawnDeathBlood(x, y, z, count = 14) {
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 1.2 + Math.random() * 3.4;
+      particles.push({
+        x: x + (Math.random() - .5) * .55,
+        y: y + Math.random() * .5,
+        z: z + (Math.random() - .5) * .55,
+        vx: Math.cos(angle) * speed,
+        vy: .6 + Math.random() * 3.1,
+        vz: Math.sin(angle) * speed,
+        life: .75 + Math.random() * .65,
+        type: 12
+      });
+    }
+  }
+
   function updateParticles(dt) {
     for (const p of particles) {
       p.life -= dt; p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt; p.vy -= 7 * dt;
@@ -4078,6 +4171,9 @@ function playerOnMachinePad() {
     if (deathState.active || hpNow <= 0) {
       label = 'OPERATOR OFFLINE';
       tone = 'danger';
+    } else if (hpNow < STARTING_HEALTH) {
+      label = 'OPERATOR WOUNDED';
+      tone = 'danger';
     } else if (hpNow < LOW_HEALTH_THRESHOLD) {
       label = 'VITALS CRITICAL';
       tone = 'danger';
@@ -4315,8 +4411,8 @@ function currentWaterIsDangerous() {
 
     const aspect = canvas.width / canvas.height;
     const proj = mat4Perspective(Math.PI / 3, aspect, 0.06, 170);
-    const e = cameraEyePos();
-    const d = lookDir();
+    const e = renderEyePos();
+    const d = renderLookDir();
     const view = mat4LookAt(e, [e[0] + d[0], e[1] + d[1], e[2] + d[2]], [0, 1, 0]);
     const mvp = mat4Mul(proj, view);
 
@@ -4475,9 +4571,13 @@ function currentWaterIsDangerous() {
     deathState.active = false;
     deathState.ready = false;
     deathState.timer = 0;
-    document.body.classList.remove('dead', 'low-health', 'stage-cleared', 'story-death', 'story-reviving', 'story-revive-fade');
+    deathState.fadeStarted = false;
+    deathState.overlayShown = false;
+    deathState.bloodTimer = 0;
+    woundGaspTimer = 0;
+    document.body.classList.remove('dead', 'low-health', 'wounded', 'death-cinematic', 'death-fading', 'death-card-ready', 'stage-cleared', 'story-death', 'story-reviving', 'story-revive-fade');
     document.body.classList.toggle('quick-mode', mission.mode === MODE_QUICK);
-    deathOverlay.classList.remove('show', 'ready');
+    deathOverlay.classList.remove('show', 'ready', 'cinematic');
     upgradeOverlay.classList.remove('show');
     document.body.classList.remove('upgrade-open');
     deathStats.textContent = '';

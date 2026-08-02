@@ -14,9 +14,15 @@
   #atmosphereVignette{ pointer-events:none; position:fixed; inset:0; z-index:2; opacity:.34; background:radial-gradient(circle at 50% 45%, rgba(255,255,255,.02) 0 28%, rgba(0,0,0,.12) 58%, rgba(0,0,0,.46) 100%); mix-blend-mode:multiply; }
   #damageFlash{ pointer-events:none; position:fixed; inset:0; background:radial-gradient(circle at 50% 48%, rgba(255,40,20,0) 0 30%, rgba(110,0,0,.22) 62%, rgba(0,0,0,.64) 100%); opacity:0; transition:opacity .26s; z-index:12; mix-blend-mode:multiply; }
   #damageFlash.hit{ opacity:1; transition:opacity .04s; }
-  body.dead #game{ filter:grayscale(1) contrast(.82) brightness(.48); transition:filter .18s; }
+  body.dead #game{ filter:grayscale(.55) contrast(.86) brightness(.55); transition:filter .18s; }
+  body.death-fading #game{ filter:grayscale(1) contrast(.72) brightness(.18); transition:filter 1.05s ease; }
   body.shaking #game{ animation:screenShake .22s cubic-bezier(.36,.07,.19,.97) both; }
   body.low-health #vignette{ box-shadow: inset 0 0 160px rgba(90,0,0,.72), inset 0 -95px 135px rgba(0,0,0,.3); }
+  body.wounded #vignette{ box-shadow: inset 0 0 185px rgba(115,0,0,.82), inset 0 0 48px rgba(170,0,0,.26), inset 0 -95px 135px rgba(0,0,0,.35); animation:woundPulse 2.6s ease-in-out infinite; }
+  @keyframes woundPulse{
+    0%,100%{ opacity:.86; }
+    45%{ opacity:.62; }
+  }
   @keyframes screenShake{
     10%,90%{ transform:translate3d(-2px,1px,0); }
     20%,80%{ transform:translate3d(4px,-2px,0); }
@@ -126,7 +132,7 @@
   .scorePop.small{ font-size:clamp(12px,1.65vw,18px); }
   @keyframes scoreRise{ 0%{ opacity:0; transform:translateY(18px) scale(.88); } 14%{ opacity:1; transform:translateY(0) scale(1.05); } 72%{ opacity:1; } 100%{ opacity:0; transform:translateY(-58px) scale(.98); } }
 
-  #healthStatus{ pointer-events:none; position:fixed; left:14px; top:12px; width:230px; min-height:62px; padding:10px 12px; border-radius:8px; background:linear-gradient(180deg, rgba(13,25,29,.9), rgba(3,9,12,.86)); border:1px solid rgba(224,248,255,.2); box-shadow:inset 0 2px 0 rgba(255,255,255,.14), inset 0 -5px 12px rgba(0,0,0,.38), inset 0 0 0 1px rgba(0,0,0,.42), 0 16px 40px rgba(0,0,0,.42); backdrop-filter:blur(10px); z-index:9; }
+  #healthStatus{ display:none; pointer-events:none; position:fixed; left:14px; top:12px; width:230px; min-height:62px; padding:10px 12px; border-radius:8px; background:linear-gradient(180deg, rgba(13,25,29,.9), rgba(3,9,12,.86)); border:1px solid rgba(224,248,255,.2); box-shadow:inset 0 2px 0 rgba(255,255,255,.14), inset 0 -5px 12px rgba(0,0,0,.38), inset 0 0 0 1px rgba(0,0,0,.42), 0 16px 40px rgba(0,0,0,.42); backdrop-filter:blur(10px); z-index:9; }
   #healthStatus .healthTop{ display:flex; justify-content:space-between; align-items:baseline; gap:10px; margin-bottom:7px; }
   #healthStatus .healthLabel{ font-size:10px; letter-spacing:.09em; text-transform:uppercase; color:#bad0db; font-weight:900; }
   #healthBigText{ font-size:24px; font-weight:1000; line-height:.9; color:#f8fff5; text-shadow:0 2px 0 rgba(0,0,0,.6); }
@@ -204,10 +210,13 @@
   #reloadOverlay .reloadTitle{ font-size:clamp(10px,1.35vw,13px); font-weight:1000; letter-spacing:.12em; text-transform:uppercase; color:#ffdc7a; text-align:center; margin-bottom:6px; }
   .reloadBar{ height:9px; border-radius:999px; background:rgba(0,0,0,.42); border:1px solid rgba(255,255,255,.16); overflow:hidden; }
   #reloadOverlayFill{ height:100%; width:0%; background:linear-gradient(90deg,#ffe27a,#ffae3f); transition:width .08s linear; }
-  #deathOverlay{ pointer-events:none; position:fixed; inset:0; display:flex; align-items:center; justify-content:center; z-index:34; opacity:0; visibility:hidden; background:#000; transition:opacity .45s ease, visibility .45s ease; }
+  #deathOverlay{ pointer-events:none; position:fixed; inset:0; display:flex; align-items:center; justify-content:center; z-index:34; opacity:0; visibility:hidden; background:#000; transition:opacity 1.05s ease, visibility 1.05s ease; }
   #deathOverlay.show{ opacity:1; visibility:visible; }
   #deathOverlay.ready{ pointer-events:auto; }
-  .deathCard{ width:min(620px, calc(100vw - 34px)); text-align:center; transform:skewY(-2deg); opacity:0; animation:deathCardPop .42s ease .62s forwards; }
+  #deathOverlay.cinematic{ pointer-events:none; }
+  #deathOverlay.cinematic .deathCard{ display:none; }
+  .deathCard{ width:min(620px, calc(100vw - 34px)); text-align:center; transform:skewY(-2deg); opacity:0; animation:none; }
+  #deathOverlay.ready .deathCard{ animation:deathCardPop .42s ease forwards; }
   .deathTitle{ color:#ff3838; font-size:clamp(42px, 9vw, 96px); line-height:.86; font-weight:1000; letter-spacing:.02em; text-transform:uppercase; text-shadow:0 5px 0 rgba(0,0,0,.75), 0 0 32px rgba(255,0,0,.45); filter:drop-shadow(0 0 16px rgba(255,38,38,.36)); }
   .deathText{ margin:16px 0 10px; color:#f7f0e8; font-size:13px; font-weight:900; letter-spacing:.18em; text-transform:uppercase; text-shadow:0 2px 0 rgba(0,0,0,.9); }
   .deathStats{ margin-bottom:8px; }
@@ -235,6 +244,7 @@
   .mobileTip{ display:none; }
   .settingsPanel{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin:0 0 18px; }
   .setting{ display:flex; align-items:center; gap:8px; border:1px solid rgba(255,255,255,.13); background:rgba(255,255,255,.055); border-radius:8px; padding:9px 10px; color:#dcecf7; font-size:13px; font-weight:800; user-select:none; }
+  .healthSetting{ display:none !important; }
   .setting input{ width:18px; height:18px; accent-color:#86ee66; }
   .startActions{ width:70%; margin:24px auto 0; display:grid; grid-template-columns:1fr; gap:12px; }
   .startBtn{ appearance:none; width:100%; min-height:66px; border:0; border-radius:8px; padding:15px 20px; font-size:20px; font-weight:1000; text-transform:uppercase; cursor:pointer; }
