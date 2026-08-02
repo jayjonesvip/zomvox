@@ -79,7 +79,6 @@
   const deathStats = $('deathStats');
   const deathUnlocks = $('deathUnlocks');
   const deathShare = $('deathShare');
-  const deathContinue = $('deathContinue');
   const deathGiveUp = $('deathGiveUp');
   const mobileControls = $('mobileControls');
   const stickBase = $('stickBase');
@@ -294,7 +293,7 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.08');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.09');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -1747,7 +1746,7 @@
     const t = Math.min(1, deathState.timer / DEATH_CINEMATIC_DURATION);
     const ease = 1 - Math.pow(1 - t, 3);
     const yaw = deathState.yaw + Math.sin(t * Math.PI) * .12;
-    const pitch = deathState.pitch + (1.18 - deathState.pitch) * ease;
+    const pitch = deathState.pitch + (1.32 - deathState.pitch) * ease;
     const cp = Math.cos(pitch);
     return [Math.sin(yaw) * cp, Math.sin(pitch), Math.cos(yaw) * cp];
   }
@@ -2953,10 +2952,10 @@ function playerOnMachinePad() {
     deathState.overlayShown = false;
     deathState.bloodTimer = 0;
     deathState.yaw = player.yaw;
-    deathState.pitch = Math.max(-.25, Math.min(.25, player.pitch));
+    deathState.pitch = .78;
     deathState.eye = [
       player.pos[0],
-      topSolidY(Math.floor(player.pos[0]), Math.floor(player.pos[2])) + .72,
+      topSolidY(Math.floor(player.pos[0]), Math.floor(player.pos[2])) + .96,
       player.pos[2]
     ];
     if (document.pointerLockElement === canvas && document.exitPointerLock) document.exitPointerLock();
@@ -2972,7 +2971,6 @@ function playerOnMachinePad() {
     deathText.textContent = 'Respawning in 3.0s';
     renderAutoRespawnStats();
     renderDeathUnlocks(null);
-    deathContinue.textContent = 'Respawn';
     deathGiveUp.textContent = 'Quit';
     if (mission.mode === MODE_STORY) {
       // Story mode still records the failure visually as an automatic remote
@@ -4764,11 +4762,6 @@ function currentWaterIsDangerous() {
       if (result && typeof result.catch === 'function') result.catch(() => {});
     } catch (_) {}
   }
-  function continueFromDeath() {
-    if (!deathState.active || !deathState.ready) return;
-    sound('confirm');
-    respawn();
-  }
   play.addEventListener('click', startRandomQuickHunt);
   if (survivalStart) survivalStart.addEventListener('click', openQuickBiomeScreen);
   if (quickStart) quickStart.addEventListener('click', startRandomQuickHunt);
@@ -4791,11 +4784,9 @@ function currentWaterIsDangerous() {
   briefingOk.addEventListener('click', acknowledgeObjectiveBriefing);
   if (briefingShareButton) briefingShareButton.addEventListener('click', () => shareRunFromButton(briefingShareButton));
   if (deathShare) deathShare.addEventListener('click', () => shareRunFromButton(deathShare));
-  deathContinue.addEventListener('click', continueFromDeath);
   deathGiveUp.addEventListener('click', giveUpMission);
   canvas.addEventListener('click', () => {
     if (deathState.active) {
-      continueFromDeath();
       return;
     }
     if (!locked && !touchMode) requestPointerLockSafe();
@@ -4850,7 +4841,6 @@ function currentWaterIsDangerous() {
   });
   canvas.addEventListener('mousedown', (e) => {
     if (deathState.active) {
-      continueFromDeath();
       return;
     }
     if (!locked) { requestPointerLockSafe(); return; }
