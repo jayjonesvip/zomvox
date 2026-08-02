@@ -48,6 +48,13 @@ body::after{
 .fieldBrand small{display:none}
 .fieldObjective{padding-top:1px;text-align:left}
 #fieldObjectiveText{color:#f3fff1;font-size:12px;line-height:1;font-weight:1000;letter-spacing:.08em;text-transform:uppercase;text-shadow:0 2px 0 rgba(0,0,0,.72),0 0 14px rgba(145,243,110,.22)}
+#fieldObjectiveText.objectivePulse,#objectiveText.objectivePulse{animation:objectivePulse .72s ease-out;transform-origin:left center}
+@keyframes objectivePulse{
+  0%{color:#f6fff4;transform:scale(1);filter:brightness(1)}
+  18%{color:#91f36e;text-shadow:0 2px 0 rgba(0,0,0,.75),0 0 18px rgba(145,243,110,.75),0 0 34px rgba(145,243,110,.3);transform:scale(1.08);filter:brightness(1.55)}
+  58%{color:#baff9c;text-shadow:0 2px 0 rgba(0,0,0,.75),0 0 14px rgba(145,243,110,.5);transform:scale(1.03);filter:brightness(1.18)}
+  100%{color:inherit;transform:scale(1);filter:brightness(1)}
+}
 .fieldOperation{position:absolute;left:50%;top:13px;transform:translateX(-50%);text-align:center}
 .fieldOperation span{display:block;color:var(--tactical-green);font-size:7px;letter-spacing:.28em}
 .fieldOperation b{display:block;margin-top:4px;font-size:10px;color:#ced8d2}

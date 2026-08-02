@@ -277,7 +277,7 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.22');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.23');
   const COMMS_DROP_IN = configString(COMMS_CONFIG, 'dropIn', 'You are on {islandName}. The mission is to kill {zombieTotal} infected.');
   const COMMS_HUNT_COMPLETE = configString(COMMS_CONFIG, 'huntComplete', '{islandName} is clear. Ready for the next mission?');
   const COMMS_BITTEN = configString(COMMS_CONFIG, 'bitten', 'You are bit. Keep your distance and finish the objective.');
@@ -329,6 +329,7 @@
   };
   const worldRebuildState = { active: false, timer: 0, startedAt: 0, duration: WORLD_REBUILD_DURATION, seed: null };
   const extractionState = { active: false, timer: 0, duration: 3, seed: null };
+  let lastObjectiveRemaining = null;
   const mission = {
     quickBiome: 'forest',
     quickGoal: 0,
@@ -3792,11 +3793,22 @@
     if (killHudCount && show) killHudCount.textContent = String(Math.max(0, Math.floor(count)));
   }
 
+  function pulseObjectiveHud() {
+    for (const el of [objectiveText, fieldObjectiveText]) {
+      if (!el) continue;
+      el.classList.remove('objectivePulse');
+      void el.offsetWidth;
+      el.classList.add('objectivePulse');
+    }
+  }
+
   function updateMissionHud() {
     if (!objectiveText || !objectiveMeta) return;
     document.body.classList.toggle('stage-cleared', mission.completed);
     document.body.classList.add('quick-mode');
     const count = Math.max(0, currentInfectedGoal() - player.kills);
+    if (lastObjectiveRemaining !== null && count < lastObjectiveRemaining) pulseObjectiveHud();
+    lastObjectiveRemaining = count;
     const text = mission.completed ? 'Objective: clear' : `Objective: ${count} remain`;
     setKillHud(false, count);
     objectiveText.textContent = text;
