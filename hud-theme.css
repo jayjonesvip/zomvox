@@ -123,23 +123,14 @@ body::after{
 }
 
 #menu{
-  justify-content:flex-start;
+  justify-content:center;
   padding:8vh 7.5vw;
   background:
-    linear-gradient(90deg,rgba(2,5,6,.98) 0 37%,rgba(2,5,6,.72) 58%,rgba(2,5,6,.15)),
+    linear-gradient(90deg,rgba(2,5,6,.92) 0 30%,rgba(2,5,6,.68) 50%,rgba(2,5,6,.28)),
     linear-gradient(0deg,rgba(2,5,6,.75),transparent 60%),
     url("assets/zomvox-splash.png") center/cover no-repeat;
 }
-#menu::before{
-  content:"";
-  position:absolute;
-  left:5.4vw;
-  top:16%;
-  bottom:16%;
-  width:2px;
-  background:linear-gradient(transparent,var(--tactical-green),transparent);
-  box-shadow:0 0 16px rgba(145,243,110,.24);
-}
+#menu::before{display:none}
 #menu::after{
   content:"";
   position:absolute;inset:0;pointer-events:none;opacity:.07;
@@ -165,7 +156,7 @@ body::after{
 }
 .card{position:relative;z-index:1}
 #mainMenuCard{
-  width:min(620px,48vw);
+  width:min(720px,62vw);
   padding:0;
   text-align:center;
   border:0;
@@ -176,7 +167,7 @@ body::after{
 }
 .menuClassification{color:var(--tactical-green);font-size:9px;font-weight:900;letter-spacing:.3em}
 #mainMenuCard h1{
-  margin:0 0 28px;
+  margin:0 0 14px;
   font-size:clamp(70px,9vw,132px);
   line-height:.72;
   letter-spacing:-.08em;
@@ -188,28 +179,39 @@ body::after{
   -webkit-text-stroke:1px rgba(145,243,110,.85);
   text-shadow:0 0 28px rgba(145,243,110,.12);
 }
-.menuTagline{margin:24px 0 18px;color:#dce5df;font-size:14px;font-weight:700;line-height:1.35;letter-spacing:.12em}
+.menuTagline{margin:0 0 24px;color:#dce5df;font-size:clamp(13px,1.05vw,17px);font-weight:900;line-height:1.2;letter-spacing:.16em;text-transform:uppercase;text-shadow:0 3px 18px rgba(0,0,0,.72)}
 .menuTagline span{color:#8d9d95}
 .menuReadout{display:flex;gap:8px;margin:0 0 18px}
 .menuReadout span{min-width:120px;padding:8px;border-left:1px solid rgba(145,243,110,.38);color:#87958e;font-size:7px;letter-spacing:.13em}
 .menuReadout b{display:block;color:#e5eee8;font-size:20px;line-height:1;margin-bottom:4px}
-.menuClassification,.menuTagline,.menuReadout,.menuFieldGuide{display:none}
-.startActions{width:min(430px,100%);margin:0 auto;gap:7px}
+.menuClassification,.menuReadout,.menuFieldGuide{display:none}
+.startActions{width:100%;margin:0 auto;gap:7px}
 .startBtn{
   min-height:72px;
   display:flex;
   align-items:center;
   justify-content:center;
   padding:14px 20px;
-  border:1px solid rgba(145,243,110,.35);
-  color:#e8f1eb;
-  background:rgba(8,16,17,.78);
-  box-shadow:inset 0 1px rgba(255,255,255,.07),0 12px 30px rgba(0,0,0,.2);
+  border:2px solid rgba(145,243,110,.82);
+  color:#f0f8ff;
+  background:rgba(3,10,9,.36);
+  box-shadow:inset 0 0 0 1px rgba(145,243,110,.22),inset 0 0 28px rgba(145,243,110,.08),0 0 24px rgba(145,243,110,.12),0 18px 42px rgba(0,0,0,.3);
   border-radius:8px;
 }
-.startBtn span{font-size:20px;letter-spacing:.12em}
+.startBtn span{font-size:22px;letter-spacing:.16em;text-shadow:0 3px 0 rgba(0,0,0,.72),0 0 16px rgba(240,248,255,.12)}
 .startBtn small{color:#7f8e87;font-size:7px;letter-spacing:.14em}
-.primaryStart{color:#061009;background:linear-gradient(90deg,#91f36e,#c8ff81);border-color:#b9ff9e}
+.primaryStart{color:#f0f8ff;background:rgba(3,10,9,.36);border-color:rgba(145,243,110,.82)}
+.primaryStart:hover{
+  color:#fff;
+  border-color:#b9ff9e;
+  background:rgba(9,28,18,.48);
+  box-shadow:inset 0 0 0 1px rgba(217,255,200,.28),inset 0 0 38px rgba(145,243,110,.16),0 0 32px rgba(145,243,110,.36),0 20px 46px rgba(0,0,0,.34);
+  transform:translateY(-1px);
+}
+.primaryStart:active{
+  transform:translateY(1px);
+  box-shadow:inset 0 0 0 1px rgba(217,255,200,.2),inset 0 0 26px rgba(145,243,110,.12),0 0 18px rgba(145,243,110,.24),0 12px 30px rgba(0,0,0,.3);
+}
 .primaryStart small{color:#31582c}
 .survivalStart{background:rgba(10,27,27,.84);border-color:rgba(95,209,196,.4)}
 .secondaryStart{background:rgba(30,20,10,.8);border-color:rgba(255,212,93,.4)}
@@ -502,8 +504,9 @@ body::after{
     background:radial-gradient(ellipse at 50% 52%,rgba(0,0,0,.7),rgba(0,0,0,.42) 45%,rgba(0,0,0,0) 74%);
     pointer-events:none;
   }
-  .menuClassification,.menuTagline,.menuReadout{display:none}
-  #mainMenuCard h1{font-size:clamp(52px,12vw,82px);margin:0 0 18px;line-height:.78;letter-spacing:-.065em}
+  .menuClassification,.menuReadout{display:none}
+  #mainMenuCard h1{font-size:clamp(52px,12vw,82px);margin:0 0 9px;line-height:.78;letter-spacing:-.065em}
+  .menuTagline{display:block;width:min(430px,78vw);margin:0 0 14px;font-size:clamp(9px,1.9vw,12px);line-height:1.18;letter-spacing:.1em;color:#f1fff4}
   .menuFieldGuide{display:none}
   .startActions{width:min(430px,78vw);margin:0 auto}
   .startBtn{min-height:54px;padding:10px 14px;border-radius:9px}
