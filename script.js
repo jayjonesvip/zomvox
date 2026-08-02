@@ -35,6 +35,7 @@
   const healthBigFill = $('healthBigFill');
   const fieldSignal = $('fieldSignal');
   const fieldStatusText = $('fieldStatusText');
+  const fieldLocationName = $('fieldLocationName');
   const objectiveText = $('objectiveText');
   const objectiveMeta = $('objectiveMeta');
   const killHud = $('killHud');
@@ -264,6 +265,7 @@
   let nextSpawnTimer = 3.5;
   let ammoMercyTimer = 0;
   let locked = false;
+  let desktopPaused = false;
   let touchMode = matchMedia('(pointer: coarse)').matches;
   const portraitQuery = matchMedia('(orientation: portrait)');
   let keys = Object.create(null);
@@ -273,7 +275,7 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.19');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.20');
   const COMMS_DROP_IN = configString(COMMS_CONFIG, 'dropIn', 'You are on {islandName}. The mission is to kill {zombieTotal} infected.');
   const COMMS_HUNT_COMPLETE = configString(COMMS_CONFIG, 'huntComplete', '{islandName} is clear. Ready for the next mission?');
   const COMMS_BITTEN = configString(COMMS_CONFIG, 'bitten', 'You are bit. Keep your distance and finish the objective.');
@@ -420,8 +422,6 @@
     syncBulletRack(player.magSize);
     if (refill) player.mag = player.magSize;
     else player.mag = Math.min(player.mag, player.magSize);
-    const label = weaponPanel.querySelector('.label');
-    if (label) label.textContent = 'Block Blaster / ' + player.magSize + '-Round Mag';
     updateAmmoDisplay();
   }
 
@@ -1074,6 +1074,15 @@
   function currentBiomeLabel() {
     const biome = currentBiome();
     return biome.charAt(0).toUpperCase() + biome.slice(1);
+  }
+
+  function currentLocationLabel() {
+    return currentBiomeLabel() + ' Island';
+  }
+
+  function updateStartButtonLabel() {
+    const label = play ? play.querySelector('span') : null;
+    if (label) label.textContent = desktopPaused ? 'Resume Hunt' : 'Start Hunt';
   }
 
   const QUICK_PROGRESS_KEY = 'zomvoxQuickHuntProgress';
@@ -2996,7 +3005,7 @@
     hideHuntDecisionOverlay();
     document.body.classList.remove('death-cinematic');
     document.body.classList.add('death-fading', 'death-card-ready');
-    deathTitle.textContent = 'REVIVING...';
+    deathTitle.textContent = 'REVIVING';
     deathText.textContent = 'Reviving in ' + deathState.duration.toFixed(1) + 's';
     deathFill.style.width = '0%';
     deathOverlay.classList.remove('cinematic', 'awaiting-choice');
@@ -3074,6 +3083,7 @@
     hideHuntDecisionOverlay();
     woundGaspTimer = 0;
     locked = false;
+    desktopPaused = false;
     if (document.pointerLockElement === canvas && document.exitPointerLock) document.exitPointerLock();
     document.body.classList.remove('dead', 'low-health', 'wounded', 'death-cinematic', 'death-fading', 'death-card-ready', 'stage-cleared', 'quick-mode', 'hunt-complete-fade', 'extraction-fade');
     deathOverlay.classList.remove('show', 'ready', 'cinematic', 'awaiting-choice', 'reviving');
@@ -3088,6 +3098,7 @@
     deathText.textContent = 'Respond to Mission Command';
     deathFill.style.width = '0%';
     menu.style.display = 'flex';
+    updateStartButtonLabel();
     mission.quickBiome = 'forest';
     mission.quickGoal = 0;
     updateAmbientSound(true);
@@ -3115,6 +3126,7 @@
     hideHuntDecisionOverlay();
     woundGaspTimer = 0;
     locked = false;
+    desktopPaused = false;
     if (document.pointerLockElement === canvas && document.exitPointerLock) document.exitPointerLock();
     document.body.classList.remove('dead', 'low-health', 'wounded', 'death-cinematic', 'death-fading', 'death-card-ready', 'hunt-complete-fade', 'extraction-fade');
     deathOverlay.classList.remove('show', 'ready', 'cinematic', 'awaiting-choice', 'reviving');
@@ -3127,6 +3139,7 @@
     deathText.textContent = 'Respond to Mission Command';
     deathFill.style.width = '0%';
     menu.style.display = 'flex';
+    updateStartButtonLabel();
     mission.quickBiome = 'forest';
     mission.quickGoal = 0;
     document.body.classList.remove('quick-mode');
@@ -3394,7 +3407,7 @@
 
   function updateParticles(dt) {
     for (const p of particles) {
-      p.life -= dt; p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt; p.vy -= 7 * dt;
+      p.life -= dt; p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt; p.vy -= (p.gravity ?? 7) * dt;
     }
     particles = particles.filter(p => p.life > 0);
   }
@@ -3590,9 +3603,10 @@
         y: p.y + .12 + Math.random() * .18,
         z: p.z + (Math.random() - .5) * .32,
         vx: (Math.random() - .5) * .32,
-        vy: .55 + Math.random() * .65,
+        vy: .85 + Math.random() * .7,
         vz: (Math.random() - .5) * .32,
-        life: .8 + Math.random() * .45,
+        gravity: .12,
+        life: 1.0 + Math.random() * .5,
         type: 42
       });
     }
@@ -3852,6 +3866,7 @@
 
   function updateFieldStatus(hpNow) {
     if (!fieldSignal || !fieldStatusText) return;
+    if (fieldLocationName) fieldLocationName.textContent = currentLocationLabel();
     let label = 'STANDBY';
     let tone = '';
     if (deathState.active || hpNow <= 0) {
@@ -4244,6 +4259,7 @@ function currentWaterIsDangerous() {
     if (soundEnabled || ambientEnabled) window.ZomVoxSound?.prime();
     clearMovementInput();
     menu.style.display = 'none';
+    updateStartButtonLabel();
     updateAmbientSound(true);
     if (touchMode) requestMobileFullscreen();
     if (mission.pendingBriefing) {
@@ -4263,11 +4279,41 @@ function currentWaterIsDangerous() {
   }
 
   function startRandomQuickHunt() {
+    if (desktopPaused) {
+      sound('confirm');
+      desktopPaused = false;
+      enterGameFromMenu();
+      return;
+    }
     sound('confirm');
     const next = chooseNextHunt();
     document.body.classList.add('quick-mode');
     generateWorld(next.seed);
     enterGameFromMenu();
+  }
+
+  function canPauseToMenu() {
+    return !touchMode &&
+      gunUnlocked() &&
+      menu.style.display === 'none' &&
+      !deathState.active &&
+      !worldRebuildState.active &&
+      !extractionState.active &&
+      !mission.huntDecisionActive &&
+      !mission.insertionActive &&
+      !isBriefingOpen() &&
+      !isUpgradeOpen();
+  }
+
+  function pauseDesktopHunt() {
+    if (!canPauseToMenu()) return;
+    clearMovementInput();
+    desktopPaused = true;
+    locked = false;
+    if (document.pointerLockElement === canvas && document.exitPointerLock) document.exitPointerLock();
+    menu.style.display = 'flex';
+    updateStartButtonLabel();
+    updateAmbientSound(true);
   }
 
   function openSettingsModal() {
@@ -4335,9 +4381,12 @@ function currentWaterIsDangerous() {
   });
   document.addEventListener('pointerlockchange', () => {
     if (touchMode) return;
+    const wasLocked = locked;
     locked = document.pointerLockElement === canvas;
     clearKeyboardState();
+    if (!locked && wasLocked && canPauseToMenu()) desktopPaused = true;
     menu.style.display = locked || deathState.active || extractionState.active || mission.huntDecisionActive || isBriefingOpen() || isUpgradeOpen() ? 'none' : 'flex';
+    updateStartButtonLabel();
     updateAmbientSound(true);
   });
   document.addEventListener('mousemove', (e) => {
@@ -4348,6 +4397,11 @@ function currentWaterIsDangerous() {
     player.pitch = Math.max(-cap, Math.min(cap, player.pitch));
   });
   document.addEventListener('keydown', (e) => {
+    if (e.code === 'Escape' && locked && !e.repeat) {
+      e.preventDefault();
+      pauseDesktopHunt();
+      return;
+    }
     if (deathState.active && deathState.decisionActive) {
       if (e.code === 'Enter' || e.code === 'KeyY') {
         e.preventDefault();

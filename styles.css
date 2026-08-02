@@ -235,6 +235,10 @@
   #deathOverlay.ready .deathCard{ animation:deathCardPop .42s ease forwards; }
   body.death-card-ready .radioComms{ z-index:35; }
   .deathTitle{ color:#ff3838; font-size:clamp(42px, 9vw, 96px); line-height:.86; font-weight:1000; letter-spacing:.02em; text-transform:uppercase; text-shadow:0 5px 0 rgba(0,0,0,.75), 0 0 32px rgba(255,0,0,.45); filter:drop-shadow(0 0 16px rgba(255,38,38,.36)); }
+  #deathOverlay.reviving .deathCard{ transform:none; width:min(420px, calc(100vw - 34px)); }
+  #deathOverlay.reviving .deathTitle{ font-size:clamp(28px, 5vw, 48px); line-height:1; color:#e8fbff; text-shadow:0 3px 0 rgba(0,0,0,.82),0 0 24px rgba(120,220,255,.34); filter:none; }
+  #deathOverlay.reviving .deathText{ margin:12px 0 12px; text-align:center; }
+  #deathOverlay.reviving .deathMeter{ width:min(320px, 72vw); margin-left:auto; margin-right:auto; }
   .deathText{ margin:16px 0 10px; color:#f7f0e8; font-size:13px; font-weight:900; letter-spacing:.18em; text-transform:uppercase; text-shadow:0 2px 0 rgba(0,0,0,.9); }
   .deathStats{ margin-bottom:8px; }
   .deathStats:empty{ display:none; }
