@@ -1,4 +1,4 @@
-const CACHE_NAME = 'zomvox-pwa-2026-08-01-12';
+const CACHE_NAME = 'zomvox-pwa-2026-08-01-13';
 
 const APP_SHELL = [
   './',
