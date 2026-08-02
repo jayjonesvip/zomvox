@@ -17,7 +17,7 @@ window.ZOMVOX_CONFIG = {
     Bump this when you make visible changes so you can tell the browser
     loaded the newest version.
   */
-  buildVersion: '2026.08.01.06',
+  buildVersion: '2026.08.01.07',
 
   /*
     Seed used for deterministic world generation.
@@ -362,11 +362,11 @@ window.ZOMVOX_CONFIG = {
 
   timers: {
     /*
-      Delay before the player can continue after dying.
+      Auto-respawn countdown after dying.
 
       Measured in seconds.
     */
-    deathReadyDelay: 1.85,
+    deathReadyDelay: 3,
 
     /*
       Duration of the world rebuild/loading overlay.

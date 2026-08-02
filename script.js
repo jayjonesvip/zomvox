@@ -226,7 +226,7 @@
   const ENEMY_C4_DROP_CHANCE = Math.max(0, Math.min(1, configNumber(PICKUP_CONFIG, 'enemyC4DropChance', 0.06)));
   const ENEMY_ANY_DROP_CHANCE = Math.max(ENEMY_C4_DROP_CHANCE, Math.min(1, configNumber(PICKUP_CONFIG, 'enemyAnyDropChance', 0.55)));
   const LONG_RANGE_KILL_DIST = configNumber(WEAPON_CONFIG, 'longRangeKillDistance', 34);
-  const DEATH_READY_DELAY = Math.max(0.1, configNumber(TIMER_CONFIG, 'deathReadyDelay', 1.85));
+  const DEATH_READY_DELAY = Math.max(0.1, configNumber(TIMER_CONFIG, 'deathReadyDelay', 3));
   const WORLD_REBUILD_DURATION = Math.max(0.25, configNumber(TIMER_CONFIG, 'worldRebuildDuration', 2.35));
   const HEARTBEAT_INTERVAL = Math.max(0.2, configNumber(TIMER_CONFIG, 'heartbeatInterval', 0.95));
   const CYCLE_HALF_DAY_MS = Math.max(1000, configNumber(TIMER_CONFIG, 'cycleHalfDayMs', 360000));
@@ -294,7 +294,7 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.06');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.07');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -594,8 +594,21 @@
   }
 
   function renderDeathStats(summary = buildRunSummary('Run ended')) {
+    deathStats.classList.remove('simple');
     renderRunStats(deathStats, summary);
     setShareButton(deathShare, summary);
+  }
+
+  function renderAutoRespawnStats() {
+    deathStats.classList.add('simple');
+    renderRunStats(deathStats, {
+      stats: [
+        ['Infected cleared', player.lifeKills],
+        ['Survived', formatRunTime()]
+      ],
+      text: ''
+    });
+    hideDeathShare();
   }
 
   function hideDeathShare() {
@@ -2912,14 +2925,15 @@ function playerOnMachinePad() {
     cancelReload();
     sound('death');
     document.body.classList.toggle('story-death', mission.mode === MODE_STORY);
+    deathTitle.textContent = 'RESPAWNING...';
+    deathText.textContent = 'Respawning in 3.0s';
+    renderAutoRespawnStats();
+    renderDeathUnlocks(null);
+    deathContinue.textContent = 'Respawn';
+    deathGiveUp.textContent = 'Quit';
     if (mission.mode === MODE_STORY) {
-      deathTitle.textContent = 'MISSION FAILURE';
-      deathText.textContent = 'Command uplink searching for revive authorization';
-      deathStats.textContent = '';
-      renderDeathUnlocks(null);
-      hideDeathShare();
-      deathContinue.textContent = 'Respawn';
-      deathGiveUp.textContent = 'Quit';
+      // Story mode still records the failure visually as an automatic remote
+      // revive, but the player only chooses whether to quit.
     } else {
       const run = {
         kills: player.lifeKills,
@@ -2927,31 +2941,24 @@ function playerOnMachinePad() {
         bestCombo: player.lifeBestCombo
       };
       const unlockedBiomes = recordQuickHuntRun(run);
-      deathTitle.textContent = 'YOU DIED!';
-      deathText.textContent = 'Final stats';
-      renderDeathStats(buildRunSummary('Frontier Hunt failed'));
-      renderDeathUnlocks(unlockedBiomes);
       if (unlockedBiomes.length) {
         sound('objectiveClear');
-        showToast('Island unlocked: ' + unlockedBiomes.map(quickBiomeLabel).join(' + '), true);
       }
-      deathContinue.textContent = 'Respawn';
-      deathGiveUp.textContent = 'Quit';
     }
     deathFill.style.width = '0%';
-    deathOverlay.classList.remove('ready');
+    deathOverlay.classList.remove('show', 'ready');
+    void deathOverlay.offsetWidth;
+    deathOverlay.classList.add('ready');
     deathOverlay.classList.add('show');
   }
   function updateDeath(dt) {
     deathState.timer += dt;
     const progress = Math.min(1, deathState.timer / deathState.duration);
     deathFill.style.width = (progress * 100).toFixed(1) + '%';
-    if (progress >= 1 && !deathState.ready) {
-      deathState.ready = true;
-      deathText.textContent = mission.mode === MODE_STORY
-        ? 'Mission Command can remotely revive you'
-        : 'Respawn or quit to main menu';
-      deathOverlay.classList.add('ready');
+    const remaining = Math.max(0, deathState.duration - deathState.timer);
+    deathText.textContent = 'Respawning in ' + remaining.toFixed(1) + 's';
+    if (progress >= 1) {
+      respawn();
     }
   }
   function respawn() {
@@ -2980,9 +2987,10 @@ function playerOnMachinePad() {
     }
     deathOverlay.classList.remove('ready');
     deathStats.textContent = '';
+    deathStats.classList.remove('simple');
     renderDeathUnlocks(null);
     hideDeathShare();
-    deathTitle.textContent = 'YOU DIED!';
+    deathTitle.textContent = 'RESPAWNING...';
     deathText.textContent = 'Respawning...';
     deathFill.style.width = '0%';
     const sx = 0, sz = 0;
@@ -3024,9 +3032,10 @@ function playerOnMachinePad() {
     objectiveBriefing.classList.remove('show');
     document.body.classList.remove('briefing-open');
     deathStats.textContent = '';
+    deathStats.classList.remove('simple');
     renderDeathUnlocks(null);
     hideDeathShare();
-    deathTitle.textContent = 'YOU DIED!';
+    deathTitle.textContent = 'RESPAWNING...';
     deathText.textContent = 'Respawning...';
     deathFill.style.width = '0%';
     menu.style.display = 'flex';
@@ -3049,9 +3058,10 @@ function playerOnMachinePad() {
     document.body.classList.remove('dead', 'low-health', 'story-death', 'story-reviving', 'story-revive-fade');
     deathOverlay.classList.remove('show', 'ready');
     deathStats.textContent = '';
+    deathStats.classList.remove('simple');
     renderDeathUnlocks(null);
     hideDeathShare();
-    deathTitle.textContent = 'YOU DIED!';
+    deathTitle.textContent = 'RESPAWNING...';
     deathText.textContent = 'Respawning...';
     deathFill.style.width = '0%';
     menu.style.display = 'flex';
@@ -3066,7 +3076,7 @@ function playerOnMachinePad() {
   }
 
   function giveUpMission() {
-    if (!deathState.active || !deathState.ready) return;
+    if (!deathState.active) return;
     if (mission.mode === MODE_STORY) {
       returnToMainMenuFromDeath('Mission abandoned. Awaiting new orders.');
       return;
@@ -4471,11 +4481,12 @@ function currentWaterIsDangerous() {
     upgradeOverlay.classList.remove('show');
     document.body.classList.remove('upgrade-open');
     deathStats.textContent = '';
+    deathStats.classList.remove('simple');
     renderDeathUnlocks(null);
     setKillHud(false, 0);
     hideDeathShare();
     renderBriefingShare(null);
-    deathTitle.textContent = 'YOU DIED!';
+    deathTitle.textContent = 'RESPAWNING...';
     deathText.textContent = 'Respawning...';
     deathFill.style.width = '0%';
     disableOverlay.classList.remove('show');
