@@ -50,7 +50,7 @@ ZomVox is listed on [IGDB](https://www.igdb.com/) and [DEAD.ARMY](https://dead.a
 - Optional fog through code.
 - Dangerous water enabled by default through code.
 - Damage flash and screen shake when the player is hit.
-- Two-bite wound/death loop with a red wounded vignette, ground-level death camera, blood particles, black fade, and `RESPAWNING...` countdown.
+- Two-bite wound/death loop with a red wounded vignette, ground-level death camera, blood particles, black fade, Mission Command continue prompt, and `REVIVING...` meter.
 - Menu-safe gameplay pause so the player does not take damage before pressing Play.
 
 ## Game Flow
@@ -114,7 +114,7 @@ Common tuning options live in `config.js` under `window.ZOMVOX_CONFIG`. Edit tha
 
 ```js
 window.ZOMVOX_CONFIG = {
-  buildVersion: '2026.08.01.15',
+  buildVersion: '2026.08.01.16',
   initialSeed: 729641,
 
   environment: {
@@ -173,7 +173,7 @@ window.ZOMVOX_CONFIG = {
     dropIn: 'You are on {islandName}. The mission is to kill {zombieTotal} infected.',
     huntComplete: '{islandName} is clear. Good work, but there is more to do. Do you accept?',
     bitten: 'You are bit. Keep your distance and finish the objective.',
-    death: 'Do you read me? Are you there?',
+    death: 'Can you hear me? Do you want to keep going?',
     fewMore: 'Just a few more.',
     lowHealth: 'Retreat and treat your wounds.',
     longRange: 'Nice shot.',
@@ -221,7 +221,7 @@ Other sections in `config.js` expose safe defaults for:
 - `mission`: Frontier Hunt insertion drop timing and first wave size. The active hunt loop rolls random biome seeds and infected targets at runtime.
 - `comms`: short Mission Command radio lines for drop-in, hunt-complete, bite, death, objective, long-range, and ammo-cache events. `dropIn` supports `{islandName}`, `{biome}`, and `{zombieTotal}` placeholders; `huntComplete` supports `{islandName}` and `{biome}`.
 - `pickups`: ammo and C4 pickup amounts/drop chances. Health pickups are intentionally disabled.
-- `timers`: auto-respawn countdown, world rebuild meter duration, heartbeat interval, and day/night cycle length.
+- `timers`: revive meter duration, world rebuild meter duration, heartbeat interval, and day/night cycle length.
 - `audio.files`: optional file-backed sounds for weapon, impact, pickup, UI, zombie, and ambient cues. File cues are tried first when configured; blank cues fall back to procedural audio.
 - `audio.playbackRates`: optional per-cue file playback speed multipliers, such as `shoot: 1.15` to make a stock asset feel snappier.
 

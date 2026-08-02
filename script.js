@@ -79,6 +79,7 @@
   const deathStats = $('deathStats');
   const deathUnlocks = $('deathUnlocks');
   const deathShare = $('deathShare');
+  const deathContinue = $('deathContinue');
   const deathGiveUp = $('deathGiveUp');
   const mobileControls = $('mobileControls');
   const stickBase = $('stickBase');
@@ -270,11 +271,11 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.15');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.16');
   const COMMS_DROP_IN = configString(COMMS_CONFIG, 'dropIn', 'You are on {islandName}. The mission is to kill {zombieTotal} infected.');
   const COMMS_HUNT_COMPLETE = configString(COMMS_CONFIG, 'huntComplete', '{islandName} is clear. Good work, but there is more to do. Do you accept?');
   const COMMS_BITTEN = configString(COMMS_CONFIG, 'bitten', 'You are bit. Keep your distance and finish the objective.');
-  const COMMS_DEATH = configString(COMMS_CONFIG, 'death', 'Do you read me? Are you there?');
+  const COMMS_DEATH = configString(COMMS_CONFIG, 'death', 'Can you hear me? Do you want to keep going?');
   const COMMS_FEW_MORE = configString(COMMS_CONFIG, 'fewMore', 'Just a few more.');
   const COMMS_LOW_HEALTH = configString(COMMS_CONFIG, 'lowHealth', 'Retreat and treat your wounds.');
   const COMMS_LONG_RANGE = configString(COMMS_CONFIG, 'longRange', 'Nice shot.');
@@ -311,6 +312,9 @@
     ready: false,
     fadeStarted: false,
     overlayShown: false,
+    decisionActive: false,
+    reviving: false,
+    reviveTimer: 0,
     bloodTimer: 0,
     eye: [0, 0, 0],
     yaw: Math.PI,
@@ -2906,6 +2910,9 @@
     deathState.ready = false;
     deathState.fadeStarted = false;
     deathState.overlayShown = false;
+    deathState.decisionActive = false;
+    deathState.reviving = false;
+    deathState.reviveTimer = 0;
     deathState.bloodTimer = 0;
     deathState.yaw = player.yaw;
     deathState.pitch = .78;
@@ -2921,13 +2928,16 @@
     player.vel = [0, 0, 0];
     cancelReload();
     sound('death');
-    showRadioComms(COMMS_DEATH, 4.6);
+    showRadioComms(COMMS_DEATH, 5.8);
     spawnDeathBlood(player.pos[0], player.pos[1] + .65, player.pos[2], 36);
-    deathTitle.textContent = 'RESPAWNING...';
-    deathText.textContent = 'Respawning in 3.0s';
-    renderAutoRespawnStats();
+    deathTitle.textContent = 'DOWNED';
+    deathText.textContent = 'Respond to Mission Command';
+    deathStats.textContent = '';
+    deathStats.classList.remove('simple');
     renderDeathUnlocks(null);
-    deathGiveUp.textContent = 'Exit';
+    hideDeathShare();
+    if (deathGiveUp) deathGiveUp.textContent = 'Negative';
+    if (deathContinue) deathContinue.textContent = 'Copy';
     const run = {
       kills: player.lifeKills,
       seconds: runSeconds(),
@@ -2938,7 +2948,7 @@
       sound('objectiveClear');
     }
     deathFill.style.width = '0%';
-    deathOverlay.classList.remove('show', 'ready', 'cinematic');
+    deathOverlay.classList.remove('show', 'ready', 'cinematic', 'awaiting-choice', 'reviving');
     void deathOverlay.offsetWidth;
   }
   function updateDeath(dt) {
@@ -2958,20 +2968,36 @@
     }
     if (!deathState.overlayShown && deathState.timer >= DEATH_RESPAWN_START) {
       deathState.overlayShown = true;
+      deathState.decisionActive = true;
       document.body.classList.remove('death-cinematic');
       document.body.classList.add('death-card-ready');
       deathOverlay.classList.remove('cinematic');
-      deathOverlay.classList.add('ready');
+      deathOverlay.classList.add('ready', 'awaiting-choice');
+      showRadioComms(COMMS_DEATH, 6.4);
       void deathOverlay.offsetWidth;
     }
-    const respawnElapsed = Math.max(0, deathState.timer - DEATH_RESPAWN_START);
-    const progress = Math.min(1, respawnElapsed / deathState.duration);
+    if (!deathState.reviving) return;
+    deathState.reviveTimer += dt;
+    const progress = Math.min(1, deathState.reviveTimer / deathState.duration);
     deathFill.style.width = (progress * 100).toFixed(1) + '%';
-    const remaining = Math.max(0, deathState.duration - respawnElapsed);
-    deathText.textContent = 'Respawning in ' + remaining.toFixed(1) + 's';
-    if (deathState.overlayShown && progress >= 1) {
+    const remaining = Math.max(0, deathState.duration - deathState.reviveTimer);
+    deathText.textContent = 'Reviving in ' + remaining.toFixed(1) + 's';
+    if (progress >= 1) {
       respawn();
     }
+  }
+
+  function acceptDeathRevive() {
+    if (!deathState.active || !deathState.decisionActive || deathState.reviving) return;
+    sound('confirm');
+    deathState.decisionActive = false;
+    deathState.reviving = true;
+    deathState.reviveTimer = 0;
+    deathTitle.textContent = 'REVIVING...';
+    deathText.textContent = 'Reviving in ' + deathState.duration.toFixed(1) + 's';
+    deathFill.style.width = '0%';
+    deathOverlay.classList.remove('awaiting-choice');
+    deathOverlay.classList.add('reviving');
   }
   function respawn() {
     clearMovementInput();
@@ -2980,6 +3006,9 @@
     deathState.timer = 0;
     deathState.fadeStarted = false;
     deathState.overlayShown = false;
+    deathState.decisionActive = false;
+    deathState.reviving = false;
+    deathState.reviveTimer = 0;
     deathState.bloodTimer = 0;
     player.deaths++;
     player.health = STARTING_HEALTH;
@@ -2996,13 +3025,13 @@
     woundGaspTimer = 0;
     document.body.classList.remove('dead', 'low-health', 'wounded', 'death-cinematic', 'death-fading', 'death-card-ready');
     deathOverlay.classList.remove('show', 'cinematic');
-    deathOverlay.classList.remove('ready', 'cinematic');
+    deathOverlay.classList.remove('ready', 'cinematic', 'awaiting-choice', 'reviving');
     deathStats.textContent = '';
     deathStats.classList.remove('simple');
     renderDeathUnlocks(null);
     hideDeathShare();
-    deathTitle.textContent = 'RESPAWNING...';
-    deathText.textContent = 'Respawning...';
+    deathTitle.textContent = 'DOWNED';
+    deathText.textContent = 'Respond to Mission Command';
     deathFill.style.width = '0%';
     const sx = 0, sz = 0;
     cameraStepOffsetY = 0;
@@ -3016,7 +3045,7 @@
       if (!keep) stopEnemySounds(e);
       return keep;
     });
-    showToast('Respawned at the old marker. Deaths: ' + player.deaths);
+    showToast('Revived at the old marker. Deaths: ' + player.deaths);
   }
 
   function returnToMainMenu(message = 'Awaiting orders.') {
@@ -3026,6 +3055,9 @@
     deathState.timer = 0;
     deathState.fadeStarted = false;
     deathState.overlayShown = false;
+    deathState.decisionActive = false;
+    deathState.reviving = false;
+    deathState.reviveTimer = 0;
     deathState.bloodTimer = 0;
     extractionState.active = false;
     extractionState.timer = 0;
@@ -3038,7 +3070,7 @@
     locked = false;
     if (document.pointerLockElement === canvas && document.exitPointerLock) document.exitPointerLock();
     document.body.classList.remove('dead', 'low-health', 'wounded', 'death-cinematic', 'death-fading', 'death-card-ready', 'stage-cleared', 'quick-mode', 'hunt-complete-fade', 'extraction-fade');
-    deathOverlay.classList.remove('show', 'ready', 'cinematic');
+    deathOverlay.classList.remove('show', 'ready', 'cinematic', 'awaiting-choice', 'reviving');
     objectiveBriefing.classList.remove('show');
     document.body.classList.remove('briefing-open');
     worldOverlay.classList.remove('show');
@@ -3046,8 +3078,8 @@
     deathStats.classList.remove('simple');
     renderDeathUnlocks(null);
     hideDeathShare();
-    deathTitle.textContent = 'RESPAWNING...';
-    deathText.textContent = 'Respawning...';
+    deathTitle.textContent = 'DOWNED';
+    deathText.textContent = 'Respond to Mission Command';
     deathFill.style.width = '0%';
     menu.style.display = 'flex';
     mission.quickBiome = 'forest';
@@ -3063,6 +3095,9 @@
     deathState.timer = 0;
     deathState.fadeStarted = false;
     deathState.overlayShown = false;
+    deathState.decisionActive = false;
+    deathState.reviving = false;
+    deathState.reviveTimer = 0;
     deathState.bloodTimer = 0;
     extractionState.active = false;
     extractionState.timer = 0;
@@ -3075,14 +3110,14 @@
     locked = false;
     if (document.pointerLockElement === canvas && document.exitPointerLock) document.exitPointerLock();
     document.body.classList.remove('dead', 'low-health', 'wounded', 'death-cinematic', 'death-fading', 'death-card-ready', 'hunt-complete-fade', 'extraction-fade');
-    deathOverlay.classList.remove('show', 'ready', 'cinematic');
+    deathOverlay.classList.remove('show', 'ready', 'cinematic', 'awaiting-choice', 'reviving');
     worldOverlay.classList.remove('show');
     deathStats.textContent = '';
     deathStats.classList.remove('simple');
     renderDeathUnlocks(null);
     hideDeathShare();
-    deathTitle.textContent = 'RESPAWNING...';
-    deathText.textContent = 'Respawning...';
+    deathTitle.textContent = 'DOWNED';
+    deathText.textContent = 'Respond to Mission Command';
     deathFill.style.width = '0%';
     menu.style.display = 'flex';
     mission.quickBiome = 'forest';
@@ -3094,7 +3129,7 @@
 
   function giveUpMission() {
     if (!deathState.active) return;
-    returnToMainMenuFromDeath('Frontier Hunt ended. Awaiting next run.', false);
+    returnToMainMenuFromDeath('Signal lost. Awaiting next hunt.', false);
   }
 
   function startReload() {
@@ -4150,6 +4185,9 @@ function currentWaterIsDangerous() {
     deathState.timer = 0;
     deathState.fadeStarted = false;
     deathState.overlayShown = false;
+    deathState.decisionActive = false;
+    deathState.reviving = false;
+    deathState.reviveTimer = 0;
     deathState.bloodTimer = 0;
     woundGaspTimer = 0;
     extractionState.active = false;
@@ -4158,7 +4196,7 @@ function currentWaterIsDangerous() {
     hideHuntDecisionOverlay();
     document.body.classList.remove('dead', 'low-health', 'wounded', 'death-cinematic', 'death-fading', 'death-card-ready', 'stage-cleared', 'hunt-complete-fade', 'extraction-fade');
     document.body.classList.add('quick-mode');
-    deathOverlay.classList.remove('show', 'ready', 'cinematic');
+    deathOverlay.classList.remove('show', 'ready', 'cinematic', 'awaiting-choice', 'reviving');
     upgradeOverlay.classList.remove('show');
     document.body.classList.remove('upgrade-open');
     deathStats.textContent = '';
@@ -4167,8 +4205,8 @@ function currentWaterIsDangerous() {
     setKillHud(false, 0);
     hideDeathShare();
     renderBriefingShare(null);
-    deathTitle.textContent = 'RESPAWNING...';
-    deathText.textContent = 'Respawning...';
+    deathTitle.textContent = 'DOWNED';
+    deathText.textContent = 'Respond to Mission Command';
     deathFill.style.width = '0%';
     disableOverlay.classList.remove('show');
     disableFill.style.width = '0%';
@@ -4274,6 +4312,7 @@ function currentWaterIsDangerous() {
   briefingOk.addEventListener('click', acknowledgeObjectiveBriefing);
   if (briefingShareButton) briefingShareButton.addEventListener('click', () => shareRunFromButton(briefingShareButton));
   if (deathShare) deathShare.addEventListener('click', () => shareRunFromButton(deathShare));
+  if (deathContinue) deathContinue.addEventListener('click', acceptDeathRevive);
   deathGiveUp.addEventListener('click', giveUpMission);
   if (huntAccept) huntAccept.addEventListener('click', acceptHuntDecision);
   if (huntDecline) huntDecline.addEventListener('click', declineHuntDecision);
@@ -4298,6 +4337,18 @@ function currentWaterIsDangerous() {
     player.pitch = Math.max(-cap, Math.min(cap, player.pitch));
   });
   document.addEventListener('keydown', (e) => {
+    if (deathState.active && deathState.decisionActive) {
+      if (e.code === 'Enter' || e.code === 'KeyY') {
+        e.preventDefault();
+        acceptDeathRevive();
+        return;
+      }
+      if (e.code === 'Escape' || e.code === 'KeyN') {
+        e.preventDefault();
+        giveUpMission();
+        return;
+      }
+    }
     if (mission.huntDecisionActive && mission.huntDecisionShown) {
       if (e.code === 'Enter' || e.code === 'KeyY') {
         e.preventDefault();
