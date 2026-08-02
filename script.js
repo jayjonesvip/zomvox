@@ -277,11 +277,12 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.23');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.24');
   const COMMS_DROP_IN = configString(COMMS_CONFIG, 'dropIn', 'You are on {islandName}. The mission is to kill {zombieTotal} infected.');
   const COMMS_HUNT_COMPLETE = configString(COMMS_CONFIG, 'huntComplete', '{islandName} is clear. Ready for the next mission?');
   const COMMS_BITTEN = configString(COMMS_CONFIG, 'bitten', 'You are bit. Keep your distance and finish the objective.');
   const COMMS_DEATH = configString(COMMS_CONFIG, 'death', 'Can you hear me? Do you want to keep going?');
+  const COMMS_POST_REVIVAL = configString(COMMS_CONFIG, 'postRevival', 'Glad you are back. Focus on the objective.');
   const COMMS_FEW_MORE = configString(COMMS_CONFIG, 'fewMore', 'Just a few more.');
   const COMMS_LOW_HEALTH = configString(COMMS_CONFIG, 'lowHealth', 'Retreat and treat your wounds.');
   const COMMS_LONG_RANGE = configString(COMMS_CONFIG, 'longRange', 'Nice shot.');
@@ -464,6 +465,13 @@
         if (!radioComms.classList.contains('show')) radioComms.hidden = true;
       }, 180);
     }, duration * 1000);
+  }
+
+  function hideRadioComms() {
+    if (!radioComms) return;
+    clearTimeout(radioCommsTimer);
+    radioComms.classList.remove('show');
+    radioComms.hidden = true;
   }
 
   function formatCommsMessage(template) {
@@ -1452,6 +1460,7 @@
   function beginExtractionRedeploy() {
     const next = chooseNextHunt();
     hideHuntDecisionOverlay();
+    hideRadioComms();
     mission.huntDecisionActive = false;
     mission.huntDecisionTimer = 0;
     mission.huntDecisionShown = false;
@@ -1471,6 +1480,7 @@
   function declineHuntDecision() {
     sound('confirm');
     hideHuntDecisionOverlay();
+    hideRadioComms();
     mission.huntDecisionActive = false;
     mission.huntDecisionTimer = 0;
     mission.huntDecisionShown = false;
@@ -3017,6 +3027,7 @@
     sound('confirm');
     if (!touchMode) requestPointerLockSafe();
     deathState.decisionActive = false;
+    hideRadioComms();
     deathState.reviving = true;
     deathState.reviveTimer = 0;
     hideHuntDecisionOverlay();
@@ -3077,6 +3088,7 @@
       return keep;
     });
     showToast('Revived at the old marker. Deaths: ' + player.deaths);
+    showRadioComms(formatCommsMessage(COMMS_POST_REVIVAL), 4.2);
     requestPointerLockAfterUi();
   }
 
@@ -3098,6 +3110,7 @@
     mission.huntDecisionActive = false;
     mission.huntDecisionTimer = 0;
     mission.huntDecisionShown = false;
+    hideRadioComms();
     hideHuntDecisionOverlay();
     woundGaspTimer = 0;
     locked = false;

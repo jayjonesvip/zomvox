@@ -489,7 +489,7 @@ body::after{
   #reserveText,.ammoSlash{font-size:11px}
   #perkHud{right:calc(10px + env(safe-area-inset-right));top:calc(52px + env(safe-area-inset-top));width:112px;gap:3px}
   .fieldPerkRow{max-width:112px;padding:3px 5px;border-right-width:1px;border-radius:3px;font-size:7px;letter-spacing:.08em}
-  #missionPanel{display:block;left:calc(10px + env(safe-area-inset-left));top:calc(57px + env(safe-area-inset-top));min-width:0;max-width:150px;padding:4px 7px}
+  #missionPanel{display:block;left:calc(10px + env(safe-area-inset-left));top:calc(12px + env(safe-area-inset-top));min-width:0;max-width:150px;padding:4px 7px}
   .missionLabel,#objectiveMeta{display:none}
   #objectiveText{font-size:8px;white-space:normal}
   #menu{

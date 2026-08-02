@@ -17,7 +17,7 @@ window.ZOMVOX_CONFIG = {
     Bump this when you make visible changes so you can tell the browser
     loaded the newest version.
   */
-  buildVersion: '2026.08.01.23',
+  buildVersion: '2026.08.01.24',
 
   /*
     Seed used for deterministic world generation.
@@ -364,6 +364,7 @@ window.ZOMVOX_CONFIG = {
     huntComplete: '{islandName} is clear. Ready for the next mission?',
     bitten: 'You are bit. Keep your distance and finish the objective.',
     death: 'Can you hear me? Do you want to keep going?',
+    postRevival: 'Glad you are back. Focus on the objective.',
     fewMore: 'Just a few more.',
     lowHealth: 'Retreat and treat your wounds.',
     longRange: 'Nice shot.',
