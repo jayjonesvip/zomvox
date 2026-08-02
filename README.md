@@ -50,7 +50,7 @@ ZomVox is listed on [IGDB](https://www.igdb.com/) and [DEAD.ARMY](https://dead.a
 - Optional fog through code.
 - Dangerous water enabled by default through code.
 - Damage flash and screen shake when the player is hit.
-- Dramatic `YOU DIED!` overlay with run stats, retry, and main-menu options.
+- Black-screen death fade with a short `RESPAWNING...` countdown, simple run stats, and a quit option.
 - Menu-safe gameplay pause so the player does not take damage before pressing Play.
 
 ## Game Flow
@@ -114,7 +114,7 @@ Common tuning options live in `config.js` under `window.ZOMVOX_CONFIG`. Edit tha
 
 ```js
 window.ZOMVOX_CONFIG = {
-  buildVersion: '2026.08.01.06',
+  buildVersion: '2026.08.01.07',
   initialSeed: 729641,
 
   environment: {
@@ -215,7 +215,7 @@ Other sections in `config.js` expose safe defaults for:
 - `enemies`: base enemy cap, horde escalation values, and close-range zombie moan radius/voice/timing controls.
 - `mission`: legacy/story mission tuning plus insertion drop timing and first wave size. Frontier Hunt currently rolls random hunt seeds and targets at runtime.
 - `pickups`: ammo and C4 pickup amounts/drop chances. Health pickups are intentionally disabled.
-- `timers`: death overlay delay, world rebuild meter duration, heartbeat interval, and day/night cycle length.
+- `timers`: auto-respawn countdown, world rebuild meter duration, heartbeat interval, and day/night cycle length.
 - `audio.files`: optional file-backed sounds for weapon, impact, pickup, UI, zombie, and ambient cues. File cues are tried first when configured; blank cues fall back to procedural audio.
 - `audio.playbackRates`: optional per-cue file playback speed multipliers, such as `shoot: 1.15` to make a stock asset feel snappier.
 
