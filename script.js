@@ -36,6 +36,8 @@
   const fieldSignal = $('fieldSignal');
   const fieldStatusText = $('fieldStatusText');
   const fieldLocationName = $('fieldLocationName');
+  const fieldObjectiveText = $('fieldObjectiveText');
+  const fieldPerksList = $('fieldPerksList');
   const objectiveText = $('objectiveText');
   const objectiveMeta = $('objectiveMeta');
   const killHud = $('killHud');
@@ -275,7 +277,7 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.20');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.21');
   const COMMS_DROP_IN = configString(COMMS_CONFIG, 'dropIn', 'You are on {islandName}. The mission is to kill {zombieTotal} infected.');
   const COMMS_HUNT_COMPLETE = configString(COMMS_CONFIG, 'huntComplete', '{islandName} is clear. Ready for the next mission?');
   const COMMS_BITTEN = configString(COMMS_CONFIG, 'bitten', 'You are bit. Keep your distance and finish the objective.');
@@ -520,6 +522,19 @@
     return PERK_CHOICES
       .filter(choice => activePerks[choice.id])
       .map(choice => choice.name);
+  }
+
+  function renderFieldPerks() {
+    if (!fieldPerksList) return;
+    const perks = activePerkNames();
+    fieldPerksList.innerHTML = '';
+    fieldPerksList.hidden = perks.length === 0;
+    for (const perk of perks) {
+      const row = document.createElement('div');
+      row.className = 'fieldPerkRow';
+      row.textContent = perk;
+      fieldPerksList.appendChild(row);
+    }
   }
 
   function availablePerkChoices() {
@@ -1332,7 +1347,7 @@
     const afterOk = mission.briefingAfterOk;
     mission.briefingAfterOk = null;
     if (afterOk) afterOk();
-    if (!touchMode && menu.style.display === 'none' && !deathState.active && !worldRebuildState.active && !isUpgradeOpen()) requestPointerLockSafe();
+    requestPointerLockAfterUi();
   }
 
   function openPerkChoice(afterChoice, options = {}) {
@@ -1373,7 +1388,7 @@
     const afterChoice = mission.upgradeAfterChoice;
     mission.upgradeAfterChoice = null;
     if (afterChoice) afterChoice();
-    if (!touchMode && menu.style.display === 'none' && !deathState.active && !worldRebuildState.active && !isBriefingOpen() && !isUpgradeOpen()) requestPointerLockSafe();
+    requestPointerLockAfterUi();
   }
 
   function updateWorldRebuild(dt) {
@@ -2999,6 +3014,7 @@
   function acceptDeathRevive() {
     if (!deathState.active || !deathState.decisionActive || deathState.reviving) return;
     sound('confirm');
+    if (!touchMode) requestPointerLockSafe();
     deathState.decisionActive = false;
     deathState.reviving = true;
     deathState.reviveTimer = 0;
@@ -3060,6 +3076,7 @@
       return keep;
     });
     showToast('Revived at the old marker. Deaths: ' + player.deaths);
+    requestPointerLockAfterUi();
   }
 
   function returnToMainMenu(message = 'Awaiting orders.') {
@@ -3780,8 +3797,11 @@
     document.body.classList.toggle('stage-cleared', mission.completed);
     document.body.classList.add('quick-mode');
     const count = Math.max(0, currentInfectedGoal() - player.kills);
+    const text = mission.completed ? 'Objective: clear' : `Objective: ${count} remain`;
     setKillHud(false, count);
-    objectiveText.textContent = mission.completed ? 'Objective: clear' : `Objective: ${count} remain`;
+    objectiveText.textContent = text;
+    if (fieldObjectiveText) fieldObjectiveText.textContent = text;
+    renderFieldPerks();
     objectiveMeta.textContent = '';
   }
 
@@ -4275,7 +4295,7 @@ function currentWaterIsDangerous() {
     if (touchMode) {
       return;
     }
-    requestPointerLockSafe();
+    requestPointerLockAfterUi();
   }
 
   function startRandomQuickHunt() {
@@ -4346,6 +4366,28 @@ function currentWaterIsDangerous() {
       const result = canvas.requestPointerLock();
       if (result && typeof result.catch === 'function') result.catch(() => {});
     } catch (_) {}
+  }
+
+  function canRequestGameplayPointerLock() {
+    return !touchMode &&
+      menu.style.display === 'none' &&
+      !deathState.active &&
+      !worldRebuildState.active &&
+      !extractionState.active &&
+      !mission.huntDecisionActive &&
+      !isBriefingOpen() &&
+      !isUpgradeOpen();
+  }
+
+  function requestPointerLockAfterUi() {
+    if (!canRequestGameplayPointerLock()) return;
+    requestPointerLockSafe();
+    requestAnimationFrame(() => {
+      if (canRequestGameplayPointerLock() && document.pointerLockElement !== canvas) requestPointerLockSafe();
+    });
+    setTimeout(() => {
+      if (canRequestGameplayPointerLock() && document.pointerLockElement !== canvas) requestPointerLockSafe();
+    }, 80);
   }
   play.addEventListener('click', startRandomQuickHunt);
   if (controlsButton) controlsButton.addEventListener('click', openControlsModal);
