@@ -17,7 +17,7 @@ window.ZOMVOX_CONFIG = {
     Bump this when you make visible changes so you can tell the browser
     loaded the newest version.
   */
-  buildVersion: '2026.08.01.16',
+  buildVersion: '2026.08.01.18',
 
   /*
     Seed used for deterministic world generation.
@@ -361,7 +361,7 @@ window.ZOMVOX_CONFIG = {
       Use an empty string '' to disable a specific transmission.
     */
     dropIn: 'You are on {islandName}. The mission is to kill {zombieTotal} infected.',
-    huntComplete: '{islandName} is clear. Good work, but there is more to do. Do you accept?',
+    huntComplete: '{islandName} is clear. Ready for the next mission?',
     bitten: 'You are bit. Keep your distance and finish the objective.',
     death: 'Can you hear me? Do you want to keep going?',
     fewMore: 'Just a few more.',
