@@ -277,7 +277,7 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.24');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.25');
   const COMMS_DROP_IN = configString(COMMS_CONFIG, 'dropIn', 'You are on {islandName}. The mission is to kill {zombieTotal} infected.');
   const COMMS_HUNT_COMPLETE = configString(COMMS_CONFIG, 'huntComplete', '{islandName} is clear. Ready for the next mission?');
   const COMMS_BITTEN = configString(COMMS_CONFIG, 'bitten', 'You are bit. Keep your distance and finish the objective.');
@@ -455,6 +455,7 @@
   function showRadioComms(message, duration = 3.4) {
     if (!radioComms || !radioCommsText) return;
     if (!message) return;
+    sound('briefing');
     radioCommsText.textContent = message;
     radioComms.hidden = false;
     radioComms.classList.add('show');
