@@ -85,6 +85,7 @@
           addTone(54, 0.01, 0, 0.024, 0.005);
           break;
         case 'ambientDunes':
+        case 'ambientDustfield':
           addNoise('pink', 'bandpass', 980, 1.05, 0.075, -0.25, 0.043, 0.024, 0.033, 520);
           addNoise('white', 'highpass', 3300, 0.8, 0.008, 0.55, 0.087, 0.003, 0.051, 700);
           break;
@@ -115,7 +116,7 @@
       if (first) return this.rng.range(0.7, 2.4);
       if (this.name === 'ambientForest') return this.rng.range(2.4, 5.8);
       if (this.name === 'ambientSwamp') return this.rng.range(2.0, 4.8);
-      if (this.name === 'ambientDunes' || this.name === 'ambientTundra') return this.rng.range(3.2, 7.2);
+      if (this.name === 'ambientDunes' || this.name === 'ambientDustfield' || this.name === 'ambientTundra') return this.rng.range(3.2, 7.2);
       return this.rng.range(3.8, 8.5);
     }
 
@@ -160,7 +161,7 @@
         : roll < 0.84 ? windGustVoice(0.65) : insectVoice(0.65);
     } else if (name === 'ambientSwamp') {
       voice = roll < 0.46 ? frogVoice(0.9) : roll < 0.82 ? insectVoice(0.9) : zombieAmbientVoice(0.42);
-    } else if (name === 'ambientDunes') {
+    } else if (name === 'ambientDunes' || name === 'ambientDustfield') {
       voice = roll < 0.66 ? windGustVoice(0.9) : roll < 0.84 ? distantGunfireVoice() : distantExplosionVoice();
     } else if (name === 'ambientRocky') {
       voice = roll < 0.42 ? windGustVoice(0.72) : roll < 0.65 ? rumbleVoice(0.62)

@@ -167,7 +167,9 @@
     ICE: 32,
     PINE_LEAF: 33,
     CLOUD: 34,
-    SPIRE_METAL: 41
+    SPIRE_METAL: 41,
+    ASPHALT: 44,
+    RUNWAY_MARK: 45
   };
 
   const CHUNK_SIZE = Math.max(4, Math.floor(configNumber(WORLD_CONFIG, 'chunkSize', 16)));
@@ -217,7 +219,7 @@
   const INSERTION_FALL_SPEED = Math.max(2, configNumber(MISSION_CONFIG, 'insertionFallSpeed', 5.8));
   const FIRST_WAVE_SIZE = Math.max(0, Math.floor(configNumber(MISSION_CONFIG, 'firstWaveSize', 3)));
   const INITIAL_SEED = Math.floor(configNumber(CONFIG, 'initialSeed', 729641));
-  const QUICK_BIOMES = ['forest', 'dunes', 'rocky', 'swamp', 'ashlands', 'tundra'];
+  const QUICK_BIOMES = ['forest', 'dunes', 'rocky', 'swamp', 'ashlands', 'tundra', 'dustfield'];
   const AMMO_PICKUP_ROUNDS = Math.max(1, Math.floor(configNumber(PICKUP_CONFIG, 'ammoRounds', 6)));
   const MAP_AMMO_PICKUP_CHANCE = Math.max(0, Math.min(1, configNumber(PICKUP_CONFIG, 'mapAmmoChance', 0.28)));
   const ENEMY_C4_DROP_CHANCE = Math.max(0, Math.min(1, configNumber(PICKUP_CONFIG, 'enemyC4DropChance', 0.06)));
@@ -241,6 +243,8 @@
   let rebuildQueued = false;
   let fullRebuildQueued = false;
   let worldBlockCount = 0;
+  let dustfieldPlanCache = null;
+  let dustfieldPlanSeed = null;
 
   const player = {
     pos: [0, 16, 0],
@@ -289,7 +293,7 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.31');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.32');
   const COMMS_DROP_IN = configString(COMMS_CONFIG, 'dropIn', 'You are on {islandName}. The mission is to kill {zombieTotal} infected.');
   const COMMS_HUNT_COMPLETE = configString(COMMS_CONFIG, 'huntComplete', '{islandName} is clear. Ready for the next mission?');
   const COMMS_BITTEN = configString(COMMS_CONFIG, 'bitten', 'You are bit. Keep distance and survive one minute to recover.');
@@ -1209,7 +1213,7 @@
 
   function normalizeBiome(value) {
     const biome = String(value || 'forest').trim().toLowerCase();
-    return ['forest', 'dunes', 'rocky', 'swamp', 'ashlands', 'tundra'].includes(biome) ? biome : 'forest';
+    return QUICK_BIOMES.includes(biome) ? biome : 'forest';
   }
 
   function monthlySeedPrefix(date = new Date()) {
@@ -1248,6 +1252,7 @@
 
   function currentBiomeLabel(value = currentBiome()) {
     const biome = normalizeBiome(value);
+    if (biome === 'dustfield') return 'Dustfield';
     return biome.charAt(0).toUpperCase() + biome.slice(1);
   }
 
@@ -1268,7 +1273,8 @@
     rocky: { label: 'Rocky', requirement: 'Survive 5:00', test: progress => progress.stats.bestSurvivalSeconds >= 300 },
     swamp: { label: 'Swamp', requirement: 'Kill 50 in one hunt', test: progress => progress.stats.bestKills >= 50 },
     ashlands: { label: 'Ashlands', requirement: 'Earn a 5-kill streak', test: progress => progress.stats.bestCombo >= 5 },
-    tundra: { label: 'Tundra', requirement: '100 total kills', test: progress => progress.stats.totalKills >= 100 }
+    tundra: { label: 'Tundra', requirement: '100 total kills', test: progress => progress.stats.totalKills >= 100 },
+    dustfield: { label: 'Dustfield', requirement: 'Unlocked' }
   };
 
   function defaultQuickProgress() {
@@ -1893,6 +1899,9 @@
       if(t < 40.5) return vec3(0.82, 0.86, 0.72); /* zombie teeth */
       if(t < 41.5) return vec3(0.68, 0.74, 0.76) * (0.78 + (sin(uTime * 2.4) * 0.5 + 0.5) * 0.20); /* active spire metal */
       if(t < 42.5) return vec3(0.24, 0.62, 1.00); /* perk blue */
+      if(t < 43.5) return vec3(1.0, 0.45, 0.18); /* warm particles */
+      if(t < 44.5) return vec3(0.035, 0.038, 0.040); /* asphalt */
+      if(t < 45.5) return vec3(0.82, 0.82, 0.72); /* runway paint */
       return vec3(1.0, 0.45, 0.18); /* particles */
     }
     void main(){
@@ -2069,7 +2078,8 @@
   function blocksMovement(type) { return !!type && type !== BLOCK.WATER && type !== BLOCK.LEAF && type !== BLOCK.PINE_LEAF && type !== BLOCK.CLOUD; }
   function isAutoStepSurface(type) {
     return type === BLOCK.GRASS || type === BLOCK.DIRT || type === BLOCK.STONE ||
-      type === BLOCK.SAND || type === BLOCK.MUD || type === BLOCK.ASH || type === BLOCK.SNOW || type === BLOCK.ICE;
+      type === BLOCK.SAND || type === BLOCK.MUD || type === BLOCK.ASH || type === BLOCK.SNOW ||
+      type === BLOCK.ICE || type === BLOCK.ASPHALT || type === BLOCK.RUNWAY_MARK;
   }
 
   function seededHash(x, z) {
@@ -2089,7 +2099,72 @@
     for (let i = 0; i < 5; i++) { value += noise2(x * freq, z * freq) * amp; freq *= 2.02; amp *= 0.52; }
     return value;
   }
+
+  function dustfieldPlan() {
+    if (dustfieldPlanCache && dustfieldPlanSeed === currentSeed) return dustfieldPlanCache;
+    const eastWest = seededHash(71.3, 912.4) > .5;
+    const dirX = eastWest ? 1 : 0;
+    const dirZ = eastWest ? 0 : 1;
+    const sideX = -dirZ;
+    const sideZ = dirX;
+    const span = WORLD_MAX - WORLD_MIN + 1;
+    const halfLen = Math.max(26, Math.floor(Math.min(46, span * .41)));
+    const halfWidth = 4;
+    const side = seededHash(411.2, -93.7) > .5 ? 1 : -1;
+    const cx = Math.floor((seededHash(18.4, -62.1) - .5) * 8);
+    const cz = Math.floor((seededHash(-55.8, 124.6) - .5) * 8);
+    const elevation = WATER_LEVEL + 5;
+    const towerAlong = -halfLen + 17 + Math.floor(seededHash(32.4, 118.2) * 7);
+    const hangarAlong = halfLen - 24 - Math.floor(seededHash(-82.4, 32.2) * 9);
+    dustfieldPlanCache = {
+      cx, cz, dirX, dirZ, sideX, sideZ, side, halfLen, halfWidth, elevation,
+      tower: dustfieldPoint(cx, cz, dirX, dirZ, sideX, sideZ, towerAlong, side * (halfWidth + 8)),
+      hangar: dustfieldPoint(cx, cz, dirX, dirZ, sideX, sideZ, hangarAlong, side * (halfWidth + 10))
+    };
+    dustfieldPlanSeed = currentSeed;
+    return dustfieldPlanCache;
+  }
+
+  function dustfieldPoint(cx, cz, dirX, dirZ, sideX, sideZ, along, across) {
+    return {
+      x: Math.round(cx + dirX * along + sideX * across),
+      z: Math.round(cz + dirZ * along + sideZ * across)
+    };
+  }
+
+  function dustfieldLocal(x, z, plan = dustfieldPlan()) {
+    const dx = x - plan.cx;
+    const dz = z - plan.cz;
+    return {
+      along: dx * plan.dirX + dz * plan.dirZ,
+      across: dx * plan.sideX + dz * plan.sideZ
+    };
+  }
+
+  function dustfieldRunwayAt(x, z, margin = 0, plan = dustfieldPlan()) {
+    const local = dustfieldLocal(x, z, plan);
+    return Math.abs(local.along) <= plan.halfLen + margin &&
+      Math.abs(local.across) <= plan.halfWidth + margin;
+  }
+
+  function dustfieldRectAt(x, z, center, rx, rz, margin = 0) {
+    return Math.abs(x - center.x) <= rx + margin && Math.abs(z - center.z) <= rz + margin;
+  }
+
+  function dustfieldProtectedAt(x, z, margin = 0, plan = dustfieldPlan()) {
+    return dustfieldRunwayAt(x, z, margin, plan) ||
+      dustfieldRectAt(x, z, plan.tower, 4, 4, margin) ||
+      dustfieldRectAt(x, z, plan.hangar, 6, 4, margin);
+  }
+
   function terrainHeight(x, z) {
+    if (currentBiome() === 'dustfield') {
+      const plan = dustfieldPlan();
+      if (dustfieldProtectedAt(x, z, 2, plan)) return plan.elevation;
+      const drift = Math.floor((noise2(x * .055 + 330, z * .055 - 210) - .5) * 3);
+      const broad = Math.floor((noise2(x * .018 - 80, z * .018 + 460) - .5) * 2);
+      return Math.max(WATER_LEVEL + 3, Math.min(MAX_Y - 10, plan.elevation + drift + broad));
+    }
     const broad = fbm(x * 0.45 + 500, z * 0.45 - 200);
     const detail = fbm(x, z);
     let h = Math.floor(TERRAIN_BASE_HEIGHT + detail * TERRAIN_DETAIL_AMOUNT + broad * TERRAIN_BROAD_AMOUNT);
@@ -2256,6 +2331,7 @@
     if (lavaShore) return { top: BLOCK.STONE, near: BLOCK.STONE };
     const roll = seededHash(x * 2.71 + 19, z * 3.43 - 11);
     if (biome === 'dunes') return { top: roll < .95 ? BLOCK.SAND : BLOCK.STONE, near: BLOCK.SAND };
+    if (biome === 'dustfield') return { top: roll < .96 ? BLOCK.SAND : BLOCK.STONE, near: BLOCK.SAND };
     if (biome === 'rocky') return { top: roll < .95 ? BLOCK.STONE : BLOCK.GRASS, near: roll < .95 ? BLOCK.STONE : BLOCK.DIRT };
     if (biome === 'swamp') return { top: roll < .72 || beach ? BLOCK.MUD : BLOCK.GRASS, near: roll < .72 || beach ? BLOCK.MUD : BLOCK.DIRT };
     if (biome === 'ashlands') return { top: roll < .82 ? BLOCK.ASH : BLOCK.STONE, near: roll < .82 ? BLOCK.ASH : BLOCK.STONE };
@@ -2352,6 +2428,99 @@
     }
   }
 
+  function genSetChunkBlock(x, y, z, type, x0, z0) {
+    if (x < x0 || x >= x0 + CHUNK_SIZE || z < z0 || z >= z0 + CHUNK_SIZE) return;
+    genSetBlock(x, y, z, type);
+  }
+
+  function dustfieldRunwayBlock(x, z, plan = dustfieldPlan()) {
+    const local = dustfieldLocal(x, z, plan);
+    const alongFromStart = Math.floor(local.along + plan.halfLen);
+    const absAcross = Math.abs(local.across);
+    const endBar = Math.abs(Math.abs(local.along) - (plan.halfLen - 4)) <= .5;
+    const edgeStripe = absAcross === plan.halfWidth && alongFromStart % 8 < 5;
+    const centerStripe = absAcross === 0 && alongFromStart % 10 < 5;
+    return endBar || edgeStripe || centerStripe ? BLOCK.RUNWAY_MARK : BLOCK.ASPHALT;
+  }
+
+  function stampDustfieldTower(plan, x0, z0) {
+    const baseY = plan.elevation + 1;
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dz = -1; dz <= 1; dz++) {
+        for (let y = 0; y < 6; y++) {
+          genSetChunkBlock(plan.tower.x + dx, baseY + y, plan.tower.z + dz, BLOCK.METAL, x0, z0);
+        }
+      }
+    }
+    for (let dx = -2; dx <= 2; dx++) {
+      for (let dz = -2; dz <= 2; dz++) {
+        for (let y = 6; y <= 8; y++) {
+          const edge = Math.abs(dx) === 2 || Math.abs(dz) === 2;
+          if (!edge) continue;
+          const windowBand = y === 7 && (Math.abs(dx) + Math.abs(dz)) % 2 === 0;
+          genSetChunkBlock(plan.tower.x + dx, baseY + y, plan.tower.z + dz, windowBand ? BLOCK.LAMP : BLOCK.BRICK, x0, z0);
+        }
+        genSetChunkBlock(plan.tower.x + dx, baseY + 9, plan.tower.z + dz, BLOCK.METAL, x0, z0);
+      }
+    }
+    genSetChunkBlock(plan.tower.x, baseY + 10, plan.tower.z, BLOCK.RED_LIGHT, x0, z0);
+  }
+
+  function stampDustfieldHangar(plan, x0, z0) {
+    const baseY = plan.elevation + 1;
+    const rx = 5, rz = 3, height = 4;
+    const openDx = plan.sideX ? -Math.sign(plan.sideX * plan.side) * rx : null;
+    const openDz = plan.sideZ ? -Math.sign(plan.sideZ * plan.side) * rz : null;
+    for (let dx = -rx; dx <= rx; dx++) {
+      for (let dz = -rz; dz <= rz; dz++) {
+        genSetChunkBlock(plan.hangar.x + dx, plan.elevation, plan.hangar.z + dz, BLOCK.ASPHALT, x0, z0);
+        const edge = Math.abs(dx) === rx || Math.abs(dz) === rz;
+        if (!edge) continue;
+        const entrance = (openDx !== null && dx === openDx && Math.abs(dz) <= 1) ||
+          (openDz !== null && dz === openDz && Math.abs(dx) <= 1);
+        for (let y = 0; y < height; y++) {
+          if (entrance && y < 3) continue;
+          const worn = y === 2 && seededHash(plan.hangar.x + dx * 5 + y, plan.hangar.z + dz * 7) > .82;
+          genSetChunkBlock(plan.hangar.x + dx, baseY + y, plan.hangar.z + dz, worn ? BLOCK.METAL : BLOCK.BRICK, x0, z0);
+        }
+      }
+    }
+    for (let dx = -rx; dx <= rx; dx++) {
+      for (let dz = -rz; dz <= rz; dz++) {
+        genSetChunkBlock(plan.hangar.x + dx, baseY + height, plan.hangar.z + dz, BLOCK.METAL, x0, z0);
+      }
+    }
+  }
+
+  function stampDustfieldDebris(plan, x0, z0) {
+    for (let i = 0; i < 11; i++) {
+      const ox = Math.floor((seededHash(i * 19.1 + 7, plan.hangar.x) - .5) * 18);
+      const oz = Math.floor((seededHash(plan.hangar.z, i * 23.7 - 4) - .5) * 14);
+      const x = plan.hangar.x + ox;
+      const z = plan.hangar.z + oz;
+      if (dustfieldRunwayAt(x, z, 1, plan) || dustfieldRectAt(x, z, plan.hangar, 5, 3, 1)) continue;
+      const stack = 1 + Math.floor(seededHash(x * 3.2 + i, z * 2.9 - i) * 2.2);
+      const type = seededHash(x - i * 4, z + i * 6) > .38 ? BLOCK.WOOD : BLOCK.METAL;
+      for (let y = 0; y < stack; y++) genSetChunkBlock(x, plan.elevation + 1 + y, z, type, x0, z0);
+    }
+  }
+
+  function stampDustfieldFeaturesForChunk(x0, z0) {
+    const plan = dustfieldPlan();
+    // Dustfield landmarks are stamped per chunk from one seeded plan. This
+    // keeps the airstrip deterministic without a costly whole-world pass.
+    for (let lx = 0; lx < CHUNK_SIZE; lx++) {
+      for (let lz = 0; lz < CHUNK_SIZE; lz++) {
+        const x = x0 + lx;
+        const z = z0 + lz;
+        if (dustfieldRunwayAt(x, z, 0, plan)) genSetBlock(x, plan.elevation, z, dustfieldRunwayBlock(x, z, plan));
+      }
+    }
+    stampDustfieldTower(plan, x0, z0);
+    stampDustfieldHangar(plan, x0, z0);
+    stampDustfieldDebris(plan, x0, z0);
+  }
+
   function generateChunk(cx, cz) {
     if (!chunkInWorld(cx, cz)) return;
     const ck = chunkKey(cx, cz);
@@ -2373,14 +2542,15 @@
           else if (y > h - 4) type = surface.near;
           genSetBlock(x, y, z, type);
         }
-        // Dunes keep low basins dry. Tundra freezes low basins into solid ice
-        // so players slide over them instead of clipping through water.
-        if (biome !== 'dunes' && h < WATER_LEVEL) {
+        // Dunes and Dustfield keep low basins dry. Tundra freezes low basins
+        // into solid ice so players slide over them instead of clipping.
+        if (biome !== 'dunes' && biome !== 'dustfield' && h < WATER_LEVEL) {
           const fill = biome === 'tundra' ? BLOCK.ICE : BLOCK.WATER;
           for (let y = h + 1; y <= WATER_LEVEL; y++) genSetBlock(x, y, z, fill);
         }
       }
     }
+    if (biome === 'dustfield') stampDustfieldFeaturesForChunk(x0, z0);
     // Props are limited away from chunk borders so chunks can be generated/unloaded cleanly.
     for (let lx = 2; lx < CHUNK_SIZE - 2; lx++) {
       for (let lz = 2; lz < CHUNK_SIZE - 2; lz++) {
@@ -2391,6 +2561,8 @@
         if (biome === 'forest' && propRoll > 0.982) {
           growTree(x, h, z, BLOCK.WOOD, true, 6, 3);
         } else if (biome === 'dunes' && propRoll > 0.972) {
+          growSaguaro(x, h, z);
+        } else if (biome === 'dustfield' && propRoll > 0.994 && !dustfieldProtectedAt(x, z, 3)) {
           growSaguaro(x, h, z);
         } else if (biome === 'rocky' && propRoll > 0.992) {
           //growTree(x, h, z, BLOCK.WOOD, true);
@@ -2469,7 +2641,8 @@
     if (type === BLOCK.SNOW) return 'snow';
     if (type === BLOCK.ICE) return 'ice';
     if (type === BLOCK.WATER) return 'water';
-    if (type === BLOCK.STONE || type === BLOCK.BRICK || type === BLOCK.METAL || type === BLOCK.SPIRE_METAL) return 'stone';
+    if (type === BLOCK.STONE || type === BLOCK.BRICK || type === BLOCK.METAL || type === BLOCK.SPIRE_METAL ||
+      type === BLOCK.ASPHALT || type === BLOCK.RUNWAY_MARK) return 'stone';
     if (type === BLOCK.WOOD || type === BLOCK.DEAD_WOOD || type === BLOCK.CACTUS) return 'wood';
     if (type === BLOCK.ASH || currentBiome() === 'ashlands') return 'ash';
     if (type === BLOCK.DIRT) return 'dirt';

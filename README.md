@@ -27,7 +27,8 @@ ZomVox is listed on [IGDB](https://www.igdb.com/) and [DEAD.ARMY](https://dead.a
 - Branded ZomVox splash screen using `assets/zomvox-splash.png`.
 - Splash screen build label using `BUILD_VERSION` plus the deployed document timestamp.
 - Favicon assets for browser tabs and installed shortcuts.
-- Procedural voxel terrain with themed islands: forest, dunes, rocky, swamp, ashlands, and tundra.
+- Procedural voxel terrain with themed islands: forest, dunes, rocky, swamp, ashlands, tundra, and Dustfield.
+- Dustfield adds a mostly flat desert safe-haven island with a long asphalt runway, runway markings, a control tower, an abandoned building, debris, and sparse cacti.
 - Procedural shader detail on grass block tops, thicker grassy side bands, and textured dirt faces.
 - Visual-only ocean plane around each island so the world reads as an island without generating thousands of extra water blocks.
 - Sand and mud surfaces slow players and zombies by 15%.
@@ -116,7 +117,7 @@ Common tuning options live in `config.js` under `window.ZOMVOX_CONFIG`. Edit tha
 
 ```js
 window.ZOMVOX_CONFIG = {
-  buildVersion: '2026.08.01.31',
+  buildVersion: '2026.08.01.32',
   initialSeed: 729641,
 
   environment: {
@@ -240,7 +241,7 @@ Procedural cue references:
 - Weapon: `shoot`, `empty`, `reloadStart`, `reloadDone`, `explosion`.
 - Impact and feedback: `hit`, `head`, `kill`, `block`, `hurt`, `death`, `toxin`, `heartbeat`.
 - Pickups and UI: `pickupAmmo`, `pickupC4`, `pickup`, `perkEquip`, `confirm`, `briefing`, `objectiveClear`, `wave`.
-- Foley and ambience: `footstep`, `land`, `ambientMenu`, `ambientForest`, `ambientDunes`, `ambientRocky`, `ambientSwamp`, `ambientAshlands`, `ambientTundra`. Footsteps use lightweight heel/toe contacts, surface scuff, grit, splash, and ice/wood accents. Ambience includes procedural beds plus occasional biome/menu sweeteners, mixed below zombie voices so nearby threats stay readable.
+- Foley and ambience: `footstep`, `land`, `ambientMenu`, `ambientForest`, `ambientDunes`, `ambientRocky`, `ambientSwamp`, `ambientAshlands`, `ambientTundra`, `ambientDustfield`. Footsteps use lightweight heel/toe contacts, surface scuff, grit, splash, and ice/wood accents. Ambience includes procedural beds plus occasional biome/menu sweeteners, mixed below zombie voices so nearby threats stay readable.
 - Zombie voices: `zombieMoan` can use `assets/zombieMoan.mp3` with per-type playback speed/reverse behavior when configured in `config.js`; otherwise the procedural fallback is used.
 
 Mission command lines are visual radio comms toasts in the HUD instead of browser text-to-speech, so they stay readable and consistent across devices.
