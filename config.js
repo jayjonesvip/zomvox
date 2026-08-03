@@ -412,7 +412,7 @@ window.ZOMVOX_CONFIG = {
       objectiveClear: 'objectiveClear.mp3',
       wave: '',
       confirm: '',
-      briefing: '',
+      briefing: 'briefing.mp3',
       zombieMoan: 'zombieMoan.mp3',
       ambientMenu: 'ambientMenu.mp3',
       ambientForest: 'ambientForest.mp3',
