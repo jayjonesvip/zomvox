@@ -277,7 +277,7 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.25');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.26');
   const COMMS_DROP_IN = configString(COMMS_CONFIG, 'dropIn', 'You are on {islandName}. The mission is to kill {zombieTotal} infected.');
   const COMMS_HUNT_COMPLETE = configString(COMMS_CONFIG, 'huntComplete', '{islandName} is clear. Ready for the next mission?');
   const COMMS_BITTEN = configString(COMMS_CONFIG, 'bitten', 'You are bit. Keep your distance and finish the objective.');
@@ -473,6 +473,14 @@
     clearTimeout(radioCommsTimer);
     radioComms.classList.remove('show');
     radioComms.hidden = true;
+  }
+
+  function showRadioCommsLater(message, duration = 3.4, delayMs = 1500) {
+    if (!message) return;
+    setTimeout(() => {
+      if (deathState.active || worldRebuildState.active || extractionState.active || isMenuOpen()) return;
+      showRadioComms(message, duration);
+    }, Math.max(0, delayMs));
   }
 
   function formatCommsMessage(template) {
@@ -3089,7 +3097,7 @@
       return keep;
     });
     showToast('Revived at the old marker. Deaths: ' + player.deaths);
-    showRadioComms(formatCommsMessage(COMMS_POST_REVIVAL), 4.2);
+    showRadioCommsLater(formatCommsMessage(COMMS_POST_REVIVAL), 4.2, 1500);
     requestPointerLockAfterUi();
   }
 
