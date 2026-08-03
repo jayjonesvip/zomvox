@@ -37,6 +37,10 @@
   const fieldStatusText = $('fieldStatusText');
   const fieldLocationName = $('fieldLocationName');
   const fieldObjectiveText = $('fieldObjectiveText');
+  const fieldHeader = $('fieldHeader');
+  const streakHud = $('streakHud');
+  const streakText = $('streakText');
+  const streakFill = $('streakFill');
   const perkHud = $('perkHud');
   const objectiveText = $('objectiveText');
   const objectiveMeta = $('objectiveMeta');
@@ -69,7 +73,7 @@
   const upgradeTitle = $('upgradeTitle');
   const upgradeBody = $('upgradeBody');
   const upgradeOptions = $('upgradeOptions');
-  const scoreFeed = $('scoreFeed');
+  const popFeed = $('popFeed');
   const reticle = $('reticle');
   const reloadOverlay = $('reloadOverlay');
   const reloadOverlayFill = $('reloadOverlayFill');
@@ -130,6 +134,9 @@
   const PICKUP_CONFIG = configSection('pickups');
   const TIMER_CONFIG = configSection('timers');
   const COMMS_CONFIG = configSection('comms');
+  const STREAK_REWARD_KILLS = 5;
+  const PICKUP_MAGNET_RADIUS = 4.2;
+  const KILL_CONFIRM_MESSAGES = ['INFECTED DOWN', 'CLEAN HIT', 'TARGET DROPPED', 'THREAT CLEARED'];
 
   const GAME_OPTIONS = {
     timeMode: configString(ENV_CONFIG, 'timeMode', 'cycle'),
@@ -262,7 +269,6 @@
     lifeLongestShot: 0,
     lifeBestCombo: 0,
     lifeStartedAt: performance.now(),
-    score: 0,
     deaths: 0
   };
 
@@ -283,7 +289,7 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.30');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.31');
   const COMMS_DROP_IN = configString(COMMS_CONFIG, 'dropIn', 'You are on {islandName}. The mission is to kill {zombieTotal} infected.');
   const COMMS_HUNT_COMPLETE = configString(COMMS_CONFIG, 'huntComplete', '{islandName} is clear. Ready for the next mission?');
   const COMMS_BITTEN = configString(COMMS_CONFIG, 'bitten', 'You are bit. Keep distance and survive one minute to recover.');
@@ -294,6 +300,7 @@
   const COMMS_LOW_HEALTH = configString(COMMS_CONFIG, 'lowHealth', 'Retreat and treat your wounds.');
   const COMMS_LONG_RANGE = configString(COMMS_CONFIG, 'longRange', 'Nice shot.');
   const COMMS_AMMO_CACHE = configString(COMMS_CONFIG, 'ammoCache', 'Ammo cache marked nearby.');
+  const COMMS_C4_COMBO = configString(COMMS_CONFIG, 'c4Combo', 'Good detonation.');
   let lastFrame = performance.now();
   const cycleStartedAt = performance.now();
   let fpsAvg = 60;
@@ -314,6 +321,8 @@
   let hordeLevel = 0;
   let heartbeatTimer = 0;
   let woundGaspTimer = 0;
+  let streakHudFlashTimer = 0;
+  let extractionFlareTimer = 0;
   let cameraStepOffsetY = 0;
   const analyticsState = { huntStarts: 0, firstShot: false, firstKill: false, bitten: false };
   const DEATH_CINEMATIC_DURATION = 2.65;
@@ -535,12 +544,53 @@
     disableOverlay.classList.remove('show');
   }
 
-  function scorePop(message, cls = '') {
+  function popMessage(message, cls = '') {
+    if (!popFeed) return;
     const el = document.createElement('div');
-    el.className = 'scorePop ' + cls;
+    el.className = 'combatPop ' + cls;
     el.textContent = message;
-    scoreFeed.appendChild(el);
+    popFeed.appendChild(el);
     setTimeout(() => el.remove(), 1150);
+  }
+
+  function randomKillConfirm(enemy) {
+    const seed = (enemy?.x || 0) * 13.7 + (enemy?.z || 0) * 5.3 + player.kills * 2.1;
+    const index = Math.floor(seededHash(seed, player.kills + 9.7) * KILL_CONFIRM_MESSAGES.length) % KILL_CONFIRM_MESSAGES.length;
+    return KILL_CONFIRM_MESSAGES[index];
+  }
+
+  function triggerRecoveredCelebration() {
+    popMessage('RECOVERED', 'pickup recovered');
+    sound('pickupHealth', .72);
+    if (fieldHeader) {
+      fieldHeader.classList.remove('recovered');
+      void fieldHeader.offsetWidth;
+      fieldHeader.classList.add('recovered');
+      setTimeout(() => fieldHeader.classList.remove('recovered'), 1000);
+    }
+  }
+
+  function triggerStreakHudReward() {
+    streakHudFlashTimer = .9;
+    if (streakHud) {
+      streakHud.classList.remove('ready');
+      void streakHud.offsetWidth;
+      streakHud.classList.add('ready');
+    }
+  }
+
+  function updateStreakHud(dt = 0) {
+    if (!streakHud || !streakText || !streakFill) return;
+    if (streakHudFlashTimer > 0) streakHudFlashTimer = Math.max(0, streakHudFlashTimer - dt);
+    const active = gunUnlocked() && mission.phase === PHASE_ZOMBIE_THREAT && !mission.completed && !deathState.active;
+    streakHud.hidden = !active;
+    if (!active) return;
+    const rawStep = player.lifeKills % STREAK_REWARD_KILLS;
+    const showReady = streakHudFlashTimer > 0;
+    const step = showReady ? STREAK_REWARD_KILLS : rawStep;
+    streakText.textContent = 'Streak ' + step + '/' + STREAK_REWARD_KILLS;
+    streakFill.style.width = ((step / STREAK_REWARD_KILLS) * 100).toFixed(1) + '%';
+    streakHud.classList.toggle('ready', showReady);
   }
 
   function resetLifeStats() {
@@ -569,7 +619,6 @@
       kills: player.kills,
       life_kills: player.lifeKills,
       deaths: player.deaths,
-      score: player.score,
       seconds_survived: runSeconds(),
       ...extra
     };
@@ -596,7 +645,6 @@
       kills: 0,
       life_kills: 0,
       deaths: 0,
-      score: 0,
       seconds_survived: 0
     });
   }
@@ -628,7 +676,7 @@
   function nextPerkId(x = 0, z = 0) {
     const available = availablePerkChoices();
     if (!available.length) return null;
-    const index = Math.floor(seededHash(x * 7.7 + player.kills, z * 3.9 - player.score) * available.length) % available.length;
+    const index = Math.floor(seededHash(x * 7.7 + player.kills, z * 3.9 - player.lifeKills) * available.length) % available.length;
     return available[index].id;
   }
 
@@ -640,7 +688,7 @@
       cancelReload();
       setPlayerMagSize(effectiveMagSize(), true);
     }
-    scorePop(choice.name.toUpperCase(), 'pickup perk small');
+    popMessage(choice.name.toUpperCase(), 'pickup perk small');
     showToast('Perk equipped: ' + choice.name, false, 'perk');
     sound('perkEquip');
     trackGameEvent('perk_collected', {
@@ -924,6 +972,7 @@
         player.health = STARTING_HEALTH;
         player.woundRecoveryDuration = 0;
         mission.bittenVoicePlayed = false;
+        triggerRecoveredCelebration();
         showRadioComms(COMMS_RECOVERED, 4.2);
         document.documentElement.style.removeProperty('--woundAlpha');
       }
@@ -955,7 +1004,7 @@
     const next = Math.floor(player.kills / HORDE_KILLS_PER_LEVEL);
     if (next <= hordeLevel) return;
     hordeLevel = next;
-    scorePop('HORDE PRESSURE +' + hordeLevel, 'wave');
+    popMessage('HORDE PRESSURE +' + hordeLevel, 'wave');
     sound('wave');
     nextSpawnTimer = Math.min(nextSpawnTimer, .75);
   }
@@ -1548,6 +1597,7 @@
     mission.huntDecisionActive = true;
     mission.huntDecisionTimer = 0;
     mission.huntDecisionShown = false;
+    extractionFlareTimer = 0;
     player.vel = [0, 0, 0];
     if (document.pointerLockElement === canvas && document.exitPointerLock) document.exitPointerLock();
   }
@@ -1598,6 +1648,7 @@
 
   function updateHuntDecision(dt) {
     mission.huntDecisionTimer += dt;
+    emitExtractionFlare(dt);
     updateParticles(dt);
     if (mission.huntDecisionTimer >= .85) showHuntDecisionPrompt();
   }
@@ -2141,7 +2192,7 @@
         bob: seededHash(spot.px * 5.1, spot.pz * 9.3) * 10
       });
       spawnParticles(spot.px + .5, spot.py + .7, spot.pz + .5, 14, 43);
-      scorePop(streak + ' KILL STREAK C4', 'pickup c4 small');
+      popMessage(streak + ' KILL STREAK C4', 'pickup c4 small');
       showToast('All perks equipped. C4 dropped instead.', false, 'c4');
       return true;
     }
@@ -2157,7 +2208,7 @@
       bob: seededHash(spot.px * 5.1, spot.pz * 9.3) * 10
     });
     spawnParticles(spot.px + .5, spot.py + .7, spot.pz + .5, 18, 42);
-    scorePop(streak + ' KILL STREAK', 'pickup perk small');
+    popMessage(streak + ' KILL STREAK', 'pickup perk small');
     showToast('Kill streak perk dropped.', false, 'perk');
     return true;
   }
@@ -2193,7 +2244,7 @@
     ammoMercyTimer = player.mag <= 0 ? 5.5 : 8.5;
     if (!spot) return;
     spawnPickupAt(spot.x, spot.y, spot.z, 'ammo');
-    scorePop('AMMO CACHE', 'pickup small');
+    popMessage('AMMO CACHE', 'pickup small');
     showRadioComms(COMMS_AMMO_CACHE, 3.8);
     trackGameEvent('ammo_cache_spawned', {
       reserve: player.reserve,
@@ -2752,7 +2803,7 @@
     player.grounded = false;
     player.vel = [0, -INSERTION_FALL_SPEED * .55, 0];
     player.pos[1] = Math.min(MAX_Y + INSERTION_DROP_HEIGHT, groundY + INSERTION_DROP_HEIGHT);
-    scorePop('DROP INBOUND', 'small');
+    popMessage('DROP INBOUND', 'small');
   }
 
   function finishInsertionDrop() {
@@ -2763,7 +2814,7 @@
     player.vel = [0, 0, 0];
     player.grounded = true;
     sound('land', 1, 1, { surface: playerAudioSurface(), gait: 'land' });
-    scorePop('TOUCHDOWN', 'pickup small');
+    popMessage('TOUCHDOWN', 'pickup small');
     showRadioComms(formatCommsMessage(COMMS_DROP_IN), 4.8);
     window.ZomVoxAnalytics?.levelStart(currentLocationLabel(), analyticsContext({
       hunt_number: analyticsState.huntStarts
@@ -2920,14 +2971,14 @@
       [(ux - uz * side) / diagA, (uz + ux * side) / diagA, .92],
       [(ux + uz * side) / diagB, (uz - ux * side) / diagB, .92]
     ];
-    let best = null, bestScore = Infinity;
+    let best = null, bestCost = Infinity;
     for (const c of candidates) {
       const target = enemyStepTarget(e, e.x + c[0] * baseStep * c[2], e.z + c[1] * baseStep * c[2]);
       if (!target) continue;
-      const score = backingOff
+      const cost = backingOff
         ? -Math.hypot(player.pos[0] - target.x, player.pos[2] - target.z)
         : Math.hypot(player.pos[0] - target.x, player.pos[2] - target.z);
-      if (score < bestScore) { bestScore = score; best = target; }
+      if (cost < bestCost) { bestCost = cost; best = target; }
     }
     if (!best) {
       e.steerSide = -(e.steerSide || 1);
@@ -3521,18 +3572,14 @@
     pulseHitMarker('kill');
     spawnKillBurst(enemy.x, enemy.y + 1.1, enemy.z, enemy.big);
     if (options.source === 'c4') {
-      player.score += 125;
-      scorePop('+125 C4 BLAST', 'combo small');
+      popMessage('C4 BLAST', 'combo small');
     } else if (options.headshot) {
-      player.score += 150;
-      scorePop('+150 HEADSHOT KILL', 'head');
+      popMessage('HEADSHOT KILL', 'head');
     } else {
-      player.score += 100;
-      scorePop('+100 ENEMY DOWN', 'kill');
+      popMessage(randomKillConfirm(enemy), 'kill');
     }
     if (dist >= LONG_RANGE_KILL_DIST) {
-      player.score += 200;
-      scorePop('+200 LONG RANGE', 'range small');
+      popMessage('LONG RANGE', 'range small');
       maybeVoiceLongRangeKill(dist);
     }
     const streak = player.lifeKills;
@@ -3553,8 +3600,8 @@
       remaining: Math.max(0, currentInfectedGoal() - player.kills)
     });
     let perkRewardKill = false;
-    if (streak > 0 && streak % 5 === 0) {
-      player.score += 250;
+    if (streak > 0 && streak % STREAK_REWARD_KILLS === 0) {
+      triggerStreakHudReward();
       perkRewardKill = spawnKillStreakPerk(enemy, streak);
     }
     lastKillTime = performance.now() / 1000;
@@ -3615,6 +3662,28 @@
   function spawnParticles(x, y, z, count, type) {
     for (let i = 0; i < count; i++) {
       particles.push({ x, y, z, vx: (Math.random() - .5) * 5, vy: Math.random() * 3.8, vz: (Math.random() - .5) * 5, life: .35 + Math.random() * .35, type });
+    }
+  }
+
+  function emitExtractionFlare(dt) {
+    extractionFlareTimer -= dt;
+    if (extractionFlareTimer > 0) return;
+    extractionFlareTimer = .045;
+    const baseY = topSolidY(Math.floor(player.pos[0]), Math.floor(player.pos[2])) + .25;
+    for (let i = 0; i < 3; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const radius = .45 + Math.random() * 1.15;
+      particles.push({
+        x: player.pos[0] + Math.cos(angle) * radius,
+        y: baseY + Math.random() * .45,
+        z: player.pos[2] + Math.sin(angle) * radius,
+        vx: Math.cos(angle) * (.18 + Math.random() * .42),
+        vy: 2.1 + Math.random() * 2.8,
+        vz: Math.sin(angle) * (.18 + Math.random() * .42),
+        gravity: .8,
+        life: .65 + Math.random() * .48,
+        type: i % 2 ? 42 : 43
+      });
     }
   }
 
@@ -3687,7 +3756,7 @@
       phase: Math.random() * Math.PI * 2
     });
     showToast('C4 tossed. Lure infected into it.');
-    scorePop('C4 TOSSED', 'pickup small');
+    popMessage('C4 TOSSED', 'pickup small');
     sound('pickupAmmo');
     trackGameEvent('c4_deployed', {
       c4_remaining: player.c4
@@ -3726,6 +3795,8 @@
       infected_cleared: killed
     });
     if (killed) {
+      if (killed >= 2) popMessage('BLAST x' + killed, 'combo');
+      if (killed >= 4) showRadioComms(COMMS_C4_COMBO, 3.8);
       showToast('C4 blast cleared ' + killed + ' infected.');
       checkMissionCompletion();
     }
@@ -3790,7 +3861,14 @@
         }
       }
       p.bob += dt * 3.2;
-      const dist = Math.hypot(p.x - player.pos[0], p.z - player.pos[2]);
+      let dist = Math.hypot(p.x - player.pos[0], p.z - player.pos[2]);
+      if (!(p.vx || p.vy || p.vz) && dist < PICKUP_MAGNET_RADIUS && dist > 1.45 && Math.abs(p.y - player.pos[1]) < 3.1) {
+        const pull = Math.min(1, dt * (2.4 + (PICKUP_MAGNET_RADIUS - dist) * 1.2));
+        p.x += (player.pos[0] - p.x) * pull;
+        p.z += (player.pos[2] - p.z) * pull;
+        p.y += (player.pos[1] + 1.0 - p.y) * Math.min(1, pull * .55);
+        dist = Math.hypot(p.x - player.pos[0], p.z - player.pos[2]);
+      }
       if (dist < 1.45 && Math.abs(p.y - player.pos[1]) < 2.2) {
         if (p.kind === 'health') {
           if (player.health >= STARTING_HEALTH) continue;
@@ -3798,14 +3876,14 @@
           player.health += healed;
           p.collected = true;
           showToast('Health +' + Math.round(healed), false, 'health');
-          scorePop('+' + Math.round(healed) + ' HEALTH', 'pickup health');
+          popMessage('+' + Math.round(healed) + ' HEALTH', 'pickup health');
           sound('pickupHealth');
           spawnParticles(p.x, p.y + .3, p.z, 10, 17);
         } else if (p.kind === 'c4') {
           player.c4 += p.amount;
           p.collected = true;
           showToast('C4 +' + p.amount, false, 'c4');
-          scorePop('+' + p.amount + ' C4', 'pickup c4');
+          popMessage('+' + p.amount + ' C4', 'pickup c4');
           sound('pickupC4');
           spawnParticles(p.x, p.y + .2, p.z, 10, 24);
           trackGameEvent('pickup_collected', {
@@ -3827,7 +3905,7 @@
           player.reserve += ammoAmount;
           p.collected = true;
           showToast('Ammo +' + ammoAmount, false, 'ammo');
-          scorePop('+' + ammoAmount + ' AMMO PICKUP', 'pickup ammo');
+          popMessage('+' + ammoAmount + ' AMMO PICKUP', 'pickup ammo');
           sound('pickupAmmo');
           trackGameEvent('pickup_collected', {
             pickup_type: 'ammo',
@@ -3978,7 +4056,7 @@
       spawnKillBurst(e.x, e.y + 1.1, e.z, e.big);
     }
     enemies = [];
-    scorePop('INFECTED PURGED', 'wave small');
+    popMessage('INFECTED PURGED', 'wave small');
   }
 
   function completeQuickHunt() {
@@ -3993,11 +4071,6 @@
     };
     recordQuickHuntRun(run);
     window.ZomVoxAnalytics?.levelEnd(currentLocationLabel(), true, analyticsContext({
-      seconds_survived: run.seconds,
-      best_streak: run.bestCombo
-    }));
-    window.ZomVoxAnalytics?.postScore(player.score, analyticsContext({
-      level: currentLocationLabel(),
       seconds_survived: run.seconds,
       best_streak: run.bestCombo
     }));
@@ -4064,6 +4137,7 @@
     updateAmbientSound();
     updateCommandBanner(dt);
     updateReticleTargeting();
+    updateStreakHud(dt);
     if (updatePortraitPauseState()) {
       updateHud();
       return;
@@ -4134,6 +4208,7 @@
     healthBigFill.style.width = Math.max(0, player.health) + '%';
     updateAmmoDisplay();
     updateMissionHud();
+    updateStreakHud(0);
     updateFieldStatus(hpNow);
     updateShootButtonState();
     updateC4ButtonState();
@@ -4437,7 +4512,6 @@ function currentWaterIsDangerous() {
     setPlayerMagSize(effectiveMagSize(), true);
     player.kills = 0;
     player.headshots = 0;
-    player.score = 0;
     player.deaths = 0;
     cancelReload();
     player.shotCooldown = 0;

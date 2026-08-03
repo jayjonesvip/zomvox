@@ -40,7 +40,7 @@ ZomVox is listed on [IGDB](https://www.igdb.com/) and [DEAD.ARMY](https://dead.a
 - Camo ammo pickups that add six rounds at a time, plus low-ammo mercy caches when reserve ammo hits zero.
 - Flat silver C4 proximity charges with blinking red dots, yellow hazard strips, one starting charge, and rare zombie drops.
 - Blue-accent perk crates awarded every five kills in one spawn; equipped perks persist for the current browser session, never repeat, and convert to C4 drops after all perks are equipped.
-- Zombie spawning, ground-emerge entrances, pursuit steering around water/trees, attack cooldowns, retreat steps after attacks, deaths, score popups, and pickup drops.
+- Zombie spawning, ground-emerge entrances, pursuit steering around water/trees, attack cooldowns, retreat steps after attacks, deaths, combat popups, and pickup drops.
 - Weighted zombie variants: normal, speedy one-shot runners, slower brute attackers, and rare grey stalkers.
 - Mobile-only landscape gate.
 - Mobile joystick movement plus separate shoot and C4 controls.
@@ -116,7 +116,7 @@ Common tuning options live in `config.js` under `window.ZOMVOX_CONFIG`. Edit tha
 
 ```js
 window.ZOMVOX_CONFIG = {
-  buildVersion: '2026.08.01.30',
+  buildVersion: '2026.08.01.31',
   initialSeed: 729641,
 
   environment: {
@@ -184,7 +184,8 @@ window.ZOMVOX_CONFIG = {
     fewMore: 'Just a few more.',
     lowHealth: 'Retreat and treat your wounds.',
     longRange: 'Nice shot.',
-    ammoCache: 'Ammo cache marked nearby.'
+    ammoCache: 'Ammo cache marked nearby.',
+    c4Combo: 'Good detonation.'
   }
 };
 ```
@@ -289,7 +290,7 @@ Mission command lines are visual radio comms toasts in the HUD instead of browse
 
 ## Gameplay Analytics
 
-`analytics.js` sends GA4 events for meaningful in-game actions while the app stays on `index.html`. Events include `game_loaded`, `hunt_started`, `player_dropped`, `first_shot`, `first_kill`, `zombie_killed`, `first_bitten`, `player_bitten`, `player_downed`, `player_revived`, `hunt_completed`, `pickup_collected`, `perk_collected`, `ammo_cache_spawned`, `c4_deployed`, `c4_detonated`, `hunt_paused`, `hunt_resumed`, `session_quit`, `install_prompt_available`, `install_prompt_result`, `pwa_installed`, plus GA4 recommended `level_start`, `level_end`, and `post_score`.
+`analytics.js` sends GA4 events for meaningful in-game actions while the app stays on `index.html`. Events include `game_loaded`, `hunt_started`, `player_dropped`, `first_shot`, `first_kill`, `zombie_killed`, `first_bitten`, `player_bitten`, `player_downed`, `player_revived`, `hunt_completed`, `pickup_collected`, `perk_collected`, `ammo_cache_spawned`, `c4_deployed`, `c4_detonated`, `hunt_paused`, `hunt_resumed`, `session_quit`, `install_prompt_available`, `install_prompt_result`, `pwa_installed`, plus GA4 recommended `level_start` and `level_end`.
 
 ## Hosting
 
