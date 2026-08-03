@@ -277,7 +277,7 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.27');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.28');
   const COMMS_DROP_IN = configString(COMMS_CONFIG, 'dropIn', 'You are on {islandName}. The mission is to kill {zombieTotal} infected.');
   const COMMS_HUNT_COMPLETE = configString(COMMS_CONFIG, 'huntComplete', '{islandName} is clear. Ready for the next mission?');
   const COMMS_BITTEN = configString(COMMS_CONFIG, 'bitten', 'You are bit. Keep your distance and finish the objective.');
@@ -2077,17 +2077,28 @@
     const x = enemy ? enemy.x : player.pos[0];
     const z = enemy ? enemy.z : player.pos[2];
     const perkId = nextPerkId(x, z);
-    if (!perkId) {
-      scorePop('ALL PERKS EQUIPPED', 'pickup perk small');
-      showToast('All perks already equipped.', false, 'perk');
-      return false;
-    }
 
     // Streak rewards should feel earned at the latest corpse. If that block
     // is water, a steep edge, or otherwise blocked, walk outward around the
     // corpse until a nearby visible ground tile is found.
     const spot = findPickupSpotNear(x, z, 5) || findPickupSpotNear(player.pos[0], player.pos[2], 6);
     if (!spot) return false;
+
+    if (!perkId) {
+      pickups.push({
+        x: spot.px + .5,
+        y: spot.py + .35,
+        z: spot.pz + .5,
+        kind: 'c4',
+        amount: 1,
+        perkId: null,
+        bob: seededHash(spot.px * 5.1, spot.pz * 9.3) * 10
+      });
+      spawnParticles(spot.px + .5, spot.py + .7, spot.pz + .5, 14, 43);
+      scorePop(streak + ' KILL STREAK C4', 'pickup c4 small');
+      showToast('All perks equipped. C4 dropped instead.', false, 'c4');
+      return true;
+    }
 
     pickups.push({
       x: spot.px + .5,
