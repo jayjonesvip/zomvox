@@ -187,6 +187,8 @@
   const STARTING_C4 = Math.max(0, Math.floor(configNumber(PLAYER_CONFIG, 'startingC4', 1)));
   const RESPAWN_RESERVE_FLOOR = Math.max(0, Math.floor(configNumber(PLAYER_CONFIG, 'respawnReserveFloor', 24)));
   const LOW_HEALTH_THRESHOLD = configNumber(PLAYER_CONFIG, 'lowHealthThreshold', 25);
+  const BITE_RECOVERY_SECONDS = Math.max(5, configNumber(PLAYER_CONFIG, 'biteRecoverySeconds', 60));
+  const RAPID_RECOVERY_SECONDS = Math.max(3, configNumber(PLAYER_CONFIG, 'rapidRecoverySeconds', 30));
   const MAG_SIZE = Math.max(1, Math.floor(configNumber(WEAPON_CONFIG, 'magSize', 6)));
   const RELOAD_TIME = Math.max(0.1, configNumber(WEAPON_CONFIG, 'reloadTime', 1.15));
   const QUICK_RELOAD_MULTIPLIER = Math.max(0.1, configNumber(WEAPON_CONFIG, 'quickReloadMultiplier', 0.5));
@@ -195,6 +197,8 @@
   const HAIR_TRIGGER_MULTIPLIER = Math.max(0.1, configNumber(WEAPON_CONFIG, 'hairTriggerMultiplier', 0.5));
   const RECOIL_AMOUNT = Math.max(0, configNumber(WEAPON_CONFIG, 'recoilAmount', 0.08));
   const PREMIUM_GRIP_MULTIPLIER = Math.max(0, Math.min(1, configNumber(WEAPON_CONFIG, 'premiumGripMultiplier', 0.38)));
+  const AMMO_BELT_MULTIPLIER = Math.max(1, configNumber(WEAPON_CONFIG, 'ammoBeltMultiplier', 1.5));
+  const BLAST_PACK_RADIUS_MULTIPLIER = Math.max(1, configNumber(WEAPON_CONFIG, 'blastPackRadiusMultiplier', 1.25));
   const ENEMY_CAP = Math.max(1, Math.floor(configNumber(ENEMY_CONFIG, 'baseCap', 18)));
   const HORDE_KILLS_PER_LEVEL = Math.max(1, Math.floor(configNumber(ENEMY_CONFIG, 'hordeKillsPerLevel', 5)));
   const HORDE_CAP_BONUS = Math.max(0, Math.floor(configNumber(ENEMY_CONFIG, 'hordeCapBonus', 2)));
@@ -249,6 +253,8 @@
     reloadInitialMag: 0,
     shotCooldown: 0,
     invuln: 0,
+    woundRecoveryTimer: 0,
+    woundRecoveryDuration: 0,
     kills: 0,
     headshots: 0,
     lifeKills: 0,
@@ -277,7 +283,7 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.27');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.29');
   const COMMS_DROP_IN = configString(COMMS_CONFIG, 'dropIn', 'You are on {islandName}. The mission is to kill {zombieTotal} infected.');
   const COMMS_HUNT_COMPLETE = configString(COMMS_CONFIG, 'huntComplete', '{islandName} is clear. Ready for the next mission?');
   const COMMS_BITTEN = configString(COMMS_CONFIG, 'bitten', 'You are bit. Keep your distance and finish the objective.');
@@ -368,7 +374,9 @@
     premiumGrip: false,
     hairTrigger: false,
     fleetFeet: false,
-    bodyArmor: false
+    rapidRecovery: false,
+    ammoBelt: false,
+    blastPack: false
   };
 
   const PERK_CHOICES = [
@@ -377,7 +385,9 @@
     { id: 'premiumGrip', name: 'Premium Grip', desc: 'Stabilized handle. Shot recoil is heavily reduced.' },
     { id: 'hairTrigger', name: 'Hair Trigger', desc: 'Tuned trigger group. Fire cooldown is cut in half.' },
     { id: 'fleetFeet', name: 'Fleet Feet', desc: 'Move 25% faster across hostile terrain.' },
-    { id: 'bodyArmor', name: 'Body Armor', desc: 'Zombie damage reduced by 20%.' }
+    { id: 'rapidRecovery', name: 'Rapid Recovery', desc: 'Bite recovery takes 30 seconds instead of a full minute.' },
+    { id: 'ammoBelt', name: 'Ammo Belt', desc: 'Ammo pickups give 50% more reserve rounds.' },
+    { id: 'blastPack', name: 'Blast Pack', desc: 'C4 explosions reach 25% farther.' }
   ];
 
   function syncBulletRack(size) {
@@ -409,6 +419,19 @@
 
   function currentPlayerSpeedMultiplier() {
     return activePerks.fleetFeet ? 1.25 : 1;
+  }
+
+  function currentBiteRecoverySeconds() {
+    return activePerks.rapidRecovery ? RAPID_RECOVERY_SECONDS : BITE_RECOVERY_SECONDS;
+  }
+
+  function currentAmmoPickupAmount(amount = AMMO_PICKUP_ROUNDS) {
+    const base = Math.max(1, Math.floor(Number(amount) || AMMO_PICKUP_ROUNDS));
+    return Math.max(1, Math.floor(base * (activePerks.ammoBelt ? AMMO_BELT_MULTIPLIER : 1)));
+  }
+
+  function currentC4BlastRadius() {
+    return 5.4 * (activePerks.blastPack ? BLAST_PACK_RADIUS_MULTIPLIER : 1);
   }
 
   function currentZombieDamage(amount) {
@@ -890,7 +913,20 @@
   }
 
   function updateLowHealthFeedback(dt) {
-    const wounded = player.health > 0 && player.health < STARTING_HEALTH && !deathState.active && !isMenuOpen();
+    const recovering = player.woundRecoveryTimer > 0 && player.woundRecoveryDuration > 0 && !deathState.active && !isMenuOpen();
+    if (recovering) {
+      player.woundRecoveryTimer = Math.max(0, player.woundRecoveryTimer - dt);
+      const remaining = player.woundRecoveryDuration ? player.woundRecoveryTimer / player.woundRecoveryDuration : 0;
+      player.health = STARTING_HEALTH - (STARTING_HEALTH / 2) * remaining;
+      document.documentElement.style.setProperty('--woundAlpha', Math.max(0, Math.min(1, remaining)).toFixed(3));
+      if (player.woundRecoveryTimer <= 0) {
+        player.health = STARTING_HEALTH;
+        player.woundRecoveryDuration = 0;
+        mission.bittenVoicePlayed = false;
+        document.documentElement.style.removeProperty('--woundAlpha');
+      }
+    }
+    const wounded = player.woundRecoveryTimer > 0 && !deathState.active && !isMenuOpen();
     document.body.classList.toggle('wounded', wounded);
     document.body.classList.toggle('low-health', false);
     if (!wounded) {
@@ -903,6 +939,14 @@
       sound('toxin', .68);
       woundGaspTimer = 3.4 + Math.random() * 5.6;
     }
+  }
+
+  function clearWoundRecovery() {
+    player.woundRecoveryTimer = 0;
+    player.woundRecoveryDuration = 0;
+    document.documentElement.style.removeProperty('--woundAlpha');
+    document.body.classList.remove('wounded', 'low-health');
+    woundGaspTimer = 0;
   }
 
   function checkHordeLevel() {
@@ -2077,17 +2121,28 @@
     const x = enemy ? enemy.x : player.pos[0];
     const z = enemy ? enemy.z : player.pos[2];
     const perkId = nextPerkId(x, z);
-    if (!perkId) {
-      scorePop('ALL PERKS EQUIPPED', 'pickup perk small');
-      showToast('All perks already equipped.', false, 'perk');
-      return false;
-    }
 
     // Streak rewards should feel earned at the latest corpse. If that block
     // is water, a steep edge, or otherwise blocked, walk outward around the
     // corpse until a nearby visible ground tile is found.
     const spot = findPickupSpotNear(x, z, 5) || findPickupSpotNear(player.pos[0], player.pos[2], 6);
     if (!spot) return false;
+
+    if (!perkId) {
+      pickups.push({
+        x: spot.px + .5,
+        y: spot.py + .35,
+        z: spot.pz + .5,
+        kind: 'c4',
+        amount: 1,
+        perkId: null,
+        bob: seededHash(spot.px * 5.1, spot.pz * 9.3) * 10
+      });
+      spawnParticles(spot.px + .5, spot.py + .7, spot.pz + .5, 14, 43);
+      scorePop(streak + ' KILL STREAK C4', 'pickup c4 small');
+      showToast('All perks equipped. C4 dropped instead.', false, 'c4');
+      return true;
+    }
 
     pickups.push({
       x: spot.px + .5,
@@ -3005,23 +3060,48 @@
 
   function damagePlayer(amount, impactSound = null) {
     if (!canDamagePlayer()) return false;
-    player.health -= amount;
+    const biteDamage = amount >= STARTING_HEALTH / 2 - 0.01;
+    const secondBite = biteDamage && player.woundRecoveryTimer > 0;
+    if (secondBite) {
+      player.health = 0;
+      player.woundRecoveryTimer = 0;
+      player.woundRecoveryDuration = 0;
+      document.documentElement.style.removeProperty('--woundAlpha');
+    } else if (biteDamage) {
+      player.woundRecoveryDuration = currentBiteRecoverySeconds();
+      player.woundRecoveryTimer = player.woundRecoveryDuration;
+      player.health = STARTING_HEALTH / 2;
+      document.documentElement.style.setProperty('--woundAlpha', '1');
+    } else {
+      player.health -= amount;
+    }
     player.invuln = .45;
     pulseDamage();
     shakeScreen();
     if (impactSound) sound(impactSound);
-    if (player.health <= 0) beginDeathSequence();
+    if (player.health <= 0) {
+      if (biteDamage) {
+        trackGameEvent('player_bitten', {
+          damage: amount,
+          health_remaining: 0,
+          lethal: !!secondBite
+        });
+      }
+      beginDeathSequence();
+    }
     else {
       if (!analyticsState.bitten) {
         analyticsState.bitten = true;
         trackGameEvent('first_bitten', {
           damage: amount,
-          health_remaining: Math.max(0, Math.round(player.health))
+          health_remaining: Math.max(0, Math.round(player.health)),
+          recovery_seconds: Math.round(player.woundRecoveryDuration || 0)
         });
       }
       trackGameEvent('player_bitten', {
         damage: amount,
-        health_remaining: Math.max(0, Math.round(player.health))
+        health_remaining: Math.max(0, Math.round(player.health)),
+        recovery_seconds: Math.round(player.woundRecoveryDuration || 0)
       });
       woundGaspTimer = Math.min(woundGaspTimer || 999, 1.2 + Math.random() * 1.8);
       maybeVoiceBitten();
@@ -3054,6 +3134,7 @@
     document.body.classList.add('dead', 'death-cinematic');
     document.body.classList.remove('low-health', 'wounded', 'death-fading', 'death-card-ready');
     player.health = 0;
+    clearWoundRecovery();
     player.vel = [0, 0, 0];
     cancelReload();
     sound('death');
@@ -3142,6 +3223,7 @@
     deathState.bloodTimer = 0;
     player.deaths++;
     player.health = STARTING_HEALTH;
+    clearWoundRecovery();
     player.mag = player.magSize;
     player.reserve = Math.max(player.reserve, RESPAWN_RESERVE_FLOOR);
     cancelReload();
@@ -3152,7 +3234,6 @@
     lastKillTime = -999;
     killComboCount = 0;
     resetLifeStats();
-    woundGaspTimer = 0;
     document.body.classList.remove('dead', 'low-health', 'wounded', 'death-cinematic', 'death-fading', 'death-card-ready');
     deathOverlay.classList.remove('show', 'cinematic');
     deathOverlay.classList.remove('ready', 'cinematic', 'awaiting-choice', 'reviving');
@@ -3201,7 +3282,7 @@
     mission.huntDecisionShown = false;
     hideRadioComms();
     hideHuntDecisionOverlay();
-    woundGaspTimer = 0;
+    clearWoundRecovery();
     locked = false;
     desktopPaused = false;
     if (document.pointerLockElement === canvas && document.exitPointerLock) document.exitPointerLock();
@@ -3245,7 +3326,7 @@
     mission.huntDecisionTimer = 0;
     mission.huntDecisionShown = false;
     hideHuntDecisionOverlay();
-    woundGaspTimer = 0;
+    clearWoundRecovery();
     locked = false;
     desktopPaused = false;
     if (document.pointerLockElement === canvas && document.exitPointerLock) document.exitPointerLock();
@@ -3612,7 +3693,7 @@
   }
 
   function detonateC4(charge) {
-    const radius = 5.4;
+    const radius = currentC4BlastRadius();
     let killed = 0;
     for (let i = 0; i < 34; i++) {
       const angle = Math.random() * Math.PI * 2;
@@ -3740,14 +3821,15 @@
             showToast('All perks already equipped.', false, 'perk');
           }
         } else {
-          player.reserve += p.amount;
+          const ammoAmount = currentAmmoPickupAmount(p.amount);
+          player.reserve += ammoAmount;
           p.collected = true;
-          showToast('Ammo +' + p.amount, false, 'ammo');
-          scorePop('+' + p.amount + ' AMMO PICKUP', 'pickup ammo');
+          showToast('Ammo +' + ammoAmount, false, 'ammo');
+          scorePop('+' + ammoAmount + ' AMMO PICKUP', 'pickup ammo');
           sound('pickupAmmo');
           trackGameEvent('pickup_collected', {
             pickup_type: 'ammo',
-            amount: p.amount,
+            amount: ammoAmount,
             reserve: player.reserve
           });
         }
@@ -4347,6 +4429,7 @@ function currentWaterIsDangerous() {
     particles = [];
     ammoMercyTimer = 0;
     player.health = STARTING_HEALTH;
+    clearWoundRecovery();
     player.reserve = STARTING_RESERVE;
     player.c4 = STARTING_C4;
     setPlayerMagSize(effectiveMagSize(), true);
@@ -4400,7 +4483,6 @@ function currentWaterIsDangerous() {
     deathState.reviving = false;
     deathState.reviveTimer = 0;
     deathState.bloodTimer = 0;
-    woundGaspTimer = 0;
     extractionState.active = false;
     extractionState.timer = 0;
     extractionState.seed = null;
