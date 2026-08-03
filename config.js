@@ -410,7 +410,7 @@ window.ZOMVOX_CONFIG = {
       pickupC4: 'pickupC4.mp3',
       perkEquip: 'perkEquip.mp3',
       objectiveClear: 'objectiveClear.mp3',
-      wave: '',
+      wave: 'wave.mp3',
       confirm: '',
       briefing: 'briefing.mp3',
       zombieMoan: 'zombieMoan.mp3',
