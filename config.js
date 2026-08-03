@@ -17,7 +17,7 @@ window.ZOMVOX_CONFIG = {
     Bump this when you make visible changes so you can tell the browser
     loaded the newest version.
   */
-  buildVersion: '2026.08.01.29',
+  buildVersion: '2026.08.01.30',
 
   /*
     Seed used for deterministic world generation.
@@ -377,6 +377,7 @@ window.ZOMVOX_CONFIG = {
     dropIn: 'You are on {islandName}. The mission is to kill {zombieTotal} infected.',
     huntComplete: '{islandName} is clear. Ready for the next mission?',
     bitten: 'You are bit. Keep distance and survive one minute to recover.',
+    recovered: 'You are at full strength. Complete your objective.',
     death: 'Can you hear me? Do you want to keep going?',
     postRevival: 'Glad you are back. Focus on the objective.',
     fewMore: 'Just a few more.',

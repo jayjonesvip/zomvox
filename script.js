@@ -283,10 +283,11 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.29');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.30');
   const COMMS_DROP_IN = configString(COMMS_CONFIG, 'dropIn', 'You are on {islandName}. The mission is to kill {zombieTotal} infected.');
   const COMMS_HUNT_COMPLETE = configString(COMMS_CONFIG, 'huntComplete', '{islandName} is clear. Ready for the next mission?');
-  const COMMS_BITTEN = configString(COMMS_CONFIG, 'bitten', 'You are bit. Keep your distance and finish the objective.');
+  const COMMS_BITTEN = configString(COMMS_CONFIG, 'bitten', 'You are bit. Keep distance and survive one minute to recover.');
+  const COMMS_RECOVERED = configString(COMMS_CONFIG, 'recovered', 'You are at full strength. Complete your objective.');
   const COMMS_DEATH = configString(COMMS_CONFIG, 'death', 'Can you hear me? Do you want to keep going?');
   const COMMS_POST_REVIVAL = configString(COMMS_CONFIG, 'postRevival', 'Glad you are back. Focus on the objective.');
   const COMMS_FEW_MORE = configString(COMMS_CONFIG, 'fewMore', 'Just a few more.');
@@ -923,6 +924,7 @@
         player.health = STARTING_HEALTH;
         player.woundRecoveryDuration = 0;
         mission.bittenVoicePlayed = false;
+        showRadioComms(COMMS_RECOVERED, 4.2);
         document.documentElement.style.removeProperty('--woundAlpha');
       }
     }
