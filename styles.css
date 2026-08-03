@@ -81,6 +81,15 @@
   #clipText{ min-width:42px; text-align:right; font-size:48px; font-weight:900; letter-spacing:0; }
   .ammoSlash{ color:#8fa2ad; font-size:24px; line-height:1.08; font-weight:900; padding-bottom:3px; }
   #reserveText{ min-width:34px; text-align:left; color:#c9d7df; font-size:23px; line-height:1.06; font-weight:900; padding-bottom:4px; }
+  #fieldHeader.recovered{ animation:recoveredHudPulse .9s ease-out 1; }
+  #streakHud{ margin-top:5px; display:flex; align-items:center; gap:7px; color:#d4ecff; font-size:9px; line-height:1; font-weight:1000; letter-spacing:.12em; text-transform:uppercase; text-shadow:0 2px 0 rgba(0,0,0,.72),0 0 10px rgba(73,169,255,.14); }
+  #streakHud[hidden]{ display:none; }
+  #streakHud i{ width:54px; height:5px; display:block; overflow:hidden; border-radius:999px; background:rgba(0,0,0,.42); border:1px solid rgba(102,194,255,.24); box-shadow:inset 0 1px 4px rgba(0,0,0,.48); }
+  #streakHud b{ display:block; width:0%; height:100%; border-radius:999px; background:linear-gradient(90deg,#66c2ff,#77f0ff); box-shadow:0 0 12px rgba(73,169,255,.42); transition:width .16s ease-out; }
+  #streakHud.ready{ color:#d7f7ff; text-shadow:0 0 14px rgba(102,194,255,.52),0 2px 0 rgba(0,0,0,.72); animation:streakReadyPulse .5s ease-out 1; }
+  #streakHud.ready b{ background:linear-gradient(90deg,#8ee8ff,#d8ff75); }
+  @keyframes streakReadyPulse{ 0%{ transform:scale(.98); filter:brightness(1); } 48%{ transform:scale(1.08); filter:brightness(1.32); } 100%{ transform:scale(1); filter:brightness(1); } }
+  @keyframes recoveredHudPulse{ 0%{ filter:drop-shadow(0 0 0 rgba(145,243,110,0)); } 35%{ filter:drop-shadow(0 0 18px rgba(145,243,110,.62)); } 100%{ filter:drop-shadow(0 0 0 rgba(145,243,110,0)); } }
   #perkHud{ pointer-events:none; position:fixed; right:14px; top:82px; width:auto; max-width:min(230px, calc(100vw - 28px)); display:grid; justify-items:end; gap:5px; z-index:9; text-align:right; }
   #perkHud[hidden]{ display:none; }
   .fieldPerkRow{ width:max-content; max-width:100%; padding:4px 7px; border:1px solid rgba(102,194,255,.28); border-radius:6px; background:rgba(3,9,12,.56); color:#d4ecff; font-size:10px; line-height:1; font-weight:1000; letter-spacing:.08em; text-transform:uppercase; text-shadow:0 2px 0 rgba(0,0,0,.7),0 0 12px rgba(73,169,255,.18); box-shadow:0 8px 20px rgba(0,0,0,.24), inset 0 1px 0 rgba(255,255,255,.08); backdrop-filter:blur(5px); }
@@ -121,21 +130,21 @@
     100%{ opacity:0; transform:translate3d(calc(var(--x,0) + var(--dx,0px)),calc(var(--y,0) + var(--dy,0px)),0) rotate(calc(var(--spin,0deg) + var(--spinEnd,0deg))) scale(var(--end,1.45)); }
   }
 
-  #scoreFeed{ pointer-events:none; position:fixed; left:50%; top:34%; width:min(430px, 52vh, calc(100vw - 32px)); transform:translateX(-50%); display:flex; flex-direction:column; align-items:center; gap:5px; z-index:6; text-align:center; }
-  .scorePop{ max-width:100%; font-size:clamp(15px,2.1vw,24px); font-weight:1000; letter-spacing:.02em; color:#fff; text-shadow:0 2px 0 rgba(0,0,0,.8), 0 0 14px rgba(255,255,255,.3); animation:scoreRise 1.05s ease-out forwards; white-space:normal; overflow-wrap:break-word; line-height:.95; }
-  .scorePop.head{ color:#ffe77e; text-shadow:0 3px 0 rgba(0,0,0,.75), 0 0 22px rgba(255,218,92,.55); }
-  .scorePop.kill{ color:#aaff86; text-shadow:0 3px 0 rgba(0,0,0,.75), 0 0 22px rgba(130,255,103,.45); }
-  .scorePop.block{ color:#bfe7ff; text-shadow:0 3px 0 rgba(0,0,0,.75), 0 0 22px rgba(117,202,255,.42); }
-  .scorePop.combo{ color:#ffad66; text-shadow:0 3px 0 rgba(0,0,0,.75), 0 0 24px rgba(255,140,42,.55); transform:scale(1.04); }
-  .scorePop.pickup{ color:#8fffc8; text-shadow:0 3px 0 rgba(0,0,0,.75), 0 0 24px rgba(97,255,190,.48); }
-  .scorePop.pickup.ammo{ color:#9dff81; text-shadow:0 3px 0 rgba(0,0,0,.75), 0 0 24px rgba(117,255,74,.48); }
-  .scorePop.pickup.health{ color:#ff6a66; text-shadow:0 3px 0 rgba(0,0,0,.75), 0 0 24px rgba(255,68,60,.48); }
-  .scorePop.pickup.c4{ color:#ffe066; text-shadow:0 3px 0 rgba(0,0,0,.75), 0 0 24px rgba(255,215,74,.5); }
-  .scorePop.pickup.perk{ color:#77c8ff; text-shadow:0 3px 0 rgba(0,0,0,.75), 0 0 24px rgba(73,169,255,.52); }
-  .scorePop.range{ color:#9fd8ff; text-shadow:0 3px 0 rgba(0,0,0,.75), 0 0 22px rgba(80,185,255,.48); }
-  .scorePop.wave{ color:#ff5f5f; font-size:clamp(14px,1.9vw,22px); letter-spacing:.06em; text-shadow:0 2px 0 rgba(0,0,0,.8), 0 0 20px rgba(255,80,80,.5); }
-  .scorePop.small{ font-size:clamp(12px,1.65vw,18px); }
-  @keyframes scoreRise{ 0%{ opacity:0; transform:translateY(18px) scale(.88); } 14%{ opacity:1; transform:translateY(0) scale(1.05); } 72%{ opacity:1; } 100%{ opacity:0; transform:translateY(-58px) scale(.98); } }
+  #popFeed{ pointer-events:none; position:fixed; left:50%; top:34%; width:min(430px, 52vh, calc(100vw - 32px)); transform:translateX(-50%); display:flex; flex-direction:column; align-items:center; gap:5px; z-index:6; text-align:center; }
+  .combatPop{ max-width:100%; font-size:clamp(15px,2.1vw,24px); font-weight:1000; letter-spacing:.02em; color:#fff; text-shadow:0 2px 0 rgba(0,0,0,.8), 0 0 14px rgba(255,255,255,.3); animation:popRise 1.05s ease-out forwards; white-space:normal; overflow-wrap:break-word; line-height:.95; }
+  .combatPop.head{ color:#ffe77e; text-shadow:0 3px 0 rgba(0,0,0,.75), 0 0 22px rgba(255,218,92,.55); }
+  .combatPop.kill{ color:#aaff86; text-shadow:0 3px 0 rgba(0,0,0,.75), 0 0 22px rgba(130,255,103,.45); }
+  .combatPop.block{ color:#bfe7ff; text-shadow:0 3px 0 rgba(0,0,0,.75), 0 0 22px rgba(117,202,255,.42); }
+  .combatPop.combo{ color:#ffad66; text-shadow:0 3px 0 rgba(0,0,0,.75), 0 0 24px rgba(255,140,42,.55); transform:scale(1.04); }
+  .combatPop.pickup{ color:#8fffc8; text-shadow:0 3px 0 rgba(0,0,0,.75), 0 0 24px rgba(97,255,190,.48); }
+  .combatPop.pickup.ammo{ color:#9dff81; text-shadow:0 3px 0 rgba(0,0,0,.75), 0 0 24px rgba(117,255,74,.48); }
+  .combatPop.pickup.health{ color:#ff6a66; text-shadow:0 3px 0 rgba(0,0,0,.75), 0 0 24px rgba(255,68,60,.48); }
+  .combatPop.pickup.c4{ color:#ffe066; text-shadow:0 3px 0 rgba(0,0,0,.75), 0 0 24px rgba(255,215,74,.5); }
+  .combatPop.pickup.perk{ color:#77c8ff; text-shadow:0 3px 0 rgba(0,0,0,.75), 0 0 24px rgba(73,169,255,.52); }
+  .combatPop.range{ color:#9fd8ff; text-shadow:0 3px 0 rgba(0,0,0,.75), 0 0 22px rgba(80,185,255,.48); }
+  .combatPop.wave{ color:#ff5f5f; font-size:clamp(14px,1.9vw,22px); letter-spacing:.06em; text-shadow:0 2px 0 rgba(0,0,0,.8), 0 0 20px rgba(255,80,80,.5); }
+  .combatPop.small{ font-size:clamp(12px,1.65vw,18px); }
+  @keyframes popRise{ 0%{ opacity:0; transform:translateY(18px) scale(.88); } 14%{ opacity:1; transform:translateY(0) scale(1.05); } 72%{ opacity:1; } 100%{ opacity:0; transform:translateY(-58px) scale(.98); } }
 
   #healthStatus{ display:none; pointer-events:none; position:fixed; left:14px; top:12px; width:230px; min-height:62px; padding:10px 12px; border-radius:8px; background:linear-gradient(180deg, rgba(13,25,29,.9), rgba(3,9,12,.86)); border:1px solid rgba(224,248,255,.2); box-shadow:inset 0 2px 0 rgba(255,255,255,.14), inset 0 -5px 12px rgba(0,0,0,.38), inset 0 0 0 1px rgba(0,0,0,.42), 0 16px 40px rgba(0,0,0,.42); backdrop-filter:blur(10px); z-index:9; }
   #healthStatus .healthTop{ display:flex; justify-content:space-between; align-items:baseline; gap:10px; margin-bottom:7px; }
@@ -418,6 +427,8 @@
     #clipText{ min-width:31px; font-size:36px; }
     .ammoSlash{ font-size:17px; padding-bottom:3px; }
     #reserveText{ min-width:25px; font-size:17px; padding-bottom:4px; }
+    #streakHud{ margin-top:3px; gap:4px; font-size:7px; letter-spacing:.08em; }
+    #streakHud i{ width:42px; height:4px; }
     #perkHud{ right:8px; top:calc(58px + env(safe-area-inset-top)); max-width:132px; gap:3px; }
     .fieldPerkRow{ padding:3px 5px; border-radius:5px; font-size:7px; letter-spacing:.06em; }
     #c4Hud{ display:none!important; }
@@ -431,10 +442,10 @@
     .killHud{ gap:6px; margin-bottom:3px; }
     .killHudIcon{ width:32px; height:32px; }
     #killHudCount{ font-size:30px; }
-    #scoreFeed{ top:31%; width:min(300px, 58vh, calc(100vw - 28px)); gap:4px; }
-    .scorePop{ font-size:clamp(12px,2.7vw,18px); line-height:.92; }
-    .scorePop.wave{ font-size:clamp(11px,2.4vw,16px); }
-    .scorePop.small{ font-size:clamp(10px,2.1vw,14px); }
+    #popFeed{ top:31%; width:min(300px, 58vh, calc(100vw - 28px)); gap:4px; }
+    .combatPop{ font-size:clamp(12px,2.7vw,18px); line-height:.92; }
+    .combatPop.wave{ font-size:clamp(11px,2.4vw,16px); }
+    .combatPop.small{ font-size:clamp(10px,2.1vw,14px); }
     #commandBanner{ width:min(330px, 58vh, calc(100vw - 28px)); padding:12px 14px; }
     #commandBannerTitle{ font-size:22px; }
     #commandBannerBody{ font-size:10px; line-height:1.15; }

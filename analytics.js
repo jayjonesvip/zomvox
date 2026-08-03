@@ -63,10 +63,6 @@
 
     levelEnd(levelName, success, params = {}) {
       return track('level_end', { level_name: levelName, success: !!success, ...params });
-    },
-
-    postScore(score, params = {}) {
-      return track('post_score', { score: Math.max(0, Math.floor(Number(score) || 0)), ...params });
     }
   };
 })();

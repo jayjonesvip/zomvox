@@ -17,7 +17,7 @@ window.ZOMVOX_CONFIG = {
     Bump this when you make visible changes so you can tell the browser
     loaded the newest version.
   */
-  buildVersion: '2026.08.01.30',
+  buildVersion: '2026.08.01.31',
 
   /*
     Seed used for deterministic world generation.
@@ -383,7 +383,8 @@ window.ZOMVOX_CONFIG = {
     fewMore: 'Just a few more.',
     lowHealth: 'Retreat and treat your wounds.',
     longRange: 'Nice shot.',
-    ammoCache: 'Ammo cache marked nearby.'
+    ammoCache: 'Ammo cache marked nearby.',
+    c4Combo: 'Good detonation.'
   },
 
   audio: {
