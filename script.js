@@ -277,7 +277,7 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.26');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.27');
   const COMMS_DROP_IN = configString(COMMS_CONFIG, 'dropIn', 'You are on {islandName}. The mission is to kill {zombieTotal} infected.');
   const COMMS_HUNT_COMPLETE = configString(COMMS_CONFIG, 'huntComplete', '{islandName} is clear. Ready for the next mission?');
   const COMMS_BITTEN = configString(COMMS_CONFIG, 'bitten', 'You are bit. Keep your distance and finish the objective.');
@@ -308,6 +308,7 @@
   let heartbeatTimer = 0;
   let woundGaspTimer = 0;
   let cameraStepOffsetY = 0;
+  const analyticsState = { huntStarts: 0, firstShot: false, firstKill: false, bitten: false };
   const DEATH_CINEMATIC_DURATION = 2.65;
   const DEATH_FADE_DURATION = 1.05;
   const DEATH_RESPAWN_START = DEATH_CINEMATIC_DURATION + DEATH_FADE_DURATION;
@@ -536,6 +537,47 @@
     return minutes + ':' + remain;
   }
 
+  function analyticsContext(extra = {}) {
+    return {
+      island: currentLocationLabel(),
+      biome: currentBiome(),
+      infected_goal: currentInfectedGoal(),
+      kills: player.kills,
+      life_kills: player.lifeKills,
+      deaths: player.deaths,
+      score: player.score,
+      seconds_survived: runSeconds(),
+      ...extra
+    };
+  }
+
+  function trackGameEvent(name, extra = {}) {
+    window.ZomVoxAnalytics?.track(name, analyticsContext(extra));
+  }
+
+  function resetAnalyticsHuntState() {
+    analyticsState.huntStarts++;
+    analyticsState.firstShot = false;
+    analyticsState.firstKill = false;
+    analyticsState.bitten = false;
+  }
+
+  function trackHuntStarted(next) {
+    resetAnalyticsHuntState();
+    trackGameEvent('hunt_started', {
+      island: currentBiomeLabel(next.biome) + ' Island',
+      biome: next.biome,
+      infected_goal: next.goal,
+      hunt_number: analyticsState.huntStarts,
+      kills: 0,
+      life_kills: 0,
+      deaths: 0,
+      score: 0,
+      seconds_survived: 0
+    });
+  }
+
+
   function activePerkNames() {
     return PERK_CHOICES
       .filter(choice => activePerks[choice.id])
@@ -577,6 +619,11 @@
     scorePop(choice.name.toUpperCase(), 'pickup perk small');
     showToast('Perk equipped: ' + choice.name, false, 'perk');
     sound('perkEquip');
+    trackGameEvent('perk_collected', {
+      perk_id: choice.id,
+      perk_name: choice.name,
+      active_perks: activePerkNames().length
+    });
     return true;
   }
 
@@ -1104,8 +1151,8 @@
     return normalizeBiome(mission.quickBiome);
   }
 
-  function currentBiomeLabel() {
-    const biome = currentBiome();
+  function currentBiomeLabel(value = currentBiome()) {
+    const biome = normalizeBiome(value);
     return biome.charAt(0).toUpperCase() + biome.slice(1);
   }
 
@@ -1468,6 +1515,7 @@
 
   function beginExtractionRedeploy() {
     const next = chooseNextHunt();
+    trackHuntStarted(next);
     hideHuntDecisionOverlay();
     hideRadioComms();
     mission.huntDecisionActive = false;
@@ -1575,6 +1623,9 @@
       markInstalledOnce();
       showToast('Installed. Open ZomVox from your home screen for app mode.');
     }
+    trackGameEvent('install_prompt_result', {
+      outcome: choice?.outcome || 'dismissed'
+    });
     updatePortraitInstall();
   }
 
@@ -1613,12 +1664,14 @@
       event.preventDefault();
       deferredInstallPrompt = event;
       updatePortraitInstall();
+      trackGameEvent('install_prompt_available');
     });
     window.addEventListener('appinstalled', () => {
       markInstalledOnce();
       deferredInstallPrompt = null;
       updatePortraitInstall();
       showToast('Installed. Open ZomVox from your home screen for app mode.');
+      trackGameEvent('pwa_installed');
     });
     if (isStandaloneApp()) markInstalledOnce();
     updatePortraitInstall();
@@ -2085,6 +2138,10 @@
     spawnPickupAt(spot.x, spot.y, spot.z, 'ammo');
     scorePop('AMMO CACHE', 'pickup small');
     showRadioComms(COMMS_AMMO_CACHE, 3.8);
+    trackGameEvent('ammo_cache_spawned', {
+      reserve: player.reserve,
+      mag: player.mag
+    });
   }
 
   function biomeSurfaceTypes(biome, x, z, h, beach, desert, lavaShore) {
@@ -2651,6 +2708,12 @@
     sound('land', 1, 1, { surface: playerAudioSurface(), gait: 'land' });
     scorePop('TOUCHDOWN', 'pickup small');
     showRadioComms(formatCommsMessage(COMMS_DROP_IN), 4.8);
+    window.ZomVoxAnalytics?.levelStart(currentLocationLabel(), analyticsContext({
+      hunt_number: analyticsState.huntStarts
+    }));
+    trackGameEvent('player_dropped', {
+      hunt_number: analyticsState.huntStarts
+    });
   }
 
   function updateMovement(dt) {
@@ -2949,6 +3012,17 @@
     if (impactSound) sound(impactSound);
     if (player.health <= 0) beginDeathSequence();
     else {
+      if (!analyticsState.bitten) {
+        analyticsState.bitten = true;
+        trackGameEvent('first_bitten', {
+          damage: amount,
+          health_remaining: Math.max(0, Math.round(player.health))
+        });
+      }
+      trackGameEvent('player_bitten', {
+        damage: amount,
+        health_remaining: Math.max(0, Math.round(player.health))
+      });
       woundGaspTimer = Math.min(woundGaspTimer || 999, 1.2 + Math.random() * 1.8);
       maybeVoiceBitten();
       maybeVoiceLowHealth();
@@ -3001,6 +3075,11 @@
     if (unlockedBiomes.length) {
       sound('objectiveClear');
     }
+    trackGameEvent('player_downed', {
+      life_kills: run.kills,
+      seconds_survived: run.seconds,
+      best_streak: run.bestCombo
+    });
     deathFill.style.width = '0%';
     deathOverlay.classList.remove('show', 'ready', 'cinematic', 'awaiting-choice', 'reviving');
     void deathOverlay.offsetWidth;
@@ -3097,6 +3176,7 @@
       return keep;
     });
     showToast('Revived at the old marker. Deaths: ' + player.deaths);
+    trackGameEvent('player_revived');
     showRadioCommsLater(formatCommsMessage(COMMS_POST_REVIVAL), 4.2, 1500);
     requestPointerLockAfterUi();
   }
@@ -3139,6 +3219,7 @@
     deathFill.style.width = '0%';
     menu.style.display = 'flex';
     updateStartButtonLabel();
+    trackGameEvent('session_quit', { reason: message });
     mission.quickBiome = 'forest';
     mission.quickGoal = 0;
     updateAmbientSound(true);
@@ -3180,6 +3261,10 @@
     deathFill.style.width = '0%';
     menu.style.display = 'flex';
     updateStartButtonLabel();
+    window.ZomVoxAnalytics?.levelEnd(currentLocationLabel(), false, analyticsContext({
+      reason: 'death_give_up'
+    }));
+    trackGameEvent('session_quit', { reason: message, from_death: true });
     mission.quickBiome = 'forest';
     mission.quickGoal = 0;
     document.body.classList.remove('quick-mode');
@@ -3369,6 +3454,21 @@
     }
     const streak = player.lifeKills;
     player.lifeBestCombo = Math.max(player.lifeBestCombo, streak);
+    if (!analyticsState.firstKill) {
+      analyticsState.firstKill = true;
+      trackGameEvent('first_kill', {
+        headshot: !!options.headshot,
+        source: options.source || 'unknown',
+        distance: Math.round(dist)
+      });
+    }
+    trackGameEvent('zombie_killed', {
+      headshot: !!options.headshot,
+      source: options.source || 'unknown',
+      distance: Math.round(dist),
+      kill_streak: streak,
+      remaining: Math.max(0, currentInfectedGoal() - player.kills)
+    });
     let perkRewardKill = false;
     if (streak > 0 && streak % 5 === 0) {
       player.score += 250;
@@ -3392,6 +3492,13 @@
     if (player.reloading) return;
     if (player.shotCooldown > 0) return;
     if (player.mag <= 0) { showToast('Empty. Reload.'); sound('empty'); startReload(); return; }
+    if (!analyticsState.firstShot) {
+      analyticsState.firstShot = true;
+      trackGameEvent('first_shot', {
+        reserve: player.reserve,
+        mag: player.mag
+      });
+    }
     player.mag--;
     player.shotCooldown = currentFireCooldown();
     gunSprite.classList.remove('shooting');
@@ -3499,6 +3606,9 @@
     showToast('C4 tossed. Lure infected into it.');
     scorePop('C4 TOSSED', 'pickup small');
     sound('pickupAmmo');
+    trackGameEvent('c4_deployed', {
+      c4_remaining: player.c4
+    });
   }
 
   function detonateC4(charge) {
@@ -3529,6 +3639,9 @@
     }
     shakeScreen();
     sound('explosion');
+    trackGameEvent('c4_detonated', {
+      infected_cleared: killed
+    });
     if (killed) {
       showToast('C4 blast cleared ' + killed + ' infected.');
       checkMissionCompletion();
@@ -3612,6 +3725,11 @@
           scorePop('+' + p.amount + ' C4', 'pickup c4');
           sound('pickupC4');
           spawnParticles(p.x, p.y + .2, p.z, 10, 24);
+          trackGameEvent('pickup_collected', {
+            pickup_type: 'c4',
+            amount: p.amount,
+            c4_total: player.c4
+          });
         } else if (p.kind === 'perk') {
           const perkId = p.perkId && !activePerks[p.perkId] ? p.perkId : nextPerkId(p.x, p.z);
           p.collected = true;
@@ -3627,6 +3745,11 @@
           showToast('Ammo +' + p.amount, false, 'ammo');
           scorePop('+' + p.amount + ' AMMO PICKUP', 'pickup ammo');
           sound('pickupAmmo');
+          trackGameEvent('pickup_collected', {
+            pickup_type: 'ammo',
+            amount: p.amount,
+            reserve: player.reserve
+          });
         }
       }
     }
@@ -3785,6 +3908,20 @@
       bestCombo: player.lifeBestCombo
     };
     recordQuickHuntRun(run);
+    window.ZomVoxAnalytics?.levelEnd(currentLocationLabel(), true, analyticsContext({
+      seconds_survived: run.seconds,
+      best_streak: run.bestCombo
+    }));
+    window.ZomVoxAnalytics?.postScore(player.score, analyticsContext({
+      level: currentLocationLabel(),
+      seconds_survived: run.seconds,
+      best_streak: run.bestCombo
+    }));
+    trackGameEvent('hunt_completed', {
+      seconds_survived: run.seconds,
+      best_streak: run.bestCombo,
+      active_perks: activePerkNames().length
+    });
     sound('objectiveClear');
     beginHuntCompleteDecision();
   }
@@ -4336,11 +4473,13 @@ function currentWaterIsDangerous() {
     if (desktopPaused) {
       sound('confirm');
       desktopPaused = false;
+      trackGameEvent('hunt_resumed');
       enterGameFromMenu();
       return;
     }
     sound('confirm');
     const next = chooseNextHunt();
+    trackHuntStarted(next);
     document.body.classList.add('quick-mode');
     generateWorld(next.seed);
     enterGameFromMenu();
@@ -4368,6 +4507,7 @@ function currentWaterIsDangerous() {
     menu.style.display = 'flex';
     updateStartButtonLabel();
     updateAmbientSound(true);
+    trackGameEvent('hunt_paused');
   }
 
   function openSettingsModal() {
@@ -4618,6 +4758,7 @@ function currentWaterIsDangerous() {
   registerPwaHooks();
   gl.enable(gl.DEPTH_TEST);
   generateWorld(currentSeed);
+  trackGameEvent('game_loaded');
   runSplash();
   requestAnimationFrame(loop);
 })();

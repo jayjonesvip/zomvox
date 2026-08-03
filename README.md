@@ -116,7 +116,7 @@ Common tuning options live in `config.js` under `window.ZOMVOX_CONFIG`. Edit tha
 
 ```js
 window.ZOMVOX_CONFIG = {
-  buildVersion: '2026.08.01.26',
+  buildVersion: '2026.08.01.27',
   initialSeed: 729641,
 
   environment: {
@@ -246,6 +246,7 @@ Mission command lines are visual radio comms toasts in the HUD instead of browse
 |-- README.md
 |-- index.html
 |-- config.js
+|-- analytics.js
 |-- manifest.webmanifest
 |-- sw.js
 |-- sound.js
@@ -272,6 +273,7 @@ Mission command lines are visual radio comms toasts in the HUD instead of browse
 
 - `index.html`: document structure, menu, settings, overlays, HUD containers, mobile controls, and script/style references.
 - `config.js`: future-dev friendly tuning values for environment, world, player, weapon, enemies, pickups, timers, seed, and build version.
+- `analytics.js`: safe Google Analytics event bridge for SPA gameplay events; it no-ops when `gtag` is blocked or unavailable.
 - `manifest.webmanifest`: install metadata, app icons, fullscreen display, and landscape orientation request.
 - `sw.js`: lightweight service worker for app shell caching and home-screen launch reliability.
 - `sound.js`: tiny compatibility loader that keeps the old script entry point while loading the split audio engine in order.
@@ -279,6 +281,10 @@ Mission command lines are visual radio comms toasts in the HUD instead of browse
 - `styles.css`: visual styling, responsive mobile layout, splash screen, health/ammo HUD, death overlay, world rebuild overlay, and touch controls.
 - `script.js`: WebGL setup, procedural terrain, fixed world chunks, movement, combat, enemy behavior, pickups, world rebuilding, HUD updates, and game loop.
 - `assets/`: splash screen, favicon files, title/social images, weapon sprite sheet, and optional cue audio files such as `zombieMoan.mp3`.
+
+## Gameplay Analytics
+
+`analytics.js` sends GA4 events for meaningful in-game actions while the app stays on `index.html`. Events include `game_loaded`, `hunt_started`, `player_dropped`, `first_shot`, `first_kill`, `zombie_killed`, `first_bitten`, `player_bitten`, `player_downed`, `player_revived`, `hunt_completed`, `pickup_collected`, `perk_collected`, `ammo_cache_spawned`, `c4_deployed`, `c4_detonated`, `hunt_paused`, `hunt_resumed`, `session_quit`, `install_prompt_available`, `install_prompt_result`, `pwa_installed`, plus GA4 recommended `level_start`, `level_end`, and `post_score`.
 
 ## Hosting
 
