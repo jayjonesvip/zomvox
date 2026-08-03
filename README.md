@@ -178,7 +178,7 @@ window.ZOMVOX_CONFIG = {
   comms: {
     dropIn: 'You are on {islandName}. The mission is to kill {zombieTotal} infected.',
     huntComplete: '{islandName} is clear. Ready for the next mission?',
-    bitten: 'You are bit. Keep your distance and finish the objective.',
+    bitten: 'You are bit. Keep distance and survive one minute to recover.',
     death: 'Can you hear me? Do you want to keep going?',
     fewMore: 'Just a few more.',
     lowHealth: 'Retreat and treat your wounds.',
