@@ -327,7 +327,7 @@ window.ZOMVOX_CONFIG = {
       C4 is checked first. If the roll is still below this value, the enemy
       drops ammo. Health pickups are intentionally disabled.
     */
-    enemyAnyDropChance: 0.33
+    enemyAnyDropChance: 0.25
   },
 
   timers: {
