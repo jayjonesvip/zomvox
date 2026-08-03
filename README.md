@@ -39,7 +39,7 @@ ZomVox is listed on [IGDB](https://www.igdb.com/) and [DEAD.ARMY](https://dead.a
 - Compact ammo HUD on desktop and mobile, plus a six-round blaster magazine with magazine-swap reloads, reserve ammo, recoil, and fire-rate cooldown.
 - Camo ammo pickups that add six rounds at a time, plus low-ammo mercy caches when reserve ammo hits zero.
 - Flat silver C4 proximity charges with blinking red dots, yellow hazard strips, one starting charge, and rare zombie drops.
-- Blue-accent perk crates awarded every five kills in one spawn; equipped perks persist for the current browser session and never repeat.
+- Blue-accent perk crates awarded every five kills in one spawn; equipped perks persist for the current browser session, never repeat, and convert to C4 drops after all perks are equipped.
 - Zombie spawning, ground-emerge entrances, pursuit steering around water/trees, attack cooldowns, retreat steps after attacks, deaths, score popups, and pickup drops.
 - Weighted zombie variants: normal, speedy one-shot runners, slower brute attackers, and rare grey stalkers.
 - Mobile-only landscape gate.
@@ -50,7 +50,7 @@ ZomVox is listed on [IGDB](https://www.igdb.com/) and [DEAD.ARMY](https://dead.a
 - Optional fog through code.
 - Dangerous water enabled by default through code.
 - Damage flash and screen shake when the player is hit.
-- Two-bite wound/death loop with a red wounded vignette, ground-level death camera, blood particles, black fade, Mission Command continue prompt, and `REVIVING...` meter.
+- Bite recovery loop: the first zombie bite starts a slowly fading red vignette and a 60-second recovery window; another bite before recovery downs the player.
 - Menu-safe gameplay pause so the player does not take damage before pressing Play.
 
 ## Game Flow
@@ -116,7 +116,7 @@ Common tuning options live in `config.js` under `window.ZOMVOX_CONFIG`. Edit tha
 
 ```js
 window.ZOMVOX_CONFIG = {
-  buildVersion: '2026.08.01.28',
+  buildVersion: '2026.08.01.29',
   initialSeed: 729641,
 
   environment: {
@@ -150,7 +150,9 @@ window.ZOMVOX_CONFIG = {
     height: 1.76,
     radius: 0.31,
     stepHeight: 1.05,
-    stepSmoothMs: 120
+    stepSmoothMs: 120,
+    biteRecoverySeconds: 60,
+    rapidRecoverySeconds: 30
   },
 
   weapon: {
@@ -162,6 +164,8 @@ window.ZOMVOX_CONFIG = {
     doubleMagMultiplier: 2,
     premiumGripMultiplier: 0.38,
     hairTriggerMultiplier: 0.5,
+    ammoBeltMultiplier: 1.5,
+    blastPackRadiusMultiplier: 1.25,
     longRangeKillDistance: 34
   },
 

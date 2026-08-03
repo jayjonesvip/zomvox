@@ -17,7 +17,7 @@ window.ZOMVOX_CONFIG = {
     Bump this when you make visible changes so you can tell the browser
     loaded the newest version.
   */
-  buildVersion: '2026.08.01.28',
+  buildVersion: '2026.08.01.29',
 
   /*
     Seed used for deterministic world generation.
@@ -189,7 +189,19 @@ window.ZOMVOX_CONFIG = {
       Main combat now uses a two-bite wounded/dead loop instead of a visible
       health meter.
     */
-    lowHealthThreshold: 25
+    lowHealthThreshold: 25,
+
+    /*
+      Seconds needed to recover after the first zombie bite.
+
+      A second bite during this recovery window downs the player.
+    */
+    biteRecoverySeconds: 60,
+
+    /*
+      Recovery seconds after the Rapid Recovery perk is equipped.
+    */
+    rapidRecoverySeconds: 30
   },
 
   weapon: {
@@ -227,6 +239,8 @@ window.ZOMVOX_CONFIG = {
     doubleMagMultiplier: 2,
     premiumGripMultiplier: 0.38,
     hairTriggerMultiplier: 0.5,
+    ammoBeltMultiplier: 1.5,
+    blastPackRadiusMultiplier: 1.25,
 
     /*
       Distance needed for the long-range kill bonus.
