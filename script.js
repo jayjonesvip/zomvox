@@ -169,7 +169,9 @@
     CLOUD: 34,
     SPIRE_METAL: 41,
     ASPHALT: 44,
-    RUNWAY_MARK: 45
+    RUNWAY_MARK: 45,
+    PURPLE_ZOMBIE: 46,
+    DARK_PURPLE_ZOMBIE: 47
   };
 
   const CHUNK_SIZE = Math.max(4, Math.floor(configNumber(WORLD_CONFIG, 'chunkSize', 16)));
@@ -211,6 +213,7 @@
   const ENEMY_CAP = Math.max(1, Math.floor(configNumber(ENEMY_CONFIG, 'baseCap', 18)));
   const HORDE_KILLS_PER_LEVEL = Math.max(1, Math.floor(configNumber(ENEMY_CONFIG, 'hordeKillsPerLevel', 5)));
   const HORDE_CAP_BONUS = Math.max(0, Math.floor(configNumber(ENEMY_CONFIG, 'hordeCapBonus', 2)));
+  const SPITTER_BILE_RANGE = Math.max(1, configNumber(ENEMY_CONFIG, 'spitterBileRange', 2.15));
   const ZOMBIE_MOAN_RADIUS = Math.max(1, configNumber(ENEMY_CONFIG, 'zombieMoanRadius', 5));
   const ZOMBIE_MOAN_MAX_VOICES = Math.max(1, Math.floor(configNumber(ENEMY_CONFIG, 'zombieMoanMaxVoices', 3)));
   const ZOMBIE_MOAN_INTERVAL_MIN = Math.max(0.5, configNumber(ENEMY_CONFIG, 'zombieMoanIntervalMin', 4));
@@ -293,7 +296,7 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.33');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.34');
   const COMMS_DROP_IN = configString(COMMS_CONFIG, 'dropIn', 'You are on {islandName}. The mission is to kill {zombieTotal} infected.');
   const COMMS_HUNT_COMPLETE = configString(COMMS_CONFIG, 'huntComplete', '{islandName} is clear. Ready for the next mission?');
   const COMMS_BITTEN = configString(COMMS_CONFIG, 'bitten', 'You are bit. Keep distance and survive one minute to recover.');
@@ -1902,6 +1905,8 @@
       if(t < 43.5) return vec3(1.0, 0.45, 0.18); /* warm particles */
       if(t < 44.5) return vec3(0.035, 0.038, 0.040); /* asphalt */
       if(t < 45.5) return vec3(0.82, 0.82, 0.72); /* runway paint */
+      if(t < 46.5) return vec3(0.44, 0.16, 0.66); /* toxic spitter zombie */
+      if(t < 47.5) return vec3(0.22, 0.08, 0.34); /* dark spitter limbs */
       return vec3(1.0, 0.45, 0.18); /* particles */
     }
     void main(){
@@ -3070,13 +3075,16 @@
 
   function enemyVariantStats(x, z) {
     const roll = seededHash(x * 12.7 - 4, z * 8.4 + 6);
-    if (roll < 0.66) {
+    if (roll < 0.62) {
       return { kind: 'normal', hp: 48, speed: 2.55, scale: 1, damage: 50, attackCooldown: .9, retreat: .34, bodyType: 10, limbType: 11, eyeType: 12 };
     }
-    if (roll < 0.84) {
+    if (roll < 0.80) {
       return { kind: 'speedy', hp: 28, speed: 3.35, scale: .78, damage: 50, attackCooldown: .68, retreat: .28, bodyType: 18, limbType: 10, eyeType: 12 };
     }
-    if (roll < 0.94) {
+    if (roll < 0.90) {
+      return { kind: 'spitter', hp: 48, speed: 2.35, scale: 1, damage: 50, attackCooldown: 1.18, retreat: .52, attackRange: SPITTER_BILE_RANGE, spitsBile: true, bodyType: BLOCK.PURPLE_ZOMBIE, limbType: BLOCK.DARK_PURPLE_ZOMBIE, eyeType: 12 };
+    }
+    if (roll < 0.98) {
       return { kind: 'brute', hp: 96, speed: 1.72, scale: 1.24, damage: 100, attackCooldown: 1.25, retreat: .46, bodyType: 19, limbType: 11, eyeType: 20 };
     }
     return { kind: 'grey', hp: 118, speed: 1.18, scale: 1, damage: 100, attackCooldown: 1.15, retreat: .38, bodyType: 35, limbType: 36, eyeType: 12 };
@@ -3175,6 +3183,44 @@
     return 1;
   }
 
+  function enemyAttackRange(enemy, stats) {
+    if (stats.attackRange) return stats.attackRange;
+    if (enemy.big) return 1.82;
+    if (stats.kind === 'speedy') return 1.42;
+    return 1.58;
+  }
+
+  function spawnBileSpit(enemy, stats) {
+    const scale = stats.scale || 1;
+    const dx = player.pos[0] - enemy.x;
+    const dz = player.pos[2] - enemy.z;
+    const dist = Math.hypot(dx, dz) || 1;
+    const ux = dx / dist;
+    const uz = dz / dist;
+    const mouthX = enemy.x + ux * .46 * scale;
+    const mouthY = enemy.y + 1.46 * scale;
+    const mouthZ = enemy.z + uz * .46 * scale;
+
+    // Spitter bile is visual-only; damage still goes through the bite system
+    // so recovery, invulnerability, analytics, and death handling stay shared.
+    for (let i = 0; i < 18; i++) {
+      const side = (Math.random() - .5) * .9;
+      const lift = (Math.random() - .35) * .55;
+      const speed = 4.4 + Math.random() * 2.2;
+      particles.push({
+        x: mouthX + (Math.random() - .5) * .08,
+        y: mouthY + (Math.random() - .5) * .08,
+        z: mouthZ + (Math.random() - .5) * .08,
+        vx: ux * speed + -uz * side,
+        vy: lift,
+        vz: uz * speed + ux * side,
+        gravity: 1.8,
+        life: .22 + Math.random() * .18,
+        type: 23
+      });
+    }
+  }
+
   function stopSoundHandle(handle) {
     if (handle && typeof handle.stop === 'function') handle.stop();
   }
@@ -3264,9 +3310,13 @@
       e.retreat = Math.max(0, (e.retreat || 0) - dt);
       e.attack -= dt;
       const stats = e.variant || enemyVariantStats(e.x, e.z);
-      const attackRange = e.big ? 1.82 : (stats.kind === 'speedy' ? 1.42 : 1.58);
+      const attackRange = enemyAttackRange(e, stats);
       const attackDist = Math.hypot(player.pos[0] - e.x, player.pos[2] - e.z) || 1;
       if (attackDist < attackRange && Math.abs(player.pos[1] - e.y) < 2.25 && e.attack <= 0) {
+        if (stats.spitsBile) {
+          spawnBileSpit(e, stats);
+          e.mouthOpenTimer = Math.max(e.mouthOpenTimer || 0, .42);
+        }
         if (canDamagePlayer()) damagePlayer(currentZombieDamage(stats.damage));
         e.attack = stats.attackCooldown;
         e.attackPose = .34;

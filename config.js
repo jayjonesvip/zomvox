@@ -17,7 +17,7 @@ window.ZOMVOX_CONFIG = {
     Bump this when you make visible changes so you can tell the browser
     loaded the newest version.
   */
-  buildVersion: '2026.08.01.33',
+  buildVersion: '2026.08.01.34',
 
   /*
     Seed used for deterministic world generation.
@@ -271,6 +271,14 @@ window.ZOMVOX_CONFIG = {
       baseCap + hordeLevel * hordeCapBonus
     */
     hordeCapBonus: 2,
+
+    /*
+      Purple spitters are normal-sized zombies with a short-range bile attack.
+
+      This range is measured in world blocks and uses the same first-bite /
+      second-bite damage loop as a regular zombie bite.
+    */
+    spitterBileRange: 2.15,
 
     /*
       Zombie moans only play when zombies are close enough to feel threatening.
