@@ -42,7 +42,9 @@ ZomVox is listed on [IGDB](https://www.igdb.com/) and [DEAD.ARMY](https://dead.a
 - Flat silver C4 proximity charges with blinking red dots, yellow hazard strips, one starting charge, and rare zombie drops.
 - Blue-accent perk crates awarded every five kills in one spawn; equipped perks persist for the current browser session, never repeat, and convert to C4 drops after all perks are equipped.
 - Zombie spawning, ground-emerge entrances, pursuit steering around water/trees, attack cooldowns, retreat steps after attacks, deaths, combat popups, and pickup drops.
-- Weighted zombie variants: normal, speedy one-shot runners, slower brute attackers, rare grey stalkers, and purple toxic spitters with short-range bile.
+- Weighted zombie variants: normal, speedy one-shot runners, slower brute attackers, rare grey stalkers, and purple toxic spitters with 5-block bile.
+- Three toxic waste barrels per island vent green particles and explode like C4 when shot, clearing infected inside the blast radius.
+- Tundra islands include snow-capped pine trees.
 - Mobile-only landscape gate.
 - Mobile joystick movement plus separate shoot and C4 controls.
 - Main menu settings for ammo HUD, controls, sound, ambient audio, and fullscreen.
@@ -117,7 +119,7 @@ Common tuning options live in `config.js` under `window.ZOMVOX_CONFIG`. Edit tha
 
 ```js
 window.ZOMVOX_CONFIG = {
-  buildVersion: '2026.08.01.34',
+  buildVersion: '2026.08.01.35',
   initialSeed: 729641,
 
   environment: {
@@ -174,7 +176,7 @@ window.ZOMVOX_CONFIG = {
     baseCap: 18,
     hordeKillsPerLevel: 4,
     hordeCapBonus: 2,
-    spitterBileRange: 2.15,
+    spitterBileRange: 5,
     zombieMoanRadius: 10,
     zombieMoanMaxVoices: 3,
     zombieMoanIntervalMin: 2.0,
