@@ -213,7 +213,7 @@
   const ENEMY_CAP = Math.max(1, Math.floor(configNumber(ENEMY_CONFIG, 'baseCap', 18)));
   const HORDE_KILLS_PER_LEVEL = Math.max(1, Math.floor(configNumber(ENEMY_CONFIG, 'hordeKillsPerLevel', 5)));
   const HORDE_CAP_BONUS = Math.max(0, Math.floor(configNumber(ENEMY_CONFIG, 'hordeCapBonus', 2)));
-  const SPITTER_BILE_RANGE = Math.max(1, configNumber(ENEMY_CONFIG, 'spitterBileRange', 2.15));
+  const SPITTER_BILE_RANGE = Math.max(1, configNumber(ENEMY_CONFIG, 'spitterBileRange', 5));
   const ZOMBIE_MOAN_RADIUS = Math.max(1, configNumber(ENEMY_CONFIG, 'zombieMoanRadius', 5));
   const ZOMBIE_MOAN_MAX_VOICES = Math.max(1, Math.floor(configNumber(ENEMY_CONFIG, 'zombieMoanMaxVoices', 3)));
   const ZOMBIE_MOAN_INTERVAL_MIN = Math.max(0.5, configNumber(ENEMY_CONFIG, 'zombieMoanIntervalMin', 4));
@@ -282,6 +282,7 @@
   let enemies = [];
   let pickups = [];
   let c4Charges = [];
+  let toxicBarrels = [];
   let particles = [];
   let nextSpawnTimer = 3.5;
   let ammoMercyTimer = 0;
@@ -296,7 +297,7 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.34');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.35');
   const COMMS_DROP_IN = configString(COMMS_CONFIG, 'dropIn', 'You are on {islandName}. The mission is to kill {zombieTotal} infected.');
   const COMMS_HUNT_COMPLETE = configString(COMMS_CONFIG, 'huntComplete', '{islandName} is clear. Ready for the next mission?');
   const COMMS_BITTEN = configString(COMMS_CONFIG, 'bitten', 'You are bit. Keep distance and survive one minute to recover.');
@@ -2221,6 +2222,42 @@
     return true;
   }
 
+  function isToxicBarrelSpotClear(x, z) {
+    if (!inWorldXZ(x, z)) return false;
+    if (Math.hypot(x - player.pos[0], z - player.pos[2]) < 9) return false;
+    if (currentBiome() === 'dustfield' && dustfieldProtectedAt(x, z, 4)) return false;
+    generateChunk(chunkCoord(x), chunkCoord(z));
+    const y = pickupAirY(x, z);
+    if (y <= WATER_LEVEL + 1) return false;
+    if (blocksMovement(getBlock(x, y, z)) || blocksMovement(getBlock(x, y + 1, z))) return false;
+    return true;
+  }
+
+  function buildToxicBarrels() {
+    const barrels = [];
+    const span = Math.max(1, WORLD_MAX - WORLD_MIN - 10);
+    for (let i = 0; i < 3; i++) {
+      for (let attempt = 0; attempt < 90; attempt++) {
+        const sx = currentSeed * .013 + i * 31.7 + attempt * 5.1;
+        const sz = currentSeed * .021 - i * 27.9 + attempt * 7.3;
+        const x = Math.floor(WORLD_MIN + 5 + seededHash(sx, sz) * span);
+        const z = Math.floor(WORLD_MIN + 5 + seededHash(sz + 19.4, sx - 11.2) * span);
+        if (!isToxicBarrelSpotClear(x, z)) continue;
+        const y = pickupAirY(x, z) + .02;
+        barrels.push({
+          x: x + .5,
+          y,
+          z: z + .5,
+          live: true,
+          vent: seededHash(x * 3.4 + i, z * 2.1 - i) * .12,
+          phase: seededHash(x - 14, z + 33) * Math.PI * 2
+        });
+        break;
+      }
+    }
+    return barrels;
+  }
+
   function pickupSpotAt(px, pz) {
     px = Math.max(WORLD_MIN, Math.min(WORLD_MAX, Math.floor(px)));
     pz = Math.max(WORLD_MIN, Math.min(WORLD_MAX, Math.floor(pz)));
@@ -2392,11 +2429,14 @@
           const edge = Math.abs(dx) + Math.abs(dz);
           if (edge > radius + 1) continue;
           if (dx === 0 && dz === 0 && y <= h + trunk) continue;
-          if (seededHash(x + dx * 17 + y, z + dz * 29) > 0.08) genSetBlock(x + dx, y, z + dz, BLOCK.PINE_LEAF);
+          if (seededHash(x + dx * 17 + y, z + dz * 29) > 0.08) {
+            const snowyTip = y >= topY - 1 && seededHash(x + dx * 11 + y * 3, z + dz * 13 - y) > .64;
+            genSetBlock(x + dx, y, z + dz, snowyTip ? BLOCK.SNOW : BLOCK.PINE_LEAF);
+          }
         }
       }
     }
-    genSetBlock(x, topY + 1, z, BLOCK.PINE_LEAF);
+    genSetBlock(x, topY + 1, z, BLOCK.SNOW);
   }
 
   function growVoxelCloud(cx, cz) {
@@ -3713,6 +3753,17 @@
     }
     return null;
   }
+
+  function toxicBarrelHitAt(px, py, pz) {
+    for (const barrel of toxicBarrels) {
+      if (!barrel.live) continue;
+      if (Math.abs(px - barrel.x) < .48 && Math.abs(pz - barrel.z) < .48 && py >= barrel.y && py <= barrel.y + 1.28) {
+        return barrel;
+      }
+    }
+    return null;
+  }
+
   function raycastProjectile(maxDist) {
     const e = eyePos();
     const d = lookDir();
@@ -3722,6 +3773,8 @@
       const pz = e[2] + d[2] * t;
       const hitEnemy = entityHitAt(px, py, pz);
       if (hitEnemy) return { kind: 'enemy', enemy: hitEnemy.enemy, head: hitEnemy.head, point: [px, py, pz], dist: t };
+      const hitBarrel = toxicBarrelHitAt(px, py, pz);
+      if (hitBarrel) return { kind: 'barrel', barrel: hitBarrel, point: [px, py, pz], dist: t };
       const bx = Math.floor(px), by = Math.floor(py), bz = Math.floor(pz);
       const type = getBlock(bx, by, bz);
       if (type && type !== BLOCK.WATER) return { kind: 'surface', type, point: [px, py, pz], dist: t };
@@ -3796,6 +3849,8 @@
     spawnKillBurst(enemy.x, enemy.y + 1.1, enemy.z, enemy.big);
     if (options.source === 'c4') {
       popMessage('C4 BLAST', 'combo small');
+    } else if (options.source === 'barrel') {
+      popMessage('TOXIC BLAST', 'combo small');
     } else if (options.headshot) {
       popMessage('HEADSHOT KILL', 'head');
     } else {
@@ -3878,6 +3933,8 @@
     } else if (hit.kind === 'surface') {
       spawnParticles(hit.point[0], hit.point[1], hit.point[2], 5, hit.type);
       sound('block');
+    } else if (hit.kind === 'barrel') {
+      detonateToxicBarrel(hit.barrel);
     }
     if (player.mag <= 0 && player.reserve > 0) startReload();
   }
@@ -4032,6 +4089,70 @@
       if (!keep) stopEnemySounds(e);
       return keep;
     });
+  }
+
+  function detonateToxicBarrel(barrel) {
+    if (!barrel || !barrel.live) return;
+    barrel.live = false;
+    const radius = currentC4BlastRadius();
+    let killed = 0;
+    for (let i = 0; i < 44; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 2.6 + Math.random() * 7.8;
+      particles.push({
+        x: barrel.x,
+        y: barrel.y + .7,
+        z: barrel.z,
+        vx: Math.cos(angle) * speed,
+        vy: 1.2 + Math.random() * 5.8,
+        vz: Math.sin(angle) * speed,
+        life: .38 + Math.random() * .72,
+        type: i % 3 === 0 ? 23 : (i % 4 === 0 ? 24 : 15)
+      });
+    }
+    for (const e of enemies) {
+      if (e.dead || e.hp <= 0) continue;
+      const dist = Math.hypot(e.x - barrel.x, e.z - barrel.z);
+      if (dist > radius || Math.abs(e.y - barrel.y) > 4.2) continue;
+      const damage = 240 * (1 - dist / radius) + 80;
+      e.hp -= damage;
+      spawnParticles(e.x, e.y + 1.0, e.z, 10, 23);
+      if (e.hp <= 0 && registerEnemyKill(e, { source: 'barrel', dist })) killed++;
+    }
+    shakeScreen();
+    sound('explosion');
+    if (killed) {
+      if (killed >= 2) popMessage('TOXIC x' + killed, 'combo');
+      showToast('Toxic barrel cleared ' + killed + ' infected.', false, 'c4');
+      checkMissionCompletion();
+    }
+    enemies = enemies.filter(e => {
+      const keep = !e.dead && e.hp > 0;
+      if (!keep) stopEnemySounds(e);
+      return keep;
+    });
+  }
+
+  function updateToxicBarrels(dt) {
+    if (!toxicBarrels.length) return;
+    for (const barrel of toxicBarrels) {
+      if (!barrel.live) continue;
+      barrel.vent -= dt;
+      if (barrel.vent > 0) continue;
+      barrel.vent = .07 + Math.random() * .08;
+      particles.push({
+        x: barrel.x + (Math.random() - .5) * .18,
+        y: barrel.y + 1.16,
+        z: barrel.z + (Math.random() - .5) * .18,
+        vx: (Math.random() - .5) * .28,
+        vy: 1.2 + Math.random() * 1.45,
+        vz: (Math.random() - .5) * .28,
+        gravity: .25,
+        life: .58 + Math.random() * .38,
+        type: 23
+      });
+    }
+    toxicBarrels = toxicBarrels.filter(barrel => barrel.live);
   }
 
   function updateC4Charges(dt) {
@@ -4412,6 +4533,7 @@
     updateEnemies(dt);
     updateZombieMoans(dt);
     updateC4Charges(dt);
+    updateToxicBarrels(dt);
     updateAmmoMercyDrops(dt);
     updatePickups(dt);
     updateParticles(dt);
@@ -4559,6 +4681,27 @@
     pushBox(arr, x - .10, y + .14, z - .10, .20, .035, .20, 24);
   }
 
+  function pushToxicBarrel(arr, barrel) {
+    const x = barrel.x, y = barrel.y, z = barrel.z;
+    const bob = Math.sin(performance.now() * .0015 + barrel.phase) * .015;
+    const by = y + bob;
+    pushBox(arr, x - .34, by, z - .34, .68, .24, .68, 13);
+    pushBox(arr, x - .38, by + .24, z - .38, .76, .12, .76, 14);
+    pushBox(arr, x - .34, by + .36, z - .34, .68, .34, .68, 13);
+    pushBox(arr, x - .38, by + .70, z - .38, .76, .12, .76, 14);
+    pushBox(arr, x - .30, by + .82, z - .30, .60, .24, .60, 13);
+    pushBox(arr, x - .12, by + 1.06, z - .12, .24, .08, .24, 23);
+    // Red warning marks on each face read as simple voxel hazard symbols.
+    pushBox(arr, x - .08, by + .48, z - .385, .16, .08, .035, 12);
+    pushBox(arr, x - .04, by + .40, z - .386, .08, .24, .035, 12);
+    pushBox(arr, x - .08, by + .48, z + .350, .16, .08, .035, 12);
+    pushBox(arr, x - .04, by + .40, z + .351, .08, .24, .035, 12);
+    pushBox(arr, x - .386, by + .48, z - .08, .035, .08, .16, 12);
+    pushBox(arr, x - .387, by + .40, z - .04, .035, .24, .08, 12);
+    pushBox(arr, x + .351, by + .48, z - .08, .035, .08, .16, 12);
+    pushBox(arr, x + .352, by + .40, z - .04, .035, .24, .08, 12);
+  }
+
   function buildDynamicMesh(time) {
     const arr = [];
     for (const e of enemies) {
@@ -4621,6 +4764,9 @@
     }
     for (const c of c4Charges) {
       pushC4Charge(arr, c, c.y);
+    }
+    for (const barrel of toxicBarrels) {
+      if (barrel.live) pushToxicBarrel(arr, barrel);
     }
     for (const p of particles) {
       const s = .07 + p.life * .05;
@@ -4730,6 +4876,7 @@ function currentWaterIsDangerous() {
     enemies = [];
     pickups = [];
     c4Charges = [];
+    toxicBarrels = [];
     particles = [];
     ammoMercyTimer = 0;
     player.health = STARTING_HEALTH;
@@ -4817,6 +4964,7 @@ function currentWaterIsDangerous() {
     player.pos = [0.5, topSolidY(0, 0) + 2.2, 0.5];
     player.vel = [0, 0, 0];
     ensureChunks(true);
+    toxicBarrels = buildToxicBarrels();
     rebuildMeshes();
     mission.phase = PHASE_ZOMBIE_THREAT;
     mission.objectiveAcknowledged = true;

@@ -17,7 +17,7 @@ window.ZOMVOX_CONFIG = {
     Bump this when you make visible changes so you can tell the browser
     loaded the newest version.
   */
-  buildVersion: '2026.08.01.34',
+  buildVersion: '2026.08.01.35',
 
   /*
     Seed used for deterministic world generation.
@@ -278,7 +278,7 @@ window.ZOMVOX_CONFIG = {
       This range is measured in world blocks and uses the same first-bite /
       second-bite damage loop as a regular zombie bite.
     */
-    spitterBileRange: 2.15,
+    spitterBileRange: 5,
 
     /*
       Zombie moans only play when zombies are close enough to feel threatening.
