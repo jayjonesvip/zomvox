@@ -28,7 +28,7 @@ ZomVox is listed on [IGDB](https://www.igdb.com/) and [DEAD.ARMY](https://dead.a
 - Splash screen build label using `BUILD_VERSION` plus the deployed document timestamp.
 - Favicon assets for browser tabs and installed shortcuts.
 - Procedural voxel terrain with themed islands: forest, dunes, rocky, swamp, ashlands, tundra, and Dustfield.
-- Dustfield adds a mostly flat desert safe-haven island with a long asphalt runway, runway markings, a control tower, an abandoned building, an abandoned camper trailer, debris, and sparse cacti.
+- Dustfield adds a mostly flat desert safe-haven island with a long asphalt runway, runway markings, a control tower, an abandoned building, debris, and sparse cacti.
 - Procedural shader detail on grass block tops, thicker grassy side bands, and textured dirt faces.
 - Visual-only ocean plane around each island so the world reads as an island without generating thousands of extra water blocks.
 - Sand and mud surfaces slow players and zombies by 15%.
@@ -119,7 +119,7 @@ Common tuning options live in `config.js` under `window.ZOMVOX_CONFIG`. Edit tha
 
 ```js
 window.ZOMVOX_CONFIG = {
-  buildVersion: '2026.08.01.37',
+  buildVersion: '2026.08.01.38',
   initialSeed: 729641,
 
   environment: {
