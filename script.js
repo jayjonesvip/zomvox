@@ -297,7 +297,7 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.36');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.37');
   const COMMS_DROP_IN = configString(COMMS_CONFIG, 'dropIn', 'You are on {islandName}. The mission is to kill {zombieTotal} infected.');
   const COMMS_HUNT_COMPLETE = configString(COMMS_CONFIG, 'huntComplete', '{islandName} is clear. Ready for the next mission?');
   const COMMS_BITTEN = configString(COMMS_CONFIG, 'bitten', 'You are bit. Keep distance and survive one minute to recover.');
@@ -2125,10 +2125,13 @@
     const elevation = WATER_LEVEL + 5;
     const towerAlong = -halfLen + 17 + Math.floor(seededHash(32.4, 118.2) * 7);
     const hangarAlong = halfLen - 24 - Math.floor(seededHash(-82.4, 32.2) * 9);
+    const camperAlong = Math.floor((towerAlong + hangarAlong) * .5) + Math.floor((seededHash(203.1, -18.2) - .5) * 10);
+    const camperAcross = -side * (halfWidth + 13);
     dustfieldPlanCache = {
       cx, cz, dirX, dirZ, sideX, sideZ, side, halfLen, halfWidth, elevation,
       tower: dustfieldPoint(cx, cz, dirX, dirZ, sideX, sideZ, towerAlong, side * (halfWidth + 8)),
-      hangar: dustfieldPoint(cx, cz, dirX, dirZ, sideX, sideZ, hangarAlong, side * (halfWidth + 10))
+      hangar: dustfieldPoint(cx, cz, dirX, dirZ, sideX, sideZ, hangarAlong, side * (halfWidth + 10)),
+      camper: dustfieldPoint(cx, cz, dirX, dirZ, sideX, sideZ, camperAlong, camperAcross)
     };
     dustfieldPlanSeed = currentSeed;
     return dustfieldPlanCache;
@@ -2160,10 +2163,19 @@
     return Math.abs(x - center.x) <= rx + margin && Math.abs(z - center.z) <= rz + margin;
   }
 
+  function dustfieldOrientedRectAt(x, z, center, halfAlong, halfAcross, margin = 0, plan = dustfieldPlan()) {
+    const dx = x - center.x;
+    const dz = z - center.z;
+    const along = dx * plan.dirX + dz * plan.dirZ;
+    const across = dx * plan.sideX + dz * plan.sideZ;
+    return Math.abs(along) <= halfAlong + margin && Math.abs(across) <= halfAcross + margin;
+  }
+
   function dustfieldProtectedAt(x, z, margin = 0, plan = dustfieldPlan()) {
     return dustfieldRunwayAt(x, z, margin, plan) ||
       dustfieldRectAt(x, z, plan.tower, 4, 4, margin) ||
-      dustfieldRectAt(x, z, plan.hangar, 6, 4, margin);
+      dustfieldRectAt(x, z, plan.hangar, 6, 4, margin) ||
+      dustfieldOrientedRectAt(x, z, plan.camper, 7, 4, margin, plan);
   }
 
   function terrainHeight(x, z) {
@@ -2481,6 +2493,12 @@
     genSetBlock(x, y, z, type);
   }
 
+  function genSetDustfieldLocalBlock(plan, center, along, across, y, type, x0, z0) {
+    const x = Math.round(center.x + plan.dirX * along + plan.sideX * across);
+    const z = Math.round(center.z + plan.dirZ * along + plan.sideZ * across);
+    genSetChunkBlock(x, y, z, type, x0, z0);
+  }
+
   function dustfieldRunwayBlock(x, z, plan = dustfieldPlan()) {
     const local = dustfieldLocal(x, z, plan);
     const alongFromStart = Math.floor(local.along + plan.halfLen);
@@ -2546,11 +2564,68 @@
       const oz = Math.floor((seededHash(plan.hangar.z, i * 23.7 - 4) - .5) * 14);
       const x = plan.hangar.x + ox;
       const z = plan.hangar.z + oz;
-      if (dustfieldRunwayAt(x, z, 1, plan) || dustfieldRectAt(x, z, plan.hangar, 5, 3, 1)) continue;
+      if (dustfieldProtectedAt(x, z, 1, plan)) continue;
       const stack = 1 + Math.floor(seededHash(x * 3.2 + i, z * 2.9 - i) * 2.2);
       const type = seededHash(x - i * 4, z + i * 6) > .38 ? BLOCK.WOOD : BLOCK.METAL;
       for (let y = 0; y < stack; y++) genSetChunkBlock(x, plan.elevation + 1 + y, z, type, x0, z0);
     }
+  }
+
+  function stampDustfieldCamper(plan, x0, z0) {
+    const baseY = plan.elevation + 1;
+    const center = plan.camper;
+    const setLocal = (along, across, y, type) => genSetDustfieldLocalBlock(plan, center, along, across, y, type, x0, z0);
+
+    // The camper is a simple abandoned aluminum trailer: a long off-white body,
+    // darker windows, stepped metal roof, wheels, hitch, and propane tanks.
+    for (let along = -5; along <= 7; along++) {
+      for (let across = -3; across <= 3; across++) {
+        setLocal(along, across, plan.elevation, seededHash(center.x + along, center.z + across) > .18 ? BLOCK.ASPHALT : BLOCK.SAND);
+      }
+    }
+
+    for (let along = -4; along <= 4; along++) {
+      for (let across = -1; across <= 1; across++) {
+        setLocal(along, across, baseY, BLOCK.RUNWAY_MARK);
+        setLocal(along, across, baseY + 1, BLOCK.RUNWAY_MARK);
+      }
+    }
+
+    for (let across = -1; across <= 1; across++) {
+      setLocal(-5, across, baseY, BLOCK.METAL);
+      setLocal(-5, across, baseY + 1, BLOCK.METAL);
+      setLocal(5, across, baseY, BLOCK.METAL);
+      setLocal(5, across, baseY + 1, BLOCK.METAL);
+    }
+
+    for (let along = -4; along <= 4; along++) {
+      for (let across = -1; across <= 1; across++) setLocal(along, across, baseY + 2, BLOCK.METAL);
+      if (along >= -3 && along <= 3) setLocal(along, 0, baseY + 3, BLOCK.METAL);
+    }
+
+    for (const along of [-3, -2, 1]) {
+      setLocal(along, -2, baseY + 1, 39);
+      setLocal(along, 2, baseY + 1, 39);
+    }
+    setLocal(3, -2, baseY, BLOCK.METAL);
+    setLocal(3, -2, baseY + 1, 39);
+
+    for (const along of [-3, 2]) {
+      setLocal(along, -2, baseY, 39);
+      setLocal(along, 2, baseY, 39);
+    }
+
+    for (let along = 5; along <= 7; along++) setLocal(along, 0, baseY, BLOCK.METAL);
+    setLocal(7, 0, baseY - 1, 39);
+    for (const across of [-1, 1]) {
+      setLocal(6, across, baseY, BLOCK.METAL);
+      setLocal(6, across, baseY + 1, BLOCK.METAL);
+      setLocal(6, across, baseY + 2, 39);
+    }
+
+    setLocal(-4, -2, baseY + 2, BLOCK.METAL);
+    setLocal(-1, -2, baseY + 2, BLOCK.METAL);
+    setLocal(2, 2, baseY + 2, BLOCK.METAL);
   }
 
   function stampDustfieldFeaturesForChunk(x0, z0) {
@@ -2567,6 +2642,7 @@
     stampDustfieldTower(plan, x0, z0);
     stampDustfieldHangar(plan, x0, z0);
     stampDustfieldDebris(plan, x0, z0);
+    stampDustfieldCamper(plan, x0, z0);
   }
 
   function generateChunk(cx, cz) {
