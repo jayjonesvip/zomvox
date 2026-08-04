@@ -55,6 +55,7 @@
     explosion: 1.08,
     hit: 0.92,
     head: 1.04,
+    briefing: 0.75,
     zombieMoan: 0.78,
     ambientMenu: 0.72,
     ambientForest: 0.68,

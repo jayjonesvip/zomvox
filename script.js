@@ -297,7 +297,7 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.35');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.36');
   const COMMS_DROP_IN = configString(COMMS_CONFIG, 'dropIn', 'You are on {islandName}. The mission is to kill {zombieTotal} infected.');
   const COMMS_HUNT_COMPLETE = configString(COMMS_CONFIG, 'huntComplete', '{islandName} is clear. Ready for the next mission?');
   const COMMS_BITTEN = configString(COMMS_CONFIG, 'bitten', 'You are bit. Keep distance and survive one minute to recover.');
@@ -1012,9 +1012,12 @@
     const next = Math.floor(player.kills / HORDE_KILLS_PER_LEVEL);
     if (next <= hordeLevel) return;
     hordeLevel = next;
-    popMessage('HORDE PRESSURE +' + hordeLevel, 'wave');
-    sound('wave');
-    nextSpawnTimer = Math.min(nextSpawnTimer, .75);
+    setTimeout(() => {
+      if (deathState.active || worldRebuildState.active || isMenuOpen()) return;
+      popMessage('HORDE PRESSURE +' + next, 'wave');
+      sound('wave');
+      nextSpawnTimer = Math.min(nextSpawnTimer, .75);
+    }, 500);
   }
 
   function isMenuOpen() {
