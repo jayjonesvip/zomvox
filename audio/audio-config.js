@@ -44,7 +44,8 @@
     ambientRocky: 'ambientRocky.mp3',
     ambientSwamp: 'ambientSwamp.mp3',
     ambientAshlands: 'ambientAshlands.mp3',
-    ambientTundra: ''
+    ambientTundra: '',
+    ambientDustfield: ''
   };
   const DEFAULT_FILE_PLAYBACK_RATES = {
     shoot: 1.15
@@ -60,7 +61,8 @@
     ambientDunes: 0.68,
     ambientRocky: 0.68,
     ambientSwamp: 0.68,
-    ambientAshlands: 0.68
+    ambientAshlands: 0.68,
+    ambientDustfield: 0.68
   };
   const PREFER_FILES = audioConfig.preferFiles !== false;
   const FILE_FALLBACK = audioConfig.fileFallback !== false;
