@@ -293,7 +293,7 @@
     'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight',
     'Space', 'ShiftLeft', 'ShiftRight'
   ]);
-  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.32');
+  const BUILD_VERSION = configString(CONFIG, 'buildVersion', '2026.08.01.33');
   const COMMS_DROP_IN = configString(COMMS_CONFIG, 'dropIn', 'You are on {islandName}. The mission is to kill {zombieTotal} infected.');
   const COMMS_HUNT_COMPLETE = configString(COMMS_CONFIG, 'huntComplete', '{islandName} is clear. Ready for the next mission?');
   const COMMS_BITTEN = configString(COMMS_CONFIG, 'bitten', 'You are bit. Keep distance and survive one minute to recover.');
@@ -3842,14 +3842,18 @@
     extractionFlareTimer -= dt;
     if (extractionFlareTimer > 0) return;
     extractionFlareTimer = .045;
-    const baseY = topSolidY(Math.floor(player.pos[0]), Math.floor(player.pos[2])) + .25;
+    const forward = lookDir();
+    const len = Math.hypot(forward[0], forward[2]) || 1;
+    const anchorX = Math.max(WORLD_MIN + 2, Math.min(WORLD_MAX - 2, player.pos[0] + (forward[0] / len) * 6.2));
+    const anchorZ = Math.max(WORLD_MIN + 2, Math.min(WORLD_MAX - 2, player.pos[2] + (forward[2] / len) * 6.2));
+    const baseY = topSolidY(Math.floor(anchorX), Math.floor(anchorZ)) + .25;
     for (let i = 0; i < 3; i++) {
       const angle = Math.random() * Math.PI * 2;
       const radius = .45 + Math.random() * 1.15;
       particles.push({
-        x: player.pos[0] + Math.cos(angle) * radius,
+        x: anchorX + Math.cos(angle) * radius,
         y: baseY + Math.random() * .45,
-        z: player.pos[2] + Math.sin(angle) * radius,
+        z: anchorZ + Math.sin(angle) * radius,
         vx: Math.cos(angle) * (.18 + Math.random() * .42),
         vy: 2.1 + Math.random() * 2.8,
         vz: Math.sin(angle) * (.18 + Math.random() * .42),
