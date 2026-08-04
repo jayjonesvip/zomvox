@@ -1012,9 +1012,12 @@
     const next = Math.floor(player.kills / HORDE_KILLS_PER_LEVEL);
     if (next <= hordeLevel) return;
     hordeLevel = next;
-    popMessage('HORDE PRESSURE +' + hordeLevel, 'wave');
-    sound('wave');
-    nextSpawnTimer = Math.min(nextSpawnTimer, .75);
+    setTimeout(() => {
+      if (deathState.active || worldRebuildState.active || isMenuOpen()) return;
+      popMessage('HORDE PRESSURE +' + next, 'wave');
+      sound('wave');
+      nextSpawnTimer = Math.min(nextSpawnTimer, .75);
+    }, 500);
   }
 
   function isMenuOpen() {
