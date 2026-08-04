@@ -42,7 +42,7 @@ ZomVox is listed on [IGDB](https://www.igdb.com/) and [DEAD.ARMY](https://dead.a
 - Flat silver C4 proximity charges with blinking red dots, yellow hazard strips, one starting charge, and rare zombie drops.
 - Blue-accent perk crates awarded every five kills in one spawn; equipped perks persist for the current browser session, never repeat, and convert to C4 drops after all perks are equipped.
 - Zombie spawning, ground-emerge entrances, pursuit steering around water/trees, attack cooldowns, retreat steps after attacks, deaths, combat popups, and pickup drops.
-- Weighted zombie variants: normal, speedy one-shot runners, slower brute attackers, and rare grey stalkers.
+- Weighted zombie variants: normal, speedy one-shot runners, slower brute attackers, rare grey stalkers, and purple toxic spitters with short-range bile.
 - Mobile-only landscape gate.
 - Mobile joystick movement plus separate shoot and C4 controls.
 - Main menu settings for ammo HUD, controls, sound, ambient audio, and fullscreen.
@@ -117,7 +117,7 @@ Common tuning options live in `config.js` under `window.ZOMVOX_CONFIG`. Edit tha
 
 ```js
 window.ZOMVOX_CONFIG = {
-  buildVersion: '2026.08.01.33',
+  buildVersion: '2026.08.01.34',
   initialSeed: 729641,
 
   environment: {
@@ -168,6 +168,17 @@ window.ZOMVOX_CONFIG = {
     ammoBeltMultiplier: 1.5,
     blastPackRadiusMultiplier: 1.25,
     longRangeKillDistance: 34
+  },
+
+  enemies: {
+    baseCap: 18,
+    hordeKillsPerLevel: 4,
+    hordeCapBonus: 2,
+    spitterBileRange: 2.15,
+    zombieMoanRadius: 10,
+    zombieMoanMaxVoices: 3,
+    zombieMoanIntervalMin: 2.0,
+    zombieMoanIntervalMax: 3.0
   },
 
   mission: {
@@ -226,7 +237,7 @@ Other sections in `config.js` expose safe defaults for:
 - `world`: chunk size, fixed map radius, max terrain height, water level, and terrain roughness/depression tuning.
 - `player`: collision size, one-block terrain auto-step height, camera step smoothing, starting health, starting ammo reserve, starting C4, respawn reserve floor, and low-health heartbeat threshold.
 - `weapon`: magazine size, magazine-swap reload time, fire cooldown, recoil, perk multipliers, and long-range kill distance.
-- `enemies`: base enemy cap, horde escalation values, and close-range zombie moan radius/voice/timing controls.
+- `enemies`: base enemy cap, horde escalation values, purple spitter bile range, and close-range zombie moan radius/voice/timing controls.
 - `mission`: Frontier Hunt insertion drop timing and first wave size. The active hunt loop rolls random biome seeds and infected targets at runtime.
 - `comms`: short Mission Command radio lines for drop-in, hunt-complete, bite, recovery, death, objective, long-range, and ammo-cache events. `dropIn` supports `{islandName}`, `{biome}`, and `{zombieTotal}` placeholders; `huntComplete` supports `{islandName}` and `{biome}`.
 - `pickups`: ammo and C4 pickup amounts/drop chances. Health pickups are intentionally disabled.
